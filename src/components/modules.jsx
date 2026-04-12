@@ -24,10 +24,10 @@ export function Invites() {
     Promise.all([
       fetchInvites(),
       supabase.from('statut_colors').select('statut, couleur')
-    ]).then(([data, { data: colors }]) => {
-      setInvites(data)
+    ]).then(([invData, colorsRes]) => {
+      setInvites(invData || [])
       const cMap = {}
-      ;(colors || []).forEach(c => { cMap[c.statut] = c.couleur })
+      ;(colorsRes?.data || []).forEach(c => { cMap[c.statut] = c.couleur })
       setStatutColors(cMap)
       setLoading(false)
     }).catch(() => setLoading(false))
