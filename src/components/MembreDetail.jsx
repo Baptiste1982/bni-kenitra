@@ -30,59 +30,67 @@ export default function MembreDetail({ membre, score, onClose }) {
     setEmailLoading(true)
     setEmailContent('')
 
-    // Objectifs BNI semestriels (6 mois = ~26 semaines)
+    // Objectifs BNI mensuels (~4 semaines)
+    const now = new Date()
+    const moisActuel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    const finDuMois = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const semainesRestantes = Math.max(1, Math.round((finDuMois - now) / (1000*60*60*24*7)))
+
     const objectifs = {
-      '1-2-1s': { cible: 1, unite: '/semaine', importance: 'Les tête-à-tête sont le cœur du réseautage BNI. C\'est là que se construisent la confiance et les recommandations qualifiées.' },
-      'Références': { cible: 1, unite: '/semaine', importance: 'Donner des références, c\'est activer le principe du Givers Gain. Plus tu donnes, plus tu reçois.' },
-      'Visiteurs': { cible: 2, unite: 'en 6 mois', importance: 'Inviter des visiteurs renforce le groupe et montre ton engagement. Chaque visiteur est un membre potentiel.' },
-      'Sponsors': { cible: 1, unite: 'en 6 mois', importance: 'Sponsoriser un nouveau membre montre ton leadership et contribue directement à la croissance du groupe.' },
-      'Présence': { cible: 1, unite: '(100%)', importance: 'La présence est la base de tout. Sans présence régulière, impossible de construire la confiance avec les autres membres.' },
-      'CEU': { cible: 1, unite: '/semaine', importance: 'La formation continue (CEU) te rend plus efficace en réseautage et montre ta volonté de progresser.' },
+      '1-2-1s': { cibleMois: 4, unite: 'tête-à-tête ce mois', importance: 'Les tête-à-tête sont le cœur du réseautage BNI. C\'est lors de ces rencontres que se construisent la confiance et les recommandations qualifiées. Sans tête-à-tête, pas de références.' },
+      'Références': { cibleMois: 4, unite: 'références données ce mois', importance: 'Donner des références, c\'est activer le principe du Givers Gain. Plus tu donnes, plus tu reçois. C\'est le moteur de ton retour sur investissement BNI.' },
+      'Visiteurs': { cibleMois: 1, unite: 'visiteur invité ce mois', importance: 'Inviter des visiteurs renforce le groupe et montre ton engagement. Chaque visiteur est un membre potentiel qui élargit ton réseau.' },
+      'Présence': { cibleMois: 4, unite: 'réunions sur 4 ce mois', importance: 'La présence est la base de tout. Sans présence régulière, impossible de construire la confiance avec les autres membres ni de recevoir des références.' },
+      'CEU': { cibleMois: 4, unite: 'CEU ce mois', importance: 'La formation continue te rend plus efficace en réseautage et montre ta volonté de progresser au sein du groupe.' },
+      'Sponsors': { cibleMois: 0, unite: '', importance: 'Sponsoriser un nouveau membre montre ton leadership et contribue directement à la croissance du groupe.' },
     }
 
-    // Construire le détail des KPI avec écarts
+    // Construire le détail des KPI avec écarts mensuels
     const kpiDetails = criteria.map(c => {
       const obj = objectifs[c.label]
       const scoreNum = Number(c.score) || 0
       const rateNum = Number(c.rate) || 0
       const pct = Math.round(scoreNum / c.max * 100)
-      let detail = `- ${c.label}: ${scoreNum}/${c.max} pts (${pct}%) — actuel: ${c.format(rateNum)}`
-      if (obj) {
-        detail += ` — objectif: ${obj.cible}${obj.unite}`
-        if (pct < 50) detail += ' ⚠️ EN DESSOUS DE L\'OBJECTIF'
+      let detail = `- ${c.label}: ${scoreNum}/${c.max} pts (${pct}%) — rythme actuel: ${c.format(rateNum)}`
+      if (obj && obj.cibleMois > 0) {
+        const manquant = Math.max(0, Math.ceil(obj.cibleMois - (rateNum * semainesRestantes)))
+        if (pct < 50) detail += ` — ⚠️ OBJECTIF CE MOIS: ${obj.cibleMois} ${obj.unite}, il en manque ~${manquant} d'ici fin ${moisActuel}`
+        else detail += ` — ✅ en bonne voie`
       }
       return detail
     }).join('\n')
 
-    const kpiImportance = criteria
-      .filter(c => Number(c.score) < c.max * 0.5 && objectifs[c.label])
+    const weakKpis = criteria.filter(c => Number(c.score) < c.max * 0.5 && objectifs[c.label])
+    const kpiImportance = weakKpis
       .map(c => `- ${c.label}: ${objectifs[c.label].importance}`)
       .join('\n')
 
-    const weeksLeft = daysToRenew ? Math.max(0, Math.round(daysToRenew / 7)) : null
     const scoreGap = 70 - (Number(s.total_score) || 0)
 
     const kpiContext = `
-SITUATION ACTUELLE DE ${m.prenom} ${m.nom}:
+SITUATION ACTUELLE DE ${m.prenom} ${m.nom} — ${moisActuel}:
 Score: ${s.total_score}/100 (objectif BNI: 70/100, il manque ${scoreGap > 0 ? scoreGap : 0} points)
 Traffic Light: ${s.traffic_light}
 Rang: ${s.rank || '—'}/20
-${renouv ? `Renouvellement: ${renouv.toLocaleDateString('fr-FR')} (dans ${daysToRenew} jours, soit ~${weeksLeft} semaines)` : ''}
+Semaines restantes ce mois: ${semainesRestantes}
+${renouv ? `Renouvellement: ${renouv.toLocaleDateString('fr-FR')} (dans ${daysToRenew} jours)` : ''}
 
-DÉTAIL DES KPIs:
+DÉTAIL DES KPIs ET OBJECTIFS DU MOIS:
 ${kpiDetails}
 
-${kpiImportance ? `IMPORTANCE DES KPIs À AMÉLIORER:\n${kpiImportance}` : ''}`
+${kpiImportance ? `POURQUOI CES KPIs SONT IMPORTANTS:\n${kpiImportance}` : ''}`
 
     const prompts = {
       relance: `Génère un email de relance professionnel et personnalisé pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
 
 CONSIGNES:
-- Cite les KPIs concrets à améliorer avec des actions précises (ex: "il te manque X tête-à-tête d'ici le [date]")
-- Rappelle pourquoi chaque KPI est important pour son business
+- Concentre-toi sur les objectifs du mois en cours (${moisActuel}): combien de tête-à-tête, références, visiteurs manquants d'ici la fin du mois
+- Pour chaque KPI faible, donne un objectif chiffré pour le mois (ex: "il te reste ${semainesRestantes} semaines pour faire X tête-à-tête")
+- Rappelle brièvement pourquoi chaque KPI compte pour son business
+- Propose 2-3 actions concrètes à faire CETTE SEMAINE
 - Ton motivant et bienveillant, pas condescendant
-- Propose 2-3 actions concrètes à faire cette semaine
+- En conclusion seulement, mentionne la perspective du renouvellement si pertinent
 - Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`,
       renouvellement: `Génère un email de rappel de renouvellement pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
@@ -90,7 +98,7 @@ ${kpiContext}
 CONSIGNES:
 - Date de renouvellement: ${renouv?.toLocaleDateString('fr-FR')} (dans ${daysToRenew} jours)
 - Valorise ce que BNI lui a apporté (TYFCB: ${Number(s.tyfcb || 0).toLocaleString('fr-FR')} MAD de chiffre d'affaires généré)
-- Mentionne les KPIs où il/elle peut encore progresser avant le renouvellement
+- Mentionne les KPIs à améliorer ce mois-ci pour arriver au renouvellement dans les meilleures conditions
 - Chaleureux et valorisant
 - Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`,
       felicitations: `Génère un email de félicitations pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
@@ -99,7 +107,7 @@ ${kpiContext}
 CONSIGNES:
 - Félicite pour les KPIs forts (score >= 50% du max)
 - Mentionne le rang ${s.rank}/20 et le score ${s.total_score}/100
-- Encourage à maintenir l'effort et viser le Traffic Light vert (70+ pts)
+- Encourage à maintenir l'effort ce mois de ${moisActuel} pour viser le Traffic Light vert (70+ pts)
 - Valorise l'impact positif sur le groupe
 - Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`
     }
