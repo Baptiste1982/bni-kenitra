@@ -12,6 +12,7 @@ export default function Membres({ profil }) {
   const [selected, setSelected] = useState(null)
   const [showImport, setShowImport] = useState(false)
   const [showPalms, setShowPalms] = useState(false)
+  const [showPalmsMenu, setShowPalmsMenu] = useState(false)
   const [previsions, setPrevisions] = useState({})
   const [palmsData, setPalmsData] = useState({})
 
@@ -145,13 +146,48 @@ export default function Membres({ profil }) {
         title="Membres"
         sub={`MK-01 Kénitra Atlantique · ${scores.length} membres scorés`}
         right={
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => { setShowPalms(!showPalms); if (!showPalms) setShowImport(false) }} style={{ padding:'9px 16px', background:showPalms?'#1C1C2E':'#fff', color:showPalms?'#fff':'#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-              {showPalms ? '✕ Fermer PALMS' : '📊 Voir PALMS'}
-            </button>
-            <button onClick={() => { setShowImport(!showImport); if (!showImport) setShowPalms(false) }} style={{ padding:'9px 16px', background:showImport?'#1C1C2E':'#fff', color:showImport?'#fff':'#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-              {showImport ? '✕ Fermer import' : '📥 Importer PALMS'}
-            </button>
+          <div style={{ position:'relative' }}>
+            <div onClick={() => { setShowImport(!showImport); setShowPalms(false); setShowPalmsMenu(false) }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernier import PALMS</div>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'Playfair Display, serif' }}>
+                  {(() => {
+                    const first = Object.values(palmsData)[0]
+                    if (!first?.created_at) return '—'
+                    return new Date(first.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' })
+                  })()}
+                </div>
+              </div>
+              <div style={{ position:'relative' }}>
+                <div onClick={e => { e.stopPropagation(); setShowPalmsMenu(!showPalmsMenu) }}
+                  style={{ width:24, height:24, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, cursor:'pointer', borderRadius:4 }}
+                  onMouseEnter={e => e.currentTarget.style.background='#F3F2EF'}
+                  onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                </div>
+                {showPalmsMenu && (
+                  <div style={{ position:'absolute', right:0, top:28, background:'#fff', border:'1px solid #E8E6E1', borderRadius:8, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', zIndex:10, minWidth:160, overflow:'hidden' }}>
+                    <div onClick={e => { e.stopPropagation(); setShowPalms(!showPalms); setShowImport(false); setShowPalmsMenu(false) }}
+                      style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
+                      onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      📊 Voir PALMS
+                    </div>
+                    <div onClick={e => { e.stopPropagation(); setShowImport(!showImport); setShowPalms(false); setShowPalmsMenu(false) }}
+                      style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      📥 Importer PALMS
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         }
       />
