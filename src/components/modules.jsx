@@ -90,14 +90,31 @@ export function Invites() {
           </button>
         ))}
       </div>
-      {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
+      {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (() => {
+        // Grouper par mois
+        const byMonth = {}
+        filtered.forEach(inv => {
+          const d = inv.date_visite ? new Date(inv.date_visite + 'T12:00:00') : null
+          const key = d ? d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' }) : 'Sans date'
+          const sortKey = d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : '0000-00'
+          if (!byMonth[key]) byMonth[key] = { sortKey, invites: [] }
+          byMonth[key].invites.push(inv)
+        })
+        const months = Object.entries(byMonth).sort((a,b) => b[1].sortKey.localeCompare(a[1].sortKey))
+
+        return months.map(([month, { invites: monthInvites }]) => (
+        <div key={month} style={{ marginBottom:16 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize', fontFamily:'Playfair Display, serif' }}>{month}</div>
+            <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''}</div>
+          </div>
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead><tr>{['Date','Prénom','Nom','Profession','Statut','Invité par','CA en charge'].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
-              {filtered.map((inv, i) => {
+              {monthInvites.map((inv, i) => {
                 const st = inv.statut || ''
                 const statStyle = st==='Devenu Membre' ? { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0' }
                   : st==='Validé par CM' ? { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0' }
@@ -168,9 +185,10 @@ export function Invites() {
               })}
             </tbody>
           </table>
-          <div style={{ padding:'10px 16px', color:'#9CA3AF', fontSize:12 }}>{filtered.length} invité{filtered.length!==1?'s':''}</div>
         </TableWrap>
-      )}
+        </div>
+        ))
+      })()}
     </div>
   )
 }
