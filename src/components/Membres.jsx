@@ -140,6 +140,14 @@ export default function Membres({ profil }) {
   const rateBg = (rate) => rate >= 1 ? tlBg('vert') : rate >= 0.5 ? tlBg('jaune') : rate >= 0.25 ? tlBg('orange') : tlBg('rouge')
   const tyfcbBg = (val) => val >= 300000 ? tlBg('vert') : val >= 50000 ? tlBg('jaune') : val >= 20000 ? tlBg('orange') : val > 0 ? tlBg('rouge') : tlBg('gris')
 
+  // Cellule KPI avec score en petit en bas à droite
+  const KpiCell = ({ value, pts, max, bg }) => (
+    <td style={{ padding:'6px 10px', background:bg.bg, textAlign:'center', position:'relative' }}>
+      <div style={{ fontSize:12, fontWeight:600, color:bg.color }}>{value}</div>
+      <div style={{ fontSize:8, color:bg.color, opacity:0.6, textAlign:'right', marginTop:1 }}>{pts}/{max}</div>
+    </td>
+  )
+
   const filtered = scores.filter(s => {
     const m = s.membres || {}
     const q = `${m.prenom||''} ${m.nom||''} ${m.societe||''} ${m.secteur_activite||''}`.toLowerCase()
@@ -289,11 +297,7 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
-                    {(() => {
-                      const att = s.attendance_rate ? Number(s.attendance_rate) : 0
-                      const bg = presBg(att)
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:bg.bg, color:bg.color, textAlign:'center' }}>{att ? `${Math.round(att*100)}%` : '0%'}</td>
-                    })()}
+                    <KpiCell value={s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '0%'} pts={Number(s.attendance_score||0)} max={10} bg={presBg(Number(s.attendance_rate||0))} />
                     {(() => {
                       const p = palmsData[s.membre_id]
                       const h = previsions[s.membre_id]
@@ -314,20 +318,12 @@ export default function Membres({ profil }) {
                       const tatBgC = rateBg(rateTat)
                       const refsBgC = rateBg(rateRefs)
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:tatBgC.bg, color:tatBgC.color, textAlign:'center' }}>{totalTat}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:refsBgC.bg, color:refsBgC.color, textAlign:'center' }}>{totalRefs}</td>
+                        <KpiCell value={totalTat} pts={Number(s.score_121||0)} max={20} bg={tatBgC} />
+                        <KpiCell value={totalRefs} pts={Number(s.referrals_given_score||0)} max={25} bg={refsBgC} />
                       </>
                     })()}
-                    {(() => {
-                      const sp = Number(s.sponsors || 0)
-                      const spBg = sp >= 1 ? tlBg('vert') : tlBg('gris')
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:spBg.bg, color:spBg.color, textAlign:'center' }}>{sp}</td>
-                    })()}
-                    {(() => {
-                      const tyfcb = Number(s.tyfcb || 0)
-                      const bg = tyfcbBg(tyfcb)
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:bg.bg, color:bg.color, textAlign:'center' }}>{tyfcb.toLocaleString('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 })+' MAD'}</td>
-                    })()}
+                    {(() => { const sp = Number(s.sponsors||0); return <KpiCell value={sp} pts={Number(s.sponsor_score||0)} max={5} bg={sp >= 1 ? tlBg('vert') : tlBg('gris')} /> })()}
+                    {(() => { const tyfcb = Number(s.tyfcb||0); return <KpiCell value={tyfcb.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD'} pts={Number(s.tyfcb_score||0)} max={5} bg={tyfcbBg(tyfcb)} /> })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
                       const pm = palmsData[s.membre_id]
