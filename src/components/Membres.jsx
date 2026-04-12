@@ -156,11 +156,17 @@ export default function Membres({ profil }) {
           <TableWrap>
             <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div style={{ fontSize:13, fontWeight:600 }}>📊 Données PALMS importées</div>
-              {(() => { const first = Object.values(palmsData)[0]; return first?.periode_debut && first?.periode_fin ? (
-                <div style={{ fontSize:11, color:'#6B7280' }}>
-                  Période : {new Date(first.periode_debut).toLocaleDateString('fr-FR')} → {new Date(first.periode_fin).toLocaleDateString('fr-FR')}
-                </div>
-              ) : null })()}
+              {(() => {
+                const first = Object.values(palmsData)[0]
+                if (!first?.periode_debut || !first?.periode_fin) return null
+                const countJ = (from, to) => { let c=0; const d=new Date(from), e=new Date(to); while(d<=e){if(d.getDay()===4)c++;d.setDate(d.getDate()+1)} return c }
+                const totalJ = countJ(first.periode_debut, first.periode_fin)
+                return (
+                  <div style={{ fontSize:11, color:'#6B7280' }}>
+                    Période : {new Date(first.periode_debut).toLocaleDateString('fr-FR')} → {new Date(first.periode_fin).toLocaleDateString('fr-FR')} · {totalJ} jeudis
+                  </div>
+                )
+              })()}
             </div>
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>

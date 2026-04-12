@@ -87,6 +87,18 @@ export default function PalmsImport({ onImportDone }) {
       let imported = 0, skipped = 0
       const periode_debut = meta.depuis || '2025-10-01'
       const periode_fin = meta.jusqua || '2026-03-31'
+      const dateImport = new Date().toISOString().split('T')[0]
+
+      // Compter les jeudis entre debut et date d'import = réunions couvertes
+      const countJeudis = (from, to) => {
+        let count = 0
+        const d = new Date(from)
+        const end = new Date(to)
+        while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
+        return count
+      }
+      const jeudisCouverts = countJeudis(periode_debut, dateImport)
+      const jeudisTotalMois = countJeudis(periode_debut, periode_fin)
 
       for (const row of rows) {
         const prenom = (row['Prénom'] || '').trim()
@@ -126,11 +138,7 @@ export default function PalmsImport({ onImportDone }) {
         imported++
       }
 
-      // Calculer nombre de semaines
-      const nbSemaines = periode_debut && periode_fin
-        ? Math.round((new Date(periode_fin) - new Date(periode_debut)) / (1000*60*60*24*7))
-        : null
-      setResult({ imported, skipped, total: rows.length, periode_debut, periode_fin, nbSemaines })
+      setResult({ imported, skipped, total: rows.length, periode_debut, periode_fin, dateImport, jeudisCouverts, jeudisTotalMois })
       if (onImportDone) onImportDone()
 
     } catch (err) {
@@ -187,7 +195,7 @@ export default function PalmsImport({ onImportDone }) {
             </div>
             {result.periode_debut && result.periode_fin && (
               <div style={{ fontSize:12, color:'#065F46', marginTop:4 }}>
-                Période : du {new Date(result.periode_debut).toLocaleDateString('fr-FR')} au {new Date(result.periode_fin).toLocaleDateString('fr-FR')} ({result.nbSemaines} semaines)
+                Période : du {new Date(result.periode_debut).toLocaleDateString('fr-FR')} au {new Date(result.periode_fin).toLocaleDateString('fr-FR')} · Import au {new Date(result.dateImport).toLocaleDateString('fr-FR')} · {result.jeudisCouverts}/{result.jeudisTotalMois} réunions couvertes
               </div>
             )}
           </div>
