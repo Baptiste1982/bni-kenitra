@@ -45,7 +45,9 @@ export function Invites() {
     } catch(e) { setSyncMsg('Erreur : ' + e.message) }
   }
 
-  const ALL_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
+  const BASE_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
+  // Ajouter les statuts personnalisés trouvés dans les données
+  const ALL_STATUTS = [...new Set([...BASE_STATUTS, ...invites.map(i => i.statut).filter(Boolean)])]
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
   const filtered = filter === 'tous' ? invites : invites.filter(i => i.statut === filter)
 
