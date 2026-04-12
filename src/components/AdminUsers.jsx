@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchUsers, createUser, deleteUser, toggleUserActive, fetchGroupes } from '../lib/bniService'
+import { fetchUsers, createUser, deleteUser, toggleUserActive, resetUserPassword, fetchGroupes } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { PageHeader, Card, SectionTitle, TableWrap, Spinner } from './ui'
 
@@ -60,8 +60,10 @@ export default function AdminUsers() {
   const [success, setSuccess] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [editAccess, setEditAccess] = useState(null)
-  const [createdCredentials, setCreatedCredentials] = useState(null) // { prenom, nom, email, password, role }
+  const [createdCredentials, setCreatedCredentials] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [resetPwd, setResetPwd] = useState(null) // user id
+  const [newPassword, setNewPassword] = useState('')
 
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '', role: 'directrice_consultante', groupe_id: '', titre: '', telephone: '' })
   const [formAccess, setFormAccess] = useState([...DEFAULT_ACCESS.directrice_consultante])
@@ -310,16 +312,31 @@ Directeur Exécutif BNI Kénitra`}
                         </span>
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => {
-                            setCreatedCredentials({ prenom: u.prenom, nom: u.nom, email: u.email, password: '(mot de passe défini à la création)', role: roleLabel(u.role) })
-                            setCopied(false)
-                          }} style={{ padding: '4px 10px', background: 'transparent', color: '#1C1C2E', border: '1px solid #E8E6E1', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                            Identifiants
-                          </button>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {resetPwd === u.id ? (
+                            <>
+                              <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Nouveau mdp"
+                                style={{ width: 110, padding: '4px 8px', border: '1px solid #E8E6E1', borderRadius: 6, fontSize: 11, fontFamily: 'DM Sans, sans-serif' }} />
+                              <button onClick={async () => {
+                                try {
+                                  if (newPassword.length < 6) { setError('Min. 6 caractères'); return }
+                                  await resetUserPassword(u.id, newPassword)
+                                  setCreatedCredentials({ prenom: u.prenom, nom: u.nom, email: u.email, password: newPassword, role: roleLabel(u.role) })
+                                  setCopied(false)
+                                  setSuccess(`Mot de passe réinitialisé pour ${u.prenom} ${u.nom}`)
+                                  setResetPwd(null); setNewPassword('')
+                                } catch (e) { setError(e.message) }
+                              }} style={{ padding: '4px 10px', background: '#C41E3A', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>OK</button>
+                              <button onClick={() => { setResetPwd(null); setNewPassword('') }} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>✕</button>
+                            </>
+                          ) : (
+                            <button onClick={() => { setResetPwd(u.id); setNewPassword('') }} style={{ padding: '4px 10px', background: 'transparent', color: '#D97706', border: '1px solid #FEF3C7', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+                              Réinit. mdp
+                            </button>
+                          )}
                           {confirmDelete === u.id ? (
                             <>
-                              <span style={{ fontSize: 11, color: '#DC2626', alignSelf: 'center' }}>Confirmer ?</span>
+                              <span style={{ fontSize: 11, color: '#DC2626' }}>Supprimer ?</span>
                               <button onClick={() => handleDelete(u.id)} style={{ padding: '4px 10px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Oui</button>
                               <button onClick={() => setConfirmDelete(null)} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Non</button>
                             </>

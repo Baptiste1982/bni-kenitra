@@ -240,3 +240,12 @@ export async function toggleUserActive(userId, actif) {
   if (data?.error) throw new Error(data.error)
   return data
 }
+
+export async function resetUserPassword(userId, password) {
+  const { data, error } = await supabase.functions.invoke('manage-users', {
+    body: { action: 'reset_password', user_id: userId, password }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
