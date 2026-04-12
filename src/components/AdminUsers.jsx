@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { fetchUsers, createUser, deleteUser, toggleUserActive, resetUserPassword, fetchGroupes } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { PageHeader, Card, SectionTitle, TableWrap, Spinner } from './ui'
@@ -62,11 +62,22 @@ export default function AdminUsers() {
   const [editAccess, setEditAccess] = useState(null)
   const [createdCredentials, setCreatedCredentials] = useState(null)
   const [copied, setCopied] = useState(false)
-  const [resetPwd, setResetPwd] = useState(null) // user id
+  const [resetPwd, setResetPwd] = useState(null)
   const [newPassword, setNewPassword] = useState('')
+  const [actionMenu, setActionMenu] = useState(null) // user id for dropdown
+  const [editUser, setEditUser] = useState(null) // user being edited
+  const [editForm, setEditForm] = useState({})
 
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '', role: 'directrice_consultante', groupe_id: '', titre: '', telephone: '' })
   const [formAccess, setFormAccess] = useState([...DEFAULT_ACCESS.directrice_consultante])
+
+  const menuRef = useRef(null)
+  useEffect(() => {
+    if (!actionMenu) return
+    const handleClick = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setActionMenu(null) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [actionMenu])
 
   const load = async () => {
     setLoading(true)
@@ -122,6 +133,28 @@ export default function AdminUsers() {
       await toggleUserActive(userId, !actif)
       await load()
     } catch (e) { setError(e.message) }
+  }
+
+  const startEdit = (u) => {
+    setEditUser(u.id)
+    setEditForm({ prenom: u.prenom, nom: u.nom, email: u.email, role: u.role, titre: u.titre || '', telephone: u.telephone || '', groupe_id: u.groupe_id || '' })
+    setActionMenu(null)
+  }
+
+  const handleSaveEdit = async () => {
+    setError(''); setSaving(true)
+    try {
+      const { error } = await supabase.from('profils').update({
+        prenom: editForm.prenom, nom: editForm.nom, email: editForm.email,
+        role: editForm.role, titre: editForm.titre || null, telephone: editForm.telephone || null,
+        groupe_id: editForm.groupe_id || null
+      }).eq('id', editUser)
+      if (error) throw error
+      setSuccess('Utilisateur mis à jour')
+      setEditUser(null)
+      await load()
+    } catch (e) { setError(e.message) }
+    setSaving(false)
   }
 
   // Sauvegarder les accès modifiés d'un utilisateur existant
@@ -312,42 +345,89 @@ Directeur Exécutif BNI Kénitra`}
                         </span>
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                          {resetPwd === u.id ? (
-                            <>
-                              <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Nouveau mdp"
-                                style={{ width: 110, padding: '4px 8px', border: '1px solid #E8E6E1', borderRadius: 6, fontSize: 11, fontFamily: 'DM Sans, sans-serif' }} />
-                              <button onClick={async () => {
-                                try {
-                                  if (newPassword.length < 6) { setError('Min. 6 caractères'); return }
-                                  await resetUserPassword(u.id, newPassword)
-                                  setCreatedCredentials({ prenom: u.prenom, nom: u.nom, email: u.email, password: newPassword, role: roleLabel(u.role) })
-                                  setCopied(false)
-                                  setSuccess(`Mot de passe réinitialisé pour ${u.prenom} ${u.nom}`)
-                                  setResetPwd(null); setNewPassword('')
-                                } catch (e) { setError(e.message) }
-                              }} style={{ padding: '4px 10px', background: '#C41E3A', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>OK</button>
-                              <button onClick={() => { setResetPwd(null); setNewPassword('') }} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>✕</button>
-                            </>
-                          ) : (
-                            <button onClick={() => { setResetPwd(u.id); setNewPassword('') }} style={{ padding: '4px 10px', background: 'transparent', color: '#D97706', border: '1px solid #FEF3C7', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                              Réinit. mdp
-                            </button>
-                          )}
-                          {confirmDelete === u.id ? (
-                            <>
-                              <span style={{ fontSize: 11, color: '#DC2626' }}>Supprimer ?</span>
-                              <button onClick={() => handleDelete(u.id)} style={{ padding: '4px 10px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Oui</button>
-                              <button onClick={() => setConfirmDelete(null)} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Non</button>
-                            </>
-                          ) : (
-                            <button onClick={() => setConfirmDelete(u.id)} style={{ padding: '4px 10px', background: 'transparent', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                              Supprimer
-                            </button>
+                        <div ref={actionMenu === u.id ? menuRef : null} style={{ position:'relative', display:'inline-block' }}>
+                          <button onClick={() => setActionMenu(actionMenu === u.id ? null : u.id)}
+                            style={{ padding:'6px 12px', background: actionMenu === u.id ? '#1C1C2E' : '#fff', color: actionMenu === u.id ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                            Actions ▾
+                          </button>
+                          {actionMenu === u.id && (
+                            <div style={{ position:'absolute', right:0, top:32, background:'#fff', border:'1px solid #E8E6E1', borderRadius:8, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', zIndex:20, minWidth:180, overflow:'hidden' }}>
+                              <div onClick={() => startEdit(u)} style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
+                                onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                                ✏️ Éditer le profil
+                              </div>
+                              <div onClick={() => { setEditAccess(isEditing ? null : u.id); setActionMenu(null) }} style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF' }}
+                                onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                                🔑 Modifier les accès
+                              </div>
+                              <div onClick={() => { setResetPwd(u.id); setNewPassword(''); setActionMenu(null) }} style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF', color:'#D97706' }}
+                                onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                                🔄 Réinitialiser le mot de passe
+                              </div>
+                              <div onClick={() => { setConfirmDelete(u.id); setActionMenu(null) }} style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF', color:'#DC2626' }}
+                                onMouseEnter={e => e.currentTarget.style.background='#FEF2F2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                                🗑️ Supprimer
+                              </div>
+                            </div>
                           )}
                         </div>
                       </td>
                     </tr>
+                    {/* Réinitialisation mot de passe inline */}
+                    {resetPwd === u.id && (
+                      <tr style={{ borderBottom:'1px solid #F3F2EF' }}>
+                        <td colSpan={7} style={{ padding:'12px 14px', background:'#FFFBEB' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <span style={{ fontSize:12, fontWeight:600, color:'#854D0E' }}>Nouveau mot de passe :</span>
+                            <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 6 caractères"
+                              style={{ padding:'6px 10px', border:'1px solid #FDE68A', borderRadius:6, fontSize:12, fontFamily:'DM Sans, sans-serif', width:200 }} />
+                            <button onClick={async () => {
+                              try {
+                                if (newPassword.length < 6) { setError('Min. 6 caractères'); return }
+                                await resetUserPassword(u.id, newPassword)
+                                setCreatedCredentials({ prenom:u.prenom, nom:u.nom, email:u.email, password:newPassword, role:roleLabel(u.role) })
+                                setCopied(false)
+                                setSuccess(`Mot de passe réinitialisé pour ${u.prenom} ${u.nom}`)
+                                setResetPwd(null); setNewPassword('')
+                              } catch(e) { setError(e.message) }
+                            }} style={{ padding:'6px 14px', background:'#D97706', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Valider</button>
+                            <button onClick={() => { setResetPwd(null); setNewPassword('') }} style={{ padding:'6px 14px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>Annuler</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {/* Confirmation suppression */}
+                    {confirmDelete === u.id && (
+                      <tr style={{ borderBottom:'1px solid #F3F2EF' }}>
+                        <td colSpan={7} style={{ padding:'12px 14px', background:'#FEF2F2' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <span style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>Confirmer la suppression de {u.prenom} {u.nom} ?</span>
+                            <button onClick={() => handleDelete(u.id)} style={{ padding:'6px 14px', background:'#DC2626', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Supprimer</button>
+                            <button onClick={() => setConfirmDelete(null)} style={{ padding:'6px 14px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>Annuler</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {/* Édition du profil */}
+                    {editUser === u.id && (
+                      <tr style={{ borderBottom:'1px solid #F3F2EF' }}>
+                        <td colSpan={7} style={{ padding:'14px', background:'#F7F6F3' }}>
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10, marginBottom:10 }}>
+                            <div><label style={labelStyle}>Prénom</label><input value={editForm.prenom} onChange={e=>setEditForm({...editForm,prenom:e.target.value})} style={inputStyle}/></div>
+                            <div><label style={labelStyle}>Nom</label><input value={editForm.nom} onChange={e=>setEditForm({...editForm,nom:e.target.value})} style={inputStyle}/></div>
+                            <div><label style={labelStyle}>Email</label><input value={editForm.email} onChange={e=>setEditForm({...editForm,email:e.target.value})} style={inputStyle}/></div>
+                            <div><label style={labelStyle}>Rôle</label><select value={editForm.role} onChange={e=>setEditForm({...editForm,role:e.target.value})} style={inputStyle}>{ROLES.map(r=><option key={r.value} value={r.value}>{r.abbr} — {r.label}</option>)}</select></div>
+                            <div><label style={labelStyle}>Titre</label><input value={editForm.titre} onChange={e=>setEditForm({...editForm,titre:e.target.value})} style={inputStyle}/></div>
+                            <div><label style={labelStyle}>Téléphone</label><input value={editForm.telephone} onChange={e=>setEditForm({...editForm,telephone:e.target.value})} style={inputStyle}/></div>
+                            <div><label style={labelStyle}>Groupe</label><select value={editForm.groupe_id} onChange={e=>setEditForm({...editForm,groupe_id:e.target.value})} style={inputStyle}><option value="">Tous</option>{groupes.map(g=><option key={g.id} value={g.id}>{g.code} — {g.nom}</option>)}</select></div>
+                            <div style={{display:'flex',alignItems:'flex-end',gap:8}}>
+                              <button onClick={handleSaveEdit} disabled={saving} style={{ padding:'8px 18px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>{saving?'...':'Sauvegarder'}</button>
+                              <button onClick={()=>setEditUser(null)} style={{ padding:'8px 18px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:8, fontSize:12, cursor:'pointer' }}>Annuler</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {/* Ligne d'édition des accès */}
                     {isEditing && (
                       <tr style={{ borderBottom: '1px solid #F3F2EF' }}>
@@ -358,7 +438,6 @@ Directeur Exécutif BNI Kénitra`}
                               modules={userModules}
                               onToggle={(moduleId) => {
                                 const updated = userModules.includes(moduleId) ? userModules.filter(m => m !== moduleId) : [...userModules, moduleId]
-                                // Mettre à jour localement
                                 setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, modules_access: updated } : usr))
                               }}
                             />
