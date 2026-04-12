@@ -299,7 +299,12 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
-                    <KpiCell value={s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '0%'} pts={Number(s.attendance_score||0)} max={10} bg={presBg(Number(s.attendance_rate||0))} tooltip={`Présence sur 6 mois glissants\n>=95%→10 | >=88%→5 | <88%→0`} />
+                    {(() => {
+                      const att = Number(s.attendance_rate||0)
+                      const attPts = Number(s.attendance_score||0)
+                      const manquePres = attPts >= 10 ? '✓ Max atteint' : att >= 0.88 ? `${Math.round((0.95 - att)*100)}% de plus pour 10pts` : `${Math.round((0.88 - att)*100)}% de plus pour 5pts`
+                      return <KpiCell value={att ? `${Math.round(att*100)}%` : '0%'} pts={attPts} max={10} bg={presBg(att)} tooltip={`Présence: ${Math.round(att*100)}% sur 6 mois\n${manquePres}\n>=95%→10 | >=88%→5 | <88%→0`} />
+                    })()}
                     {(() => {
                       const p = palmsData[s.membre_id]
                       const h = previsions[s.membre_id]
@@ -316,14 +321,31 @@ export default function Membres({ profil }) {
                       // Recalculer les scores sur le taux du mois (barème BNI)
                       const ptsTat = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
                       const ptsRefs = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
+                      // Ce qu'il manque pour le score max
+                      const manqueTat = ptsTat >= 20 ? 0 : Math.max(0, nbJeudis - totalTat)
+                      const prochainSeuilTat = ptsTat >= 20 ? '✓ Max atteint' : ptsTat >= 15 ? `+${Math.ceil(nbJeudis*1 - totalTat)} pour 20pts` : ptsTat >= 10 ? `+${Math.ceil(nbJeudis*0.75 - totalTat)} pour 15pts` : ptsTat >= 5 ? `+${Math.ceil(nbJeudis*0.5 - totalTat)} pour 10pts` : `+${Math.ceil(nbJeudis*0.25 - totalTat)} pour 5pts`
+                      const manqueRefs = ptsRefs >= 25 ? 0 : Math.max(0, Math.ceil(nbJeudis*1.25) - totalRefs)
+                      const prochainSeuilRefs = ptsRefs >= 25 ? '✓ Max atteint' : ptsRefs >= 20 ? `+${Math.ceil(nbJeudis*1.25 - totalRefs)} pour 25pts` : ptsRefs >= 15 ? `+${Math.ceil(nbJeudis*1 - totalRefs)} pour 20pts` : ptsRefs >= 10 ? `+${Math.ceil(nbJeudis*0.75 - totalRefs)} pour 15pts` : ptsRefs >= 5 ? `+${Math.ceil(nbJeudis*0.5 - totalRefs)} pour 10pts` : `+${Math.ceil(nbJeudis*0.25 - totalRefs)} pour 5pts`
                       return <>
-                        <KpiCell value={totalTat} pts={ptsTat} max={20} bg={tatBgC} tooltip={`Taux: ${rateTat.toFixed(2)}/sem (${totalTat}/${nbJeudis} jeudis)\n>=1→20 | >=0.75→15 | >=0.5→10 | >=0.25→5`} />
-                        <KpiCell value={totalRefs} pts={ptsRefs} max={25} bg={refsBgC} tooltip={`Taux: ${rateRefs.toFixed(2)}/sem (${totalRefs}/${nbJeudis} jeudis)\n>=1.25→25 | >=1→20 | >=0.75→15 | >=0.50→10 | >=0.25→5`} />
+                        <KpiCell value={totalTat} pts={ptsTat} max={20} bg={tatBgC} tooltip={`Taux: ${rateTat.toFixed(2)}/sem (${totalTat}/${nbJeudis} jeudis)\n${prochainSeuilTat}\nIl manque ${manqueTat} TàT pour le score max (20pts)`} />
+                        <KpiCell value={totalRefs} pts={ptsRefs} max={25} bg={refsBgC} tooltip={`Taux: ${rateRefs.toFixed(2)}/sem (${totalRefs}/${nbJeudis} jeudis)\n${prochainSeuilRefs}\nIl manque ${manqueRefs} reco. pour le score max (25pts)`} />
                       </>
                     })()}
-                    {(() => { const vis = Number(s.visitors||0); const visBg = vis >= 5 ? tlBg('vert') : vis >= 3 ? tlBg('jaune') : vis >= 1 ? tlBg('orange') : tlBg('gris'); return <KpiCell value={vis} pts={Number(s.visitor_score||0)} max={25} bg={visBg} tooltip={`${vis} visiteurs en 6 mois\n5+→25 | 4→20 | 3→15 | 2→10 | 1→5`} /> })()}
-                    {(() => { const sp = Number(s.sponsors||0); return <KpiCell value={sp} pts={Number(s.sponsor_score||0)} max={5} bg={sp >= 1 ? tlBg('vert') : tlBg('gris')} tooltip={`${sp} parrainage(s) en 6 mois\n1+→5 | 0→0`} /> })()}
-                    {(() => { const tyfcb = Number(s.tyfcb||0); return <KpiCell value={tyfcb.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD'} pts={Number(s.tyfcb_score||0)} max={5} bg={tyfcbBg(tyfcb)} tooltip={`TYFCB sur 6 mois glissants\n>=300k→5 | >=150k→4 | >=50k→3 | >=20k→2 | >0→1`} /> })()}
+                    {(() => {
+                      const vis = Number(s.visitors||0)
+                      const visBg = vis >= 5 ? tlBg('vert') : vis >= 3 ? tlBg('jaune') : vis >= 1 ? tlBg('orange') : tlBg('gris')
+                      const manqueVis = Math.max(0, 5 - vis)
+                      return <KpiCell value={vis} pts={Number(s.visitor_score||0)} max={25} bg={visBg} tooltip={`${vis} visiteurs en 6 mois\n${manqueVis > 0 ? `Il manque ${manqueVis} visiteur(s) pour 25pts` : '✓ Max atteint'}\n5+→25 | 4→20 | 3→15 | 2→10 | 1→5`} />
+                    })()}
+                    {(() => {
+                      const sp = Number(s.sponsors||0)
+                      return <KpiCell value={sp} pts={Number(s.sponsor_score||0)} max={5} bg={sp >= 1 ? tlBg('vert') : tlBg('gris')} tooltip={`${sp} parrainage(s) en 6 mois\n${sp === 0 ? 'Il manque 1 parrainage pour 5pts' : '✓ Max atteint'}\n1+→5 | 0→0`} />
+                    })()}
+                    {(() => {
+                      const tyfcb = Number(s.tyfcb||0)
+                      const manqueTyfcb = tyfcb >= 300000 ? '✓ Max atteint' : tyfcb >= 150000 ? `+${(300000-tyfcb).toLocaleString('de-DE')} MAD pour 5pts` : tyfcb >= 50000 ? `+${(150000-tyfcb).toLocaleString('de-DE')} MAD pour 4pts` : tyfcb >= 20000 ? `+${(50000-tyfcb).toLocaleString('de-DE')} MAD pour 3pts` : `+${(20000-tyfcb).toLocaleString('de-DE')} MAD pour 2pts`
+                      return <KpiCell value={tyfcb.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD'} pts={Number(s.tyfcb_score||0)} max={5} bg={tyfcbBg(tyfcb)} tooltip={`TYFCB sur 6 mois glissants\n${manqueTyfcb}\n>=300k→5 | >=150k→4 | >=50k→3 | >=20k→2 | >0→1`} />
+                    })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
                       const pm = palmsData[s.membre_id]
