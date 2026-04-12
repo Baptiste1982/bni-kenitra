@@ -109,18 +109,9 @@ export function Invites() {
             <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''}</div>
           </div>
         <TableWrap>
-          <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
-            <colgroup>
-              <col style={{ width:'10%' }} />
-              <col style={{ width:'12%' }} />
-              <col style={{ width:'12%' }} />
-              <col style={{ width:'20%' }} />
-              <col style={{ width:'16%' }} />
-              <col style={{ width:'15%' }} />
-              <col style={{ width:'15%' }} />
-            </colgroup>
-            <thead><tr>{['Date','Prénom','Nom','Profession','Statut','Invité par','CA en charge'].map(h => (
-              <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead><tr>{[['Date',90],['Prénom',130],['Nom',130],['Profession',null],['Statut',170],['Invité par',150],['CA en charge',120]].map(([h,w]) => (
+              <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width: w ? w : undefined }}>{h}</th>
             ))}</tr></thead>
             <tbody>
               {monthInvites.map((inv, i) => {
