@@ -1,0 +1,7 @@
+ADD IMPORT AT TOP:
+import { GroupeScoresChart } from './ScoresChart'
+
+ADD AFTER STAT CARDS IN REPORTING:
+<div style={{ marginBottom:16 }}>
+  <GroupeScoresChart scores={scores} />
+</div>

@@ -1,7 +1,7 @@
 import React from 'react'
 
 export const TLBadge = ({ tl }) => {
-  if (!tl) return <span style={styles.badge.gris}>—</span>
+  if (!tl) return <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:500, padding:'3px 8px', borderRadius:12, background:'#F3F4F6', color:'#4B5563' }}>—</span>
   const cfg = {
     vert:   { bg:'#D1FAE5', color:'#065F46', dot:'#059669' },
     orange: { bg:'#FEF3C7', color:'#92400E', dot:'#D97706' },
@@ -16,17 +16,18 @@ export const TLBadge = ({ tl }) => {
   )
 }
 
-export const Card = ({ children, style = {}, accent }) => (
+export const Card = ({ children, style={}, accent }) => (
   <div style={{ background:'#fff', borderRadius:12, padding:'18px 20px', border:'1px solid #E8E6E1', borderTop: accent ? `3px solid ${accent}` : '1px solid #E8E6E1', ...style }}>
     {children}
   </div>
 )
 
-export const StatCard = ({ label, value, sub, accent, style={} }) => (
+export const StatCard = ({ label, value, sub, accent, style={}, children }) => (
   <Card accent={accent} style={style}>
     <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{label}</div>
     <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:'#1C1C2E' }}>{value}</div>
     {sub && <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{sub}</div>}
+    {children}
   </Card>
 )
 
@@ -44,7 +45,7 @@ export const PageHeader = ({ title, sub, right }) => (
   </div>
 )
 
-export const ProgressBar = ({ value, max, color = '#C41E3A', style = {} }) => (
+export const ProgressBar = ({ value, max, color='#C41E3A', style={} }) => (
   <div style={{ height:6, background:'#F3F2EF', borderRadius:3, overflow:'hidden', ...style }}>
     <div style={{ height:'100%', width:`${Math.min(100, value/max*100)}%`, background:color, borderRadius:3, transition:'width 0.4s ease' }} />
   </div>
@@ -54,8 +55,6 @@ export const TableWrap = ({ children }) => (
   <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden' }}>{children}</div>
 )
 
-const styles = {
-  badge: {
-    gris: { display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:500, padding:'3px 8px', borderRadius:12, background:'#F3F4F6', color:'#4B5563' }
-  }
-}
+export const Spinner = ({ size=20, color='#C41E3A' }) => (
+  <div style={{ width:size, height:size, border:`2px solid #E8E6E1`, borderTopColor:color, borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+)

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01 } from '../lib/bniService'
+import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { PageHeader, SectionTitle, TableWrap, StatCard } from './ui'
 
@@ -154,6 +155,7 @@ export function Reporting() {
         <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe" accent="#059669" />
         <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`} accent="#C41E3A" />
       </div>
+      {!loading && <div style={{ marginBottom:16 }}><GroupeScoresChart scores={scores} /></div>}
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <TableWrap>
