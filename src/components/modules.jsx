@@ -12,6 +12,8 @@ export function Invites() {
   const [filter, setFilter] = useState('tous')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [editId, setEditId] = useState(null)
+  const [editData, setEditData] = useState({})
 
   const load = () => {
     setLoading(true)
@@ -30,6 +32,18 @@ export function Invites() {
     setSyncing(false)
   }
 
+  const handleSaveEdit = async () => {
+    try {
+      await supabase.from('invites').update(editData).eq('id', editId)
+      // Aussi écrire dans Google Sheet
+      try { await writeInviteToSheet(editData) } catch(e) { console.log('Sheet write skipped:', e) }
+      setEditId(null)
+      setSyncMsg('Invité mis à jour')
+      load()
+    } catch(e) { setSyncMsg('Erreur : ' + e.message) }
+  }
+
+  const ALL_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
   const filtered = filter === 'tous' ? invites : invites.filter(i => i.statut === filter)
 
@@ -92,8 +106,12 @@ export function Invites() {
                   : st==='Injoignable' || st==='absente' ? { bg:'#FEE2E2', color:'#991B1B', badge:'#FECACA' }
                   : st==='Doublon — orienté groupe 2' ? { bg:'#F3F4F6', color:'#4B5563', badge:'#E5E7EB' }
                   : { bg:'#F9FAFB', color:'#6B7280', badge:'#F3F4F6' }
+                const isEdit = editId === inv.id
+                const inputSt = { padding:'4px 8px', border:'1px solid #E8E6E1', borderRadius:6, fontSize:11, fontFamily:'DM Sans, sans-serif', width:'100%', boxSizing:'border-box' }
                 return (
-                  <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:statStyle.bg }}
+                  <React.Fragment key={i}>
+                  <tr style={{ borderBottom: isEdit ? 'none' : '1px solid rgba(0,0,0,0.05)', background:statStyle.bg, cursor:'pointer' }}
+                    onClick={() => { if (!isEdit) { setEditId(inv.id); setEditData({...inv}) } }}
                     onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.prenom}</td>
@@ -103,6 +121,31 @@ export function Invites() {
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.membre_ca_charge_nom || '—'}</td>
                   </tr>
+                  {isEdit && (
+                    <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#fff' }}>
+                      <td colSpan={7} style={{ padding:'12px 14px' }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:10 }}>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Prénom</label><input value={editData.prenom||''} onChange={e=>setEditData({...editData,prenom:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Nom</label><input value={editData.nom||''} onChange={e=>setEditData({...editData,nom:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Société</label><input value={editData.societe||''} onChange={e=>setEditData({...editData,societe:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Profession</label><input value={editData.profession||''} onChange={e=>setEditData({...editData,profession:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Téléphone</label><input value={editData.telephone||''} onChange={e=>setEditData({...editData,telephone:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Statut</label><select value={editData.statut||''} onChange={e=>setEditData({...editData,statut:e.target.value})} style={inputSt}><option value="">—</option>{ALL_STATUTS.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Invité par</label><input value={editData.invite_par_nom||''} onChange={e=>setEditData({...editData,invite_par_nom:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>CA en charge</label><input value={editData.membre_ca_charge_nom||''} onChange={e=>setEditData({...editData,membre_ca_charge_nom:e.target.value})} style={inputSt}/></div>
+                        </div>
+                        <div style={{ display:'grid', gridTemplateColumns:'3fr 1fr', gap:8, marginBottom:10 }}>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Commentaires</label><input value={editData.commentaires||''} onChange={e=>setEditData({...editData,commentaires:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Date visite</label><input type="date" value={editData.date_visite||''} onChange={e=>setEditData({...editData,date_visite:e.target.value})} style={inputSt}/></div>
+                        </div>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button onClick={e=>{e.stopPropagation();handleSaveEdit()}} style={{ padding:'6px 16px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Sauvegarder</button>
+                          <button onClick={e=>{e.stopPropagation();setEditId(null)}} style={{ padding:'6px 16px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>Annuler</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 )
               })}
             </tbody>
