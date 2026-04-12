@@ -9,6 +9,9 @@ const BAR_BG = {
 const BAR_FG = {
   vert: '#059669', orange: '#D97706', rouge: '#DC2626', gris: '#9CA3AF'
 }
+const TL_BG = {
+  vert: '#D1FAE5', orange: '#FEF9C3', rouge: '#FEE2E2', gris: '#F3F4F6'
+}
 
 // Mini bar chart component
 const BarChart = ({ data, height = 160 }) => {
@@ -109,21 +112,21 @@ export function GroupeScoresChart({ scores }) {
             <div style={{ display:'flex', justifyContent:'center', gap:24, marginBottom:16 }}>
               {Object.entries(tlDistrib).map(([tl, n]) => (
                 <div key={tl} style={{ textAlign:'center' }}>
-                  <div style={{ width:56, height:56, borderRadius:'50%', background:COLORS[tl]+'22', border:`3px solid ${COLORS[tl]}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 6px', fontSize:18, fontWeight:700, color:COLORS[tl] }}>{n}</div>
-                  <div style={{ fontSize:11, color:'#6B7280' }}>{tl}</div>
-                  <div style={{ fontSize:10, color:'#9CA3AF' }}>{Math.round(n/total*100)}%</div>
+                  <div style={{ width:56, height:56, borderRadius:'50%', background:TL_BG[tl], border:`3px solid ${BAR_FG[tl]}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 6px', fontSize:18, fontWeight:700, color:COLORS[tl] }}>{n}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:COLORS[tl] }}>{tl}</div>
+                  <div style={{ fontSize:10, color:COLORS[tl], opacity:0.7 }}>{Math.round(n/total*100)}%</div>
                 </div>
               ))}
             </div>
             {/* Progress bars */}
             {Object.entries(tlDistrib).map(([tl, n]) => (
-              <div key={tl} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:COLORS[tl], flexShrink:0 }} />
-                <span style={{ fontSize:12, width:50 }}>{tl}</span>
-                <div style={{ flex:1, background:'#F3F2EF', height:8, borderRadius:4 }}>
-                  <div style={{ height:8, width:`${n/total*100}%`, background:COLORS[tl], borderRadius:4, transition:'width 0.6s ease' }} />
+              <div key={tl} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6, padding:'6px 10px', borderRadius:8, background:TL_BG[tl] }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:BAR_FG[tl], flexShrink:0 }} />
+                <span style={{ fontSize:12, width:50, fontWeight:600, color:COLORS[tl] }}>{tl}</span>
+                <div style={{ flex:1, background:'rgba(255,255,255,0.5)', height:8, borderRadius:4 }}>
+                  <div style={{ height:8, width:`${n/total*100}%`, background:BAR_FG[tl], borderRadius:4, transition:'width 0.6s ease' }} />
                 </div>
-                <span style={{ fontSize:12, fontWeight:600, width:20 }}>{n}</span>
+                <span style={{ fontSize:14, fontWeight:700, color:COLORS[tl], width:24, textAlign:'right' }}>{n}</span>
               </div>
             ))}
           </div>
