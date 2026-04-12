@@ -185,13 +185,16 @@ export function Invites() {
                           </div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Couleur</label>
                             <div style={{ display:'flex', gap:4, padding:'4px 0' }}>
-                              {Object.entries(COULEURS).map(([key, c]) => (
-                                <div key={key} onClick={e => { e.stopPropagation(); if(editData.statut) saveStatutColor(editData.statut, key) }}
-                                  style={{ width:22, height:22, borderRadius:'50%', background:c.bg, border:`2px solid ${(statutColors[editData.statut] || 'gris') === key ? c.color : 'transparent'}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
-                                  title={c.label}>
-                                  {(statutColors[editData.statut] || 'gris') === key && <div style={{ width:8, height:8, borderRadius:'50%', background:c.color }} />}
-                                </div>
-                              ))}
+                              {Object.entries(COULEURS).map(([key, c]) => {
+                                const isActive = (statutColors[editData.statut] || 'gris') === key
+                                return (
+                                  <div key={key} onClick={e => { e.stopPropagation(); if(editData.statut) saveStatutColor(editData.statut, key) }}
+                                    style={{ width:28, height:28, borderRadius:6, background:c.bg, border:`2px solid ${isActive ? c.color : c.badge}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'transform 0.1s', transform: isActive ? 'scale(1.15)' : 'scale(1)' }}
+                                    title={c.label}>
+                                    {isActive && <div style={{ width:10, height:10, borderRadius:3, background:c.color }} />}
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Invité par</label><input value={editData.invite_par_nom||''} onChange={e=>setEditData({...editData,invite_par_nom:e.target.value})} style={inputSt}/></div>
