@@ -17,13 +17,42 @@ export function Invites() {
   const [newStatut, setNewStatut] = useState(false)
   const [customStatut, setCustomStatut] = useState('')
   const [extraStatuts, setExtraStatuts] = useState([])
+  const [statutColors, setStatutColors] = useState({})
 
   const load = () => {
     setLoading(true)
-    fetchInvites().then(data => { setInvites(data); setLoading(false) }).catch(() => setLoading(false))
+    Promise.all([
+      fetchInvites(),
+      supabase.from('statut_colors').select('statut, couleur')
+    ]).then(([data, { data: colors }]) => {
+      setInvites(data)
+      const cMap = {}
+      ;(colors || []).forEach(c => { cMap[c.statut] = c.couleur })
+      setStatutColors(cMap)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [])
+
+  const COULEURS = {
+    vert: { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0', label:'Vert' },
+    bleu: { bg:'#DBEAFE', color:'#1E40AF', badge:'#BFDBFE', label:'Bleu' },
+    jaune: { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A', label:'Jaune' },
+    orange: { bg:'#FFEDD5', color:'#9A3412', badge:'#FED7AA', label:'Orange' },
+    rouge: { bg:'#FEE2E2', color:'#991B1B', badge:'#FECACA', label:'Rouge' },
+    gris: { bg:'#F3F4F6', color:'#4B5563', badge:'#E5E7EB', label:'Gris' },
+  }
+
+  const getStatutStyle = (statut) => {
+    const couleur = statutColors[statut] || 'gris'
+    return COULEURS[couleur] || COULEURS.gris
+  }
+
+  const saveStatutColor = async (statut, couleur) => {
+    await supabase.from('statut_colors').upsert({ statut, couleur }, { onConflict: 'statut' })
+    setStatutColors(prev => ({ ...prev, [statut]: couleur }))
+  }
 
   const handleSync = async () => {
     setSyncing(true); setSyncMsg('')
@@ -115,19 +144,7 @@ export function Invites() {
             ))}</tr></thead>
             <tbody>
               {monthInvites.map((inv, i) => {
-                const st = inv.statut || ''
-                const statStyle = st==='Devenu Membre' ? { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0' }
-                  : st==='Validé par CM' ? { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0' }
-                  : st==='Membre BNI' ? { bg:'#DBEAFE', color:'#1E40AF', badge:'#BFDBFE' }
-                  : st==='Fiche envoyée au postulant' || st==='Fiche envoyée' ? { bg:'#DBEAFE', color:'#1E40AF', badge:'#BFDBFE' }
-                  : st==='En cours traitement par CM' ? { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A' }
-                  : st==='A recontacter' ? { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A' }
-                  : st==='Collaborateur d\'un membre BNI' ? { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A' }
-                  : st==='En stand-by' || st==='A temporiser' ? { bg:'#FFEDD5', color:'#9A3412', badge:'#FED7AA' }
-                  : st==='Pas intéressé pour le moment' || st==='Pas de budget pour le moment' ? { bg:'#FEE2E2', color:'#991B1B', badge:'#FECACA' }
-                  : st==='Injoignable' || st==='absente' ? { bg:'#FEE2E2', color:'#991B1B', badge:'#FECACA' }
-                  : st==='Doublon — orienté groupe 2' ? { bg:'#F3F4F6', color:'#4B5563', badge:'#E5E7EB' }
-                  : { bg:'#F9FAFB', color:'#6B7280', badge:'#F3F4F6' }
+                const statStyle = getStatutStyle(inv.statut)
                 const isEdit = editId === inv.id
                 const inputSt = { padding:'4px 8px', border:'1px solid #E8E6E1', borderRadius:6, fontSize:11, fontFamily:'DM Sans, sans-serif', width:'100%', boxSizing:'border-box' }
                 return (
@@ -165,6 +182,17 @@ export function Invites() {
                                 <button onClick={e=>{e.stopPropagation();setNewStatut(true)}} style={{ padding:'4px 8px', background:'#1C1C2E', color:'#fff', border:'none', borderRadius:6, fontSize:10, cursor:'pointer', whiteSpace:'nowrap' }}>+ Nouveau</button>
                               </div>
                             )}
+                          </div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Couleur</label>
+                            <div style={{ display:'flex', gap:4, padding:'4px 0' }}>
+                              {Object.entries(COULEURS).map(([key, c]) => (
+                                <div key={key} onClick={e => { e.stopPropagation(); if(editData.statut) saveStatutColor(editData.statut, key) }}
+                                  style={{ width:22, height:22, borderRadius:'50%', background:c.bg, border:`2px solid ${(statutColors[editData.statut] || 'gris') === key ? c.color : 'transparent'}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
+                                  title={c.label}>
+                                  {(statutColors[editData.statut] || 'gris') === key && <div style={{ width:8, height:8, borderRadius:'50%', background:c.color }} />}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Invité par</label><input value={editData.invite_par_nom||''} onChange={e=>setEditData({...editData,invite_par_nom:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>CA en charge</label><input value={editData.membre_ca_charge_nom||''} onChange={e=>setEditData({...editData,membre_ca_charge_nom:e.target.value})} style={inputSt}/></div>
