@@ -91,7 +91,7 @@ CONSIGNES:
 - Propose 2-3 actions concrètes à faire CETTE SEMAINE
 - Ton motivant et bienveillant, pas condescendant
 - En conclusion seulement, mentionne la perspective du renouvellement si pertinent
-- Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`,
+- Signe avec:\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra\n📧 jb.chiotti@bni.ma\nTel : +212 6 57 76 26 40`,
       renouvellement: `Génère un email de rappel de renouvellement pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
 
@@ -100,7 +100,7 @@ CONSIGNES:
 - Valorise ce que BNI lui a apporté (TYFCB: ${Number(s.tyfcb || 0).toLocaleString('fr-FR')} MAD de chiffre d'affaires généré)
 - Mentionne les KPIs à améliorer ce mois-ci pour arriver au renouvellement dans les meilleures conditions
 - Chaleureux et valorisant
-- Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`,
+- Signe avec:\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra\n📧 jb.chiotti@bni.ma\nTel : +212 6 57 76 26 40`,
       felicitations: `Génère un email de félicitations pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
 
@@ -109,7 +109,7 @@ CONSIGNES:
 - Mentionne le rang ${s.rank}/20 et le score ${s.total_score}/100
 - Encourage à maintenir l'effort ce mois de ${moisActuel} pour viser le Traffic Light vert (70+ pts)
 - Valorise l'impact positif sur le groupe
-- Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`
+- Signe avec:\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra\n📧 jb.chiotti@bni.ma\nTel : +212 6 57 76 26 40`
     }
     try {
       const { data, error } = await supabase.functions.invoke('generate-email', {
