@@ -230,47 +230,56 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:500 }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 50 ? '#D97706' : Number(s.total_score) >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:700, color: Number(s.total_score || 0) >= 70 ? '#059669' : Number(s.total_score || 0) >= 50 ? '#D97706' : Number(s.total_score || 0) >= 30 ? '#DC2626' : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     {(() => {
                       const att = s.attendance_rate ? Number(s.attendance_rate) : null
                       const attColor = att === null ? '#9CA3AF' : att >= 0.95 ? '#059669' : att >= 0.88 ? '#D97706' : '#DC2626'
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: attColor }}>{att !== null ? `${Math.round(att*100)}%` : '—'}</td>
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: attColor }}>{att !== null ? `${Math.round(att*100)}%` : '0%'}</td>
                     })()}
                     {(() => {
+                      const p = palmsData[s.membre_id]
                       const h = previsions[s.membre_id]
-                      // Données du mois en cours = uniquement hebdo
-                      const totalTat = h?.cumulTat || 0
-                      const totalRefs = h?.cumulRefs || 0
-                      const nbSem = h?.nbSemaines || 0
-                      // Taux par semaine du mois en cours
-                      const rateTat = nbSem > 0 ? totalTat / nbSem : 0
-                      const rateRefs = nbSem > 0 ? totalRefs / nbSem : 0
-                      // Couleur barème BNI : >=1/sem→vert, >=0.5→orange, <0.5→rouge
-                      const tatColor = nbSem === 0 ? '#9CA3AF' : rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
-                      const refsColor = nbSem === 0 ? '#9CA3AF' : rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
+                      // PALMS consolidés (avril) + hebdo
+                      const palmsTat = p ? Number(p.tat || 0) : 0
+                      const palmsRefs = p ? (p.rdi || 0) + (p.rde || 0) : 0
+                      const totalTat = palmsTat + (h?.cumulTat || 0)
+                      const totalRefs = palmsRefs + (h?.cumulRefs || 0)
+                      // Nb de jeudis couverts par les PALMS consolidés
+                      const palmsJeudis = p?.periode_debut && p?.periode_fin ? (() => {
+                        const today = new Date().toISOString().split('T')[0]
+                        let c=0; const d=new Date(p.periode_debut+'T12:00:00'), e=new Date(today+'T12:00:00')
+                        while(d<=e){if(d.getDay()===4)c++;d.setDate(d.getDate()+1)}; return c
+                      })() : 0
+                      const totalJeudis = palmsJeudis + (h?.nbSemaines || 0)
+                      const rateTat = totalJeudis > 0 ? totalTat / totalJeudis : 0
+                      const rateRefs = totalJeudis > 0 ? totalRefs / totalJeudis : 0
+                      const tatColor = rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
+                      const refsColor = rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{nbSem > 0 ? totalTat : '—'}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{nbSem > 0 ? totalRefs : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{totalTat}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{totalRefs}</td>
                       </>
                     })()}
                     {(() => {
                       const tyfcb = s.tyfcb ? Number(s.tyfcb) : null
                       const tyfcbColor = tyfcb === null ? '#9CA3AF' : tyfcb >= 30000 ? '#059669' : tyfcb >= 5000 ? '#D97706' : '#DC2626'
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tyfcbColor }}>{tyfcb !== null ? tyfcb.toLocaleString('fr-FR')+' MAD' : '—'}</td>
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tyfcbColor }}>{(tyfcb || 0).toLocaleString('fr-FR')+' MAD'}</td>
                     })()}
                     {hasPrevisions && (() => {
-                      const p = previsions[s.membre_id]
-                      // Objectif max/mois basé sur le nombre de jeudis
-                      // TàT : 1 par semaine = nbJeudis, Réf : 1.25 par semaine
+                      const pr = previsions[s.membre_id]
+                      const pm = palmsData[s.membre_id]
+                      // Total = PALMS consolidés + hebdo
+                      const totalTat = (pm ? Number(pm.tat || 0) : 0) + (pr?.cumulTat || 0)
+                      const totalRefs = (pm ? (pm.rdi || 0) + (pm.rde || 0) : 0) + (pr?.cumulRefs || 0)
                       const objTat = nbJeudis, objRefs = Math.ceil(nbJeudis * 1.25)
-                      const manqueTat = p ? Math.max(0, objTat - p.cumulTat) : objTat
-                      const manqueRefs = p ? Math.max(0, objRefs - p.cumulRefs) : objRefs
+                      const manqueTat = Math.max(0, objTat - totalTat)
+                      const manqueRefs = Math.max(0, objRefs - totalRefs)
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: p ? (p.score >= 70 ? '#059669' : p.score >= 50 ? '#D97706' : p.score >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{p ? p.score : '—'}</td>
-                        <td style={{ padding:'10px 14px' }}>{p ? <TLBadge tl={p.tl} /> : '—'}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: manqueTat === 0 ? '#059669' : manqueTat <= 2 ? '#D97706' : '#DC2626' }}>{p ? (manqueTat === 0 ? '✓' : manqueTat) : '—'}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: manqueRefs === 0 ? '#059669' : manqueRefs <= 2 ? '#D97706' : '#DC2626' }}>{p ? (manqueRefs === 0 ? '✓' : manqueRefs) : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: pr ? (pr.score >= 70 ? '#059669' : pr.score >= 50 ? '#D97706' : pr.score >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{pr ? pr.score : '0'}</td>
+                        <td style={{ padding:'10px 14px' }}>{pr ? <TLBadge tl={pr.tl} /> : <TLBadge tl="gris" />}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: manqueTat === 0 ? '#059669' : manqueTat <= 2 ? '#D97706' : '#DC2626' }}>{manqueTat === 0 ? '✓' : manqueTat}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: manqueRefs === 0 ? '#059669' : manqueRefs <= 2 ? '#D97706' : '#DC2626' }}>{manqueRefs === 0 ? '✓' : manqueRefs}</td>
                       </>
                     })()}
                     <td style={{ padding:'10px 14px', fontSize:12, color:isUrgent?'#DC2626':'inherit', fontWeight:isUrgent?700:400 }}>
