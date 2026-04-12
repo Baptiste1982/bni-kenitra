@@ -125,6 +125,7 @@ export default function Membres({ profil }) {
   useEffect(() => { load() }, [])
 
   const prevColor = (val, obj) => val >= obj ? '#059669' : val >= obj * 0.6 ? '#D97706' : '#DC2626'
+  const nameColor = (score) => Number(score||0) >= 70 ? '#065F46' : Number(score||0) >= 50 ? '#854D0E' : Number(score||0) >= 30 ? '#991B1B' : '#6B7280'
   const hasPrevisions = Object.keys(previsions).length > 0
 
   // Couleurs de fond style Traffic Light BNI
@@ -293,7 +294,7 @@ export default function Membres({ profil }) {
                     onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
                     onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:500 }}>{m.prenom} {m.nom}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:600, color:nameColor(s.total_score) }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
