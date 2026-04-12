@@ -1,6 +1,12 @@
 import React, { useState } from 'react'
 
 const COLORS = {
+  vert: '#059669', orange: '#854D0E', rouge: '#991B1B', gris: '#6B7280'
+}
+const BAR_BG = {
+  vert: '#A7F3D0', orange: '#FDE68A', rouge: '#FECACA', gris: '#E5E7EB'
+}
+const BAR_FG = {
   vert: '#059669', orange: '#D97706', rouge: '#DC2626', gris: '#9CA3AF'
 }
 
@@ -11,9 +17,11 @@ const BarChart = ({ data, height = 160 }) => {
     <div style={{ display:'flex', alignItems:'flex-end', gap:6, height, paddingTop:20 }}>
       {data.map((d, i) => (
         <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-          <div style={{ fontSize:9, color:'#9CA3AF', fontWeight:500 }}>{d.value}</div>
-          <div style={{ width:'100%', background: COLORS[d.tl] || '#9CA3AF', borderRadius:'3px 3px 0 0', height: `${(d.value / max) * (height - 30)}px`, minHeight:4, transition:'height 0.5s ease' }} />
-          <div style={{ fontSize:9, color:'#6B7280', textAlign:'center', lineHeight:1.2, maxWidth:40, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.label}</div>
+          <div style={{ fontSize:10, color: COLORS[d.tl] || '#9CA3AF', fontWeight:700 }}>{d.value}</div>
+          <div style={{ width:'100%', background: BAR_FG[d.tl] || '#9CA3AF', borderRadius:'3px 3px 0 0', height: `${(d.value / max) * (height - 30)}px`, minHeight:4, transition:'height 0.5s ease', border:`1px solid ${BAR_FG[d.tl] || '#9CA3AF'}`, boxSizing:'border-box' }}>
+            <div style={{ width:'100%', height:'100%', background: BAR_BG[d.tl] || '#E5E7EB', borderRadius:'2px 2px 0 0', opacity:0.4 }} />
+          </div>
+          <div style={{ fontSize:9, color: COLORS[d.tl] || '#6B7280', textAlign:'center', lineHeight:1.2, maxWidth:50, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:500 }}>{d.label}</div>
         </div>
       ))}
     </div>
