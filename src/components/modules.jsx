@@ -151,10 +151,10 @@ export function Reporting() {
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Reporting" sub="MK-01 Kénitra Atlantique · Oct 2025 → Mars 2026" />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-        <StatCard label="TYFCB total" value={kpis ? `${(kpis.tyfcb/1000).toFixed(0)}K MAD` : '…'} sub="Affaires entre membres" accent="#3B82F6" />
-        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total" accent="#8B5CF6" />
-        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe" accent="#059669" />
-        <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`} accent="#C41E3A" />
+        <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="Affaires entre membres" accent="#3B82F6" style={{ background: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2' }} />
+        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total" accent="#8B5CF6" style={{ background:'#FEF9C3' }} />
+        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe" accent="#059669" style={{ background: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2' }} />
+        <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`} accent="#C41E3A" style={{ background: kpis?.invitesConvertis > 3 ? '#D1FAE5' : kpis?.invitesConvertis > 0 ? '#FEF9C3' : '#FEE2E2' }} />
       </div>
       {!loading && <div style={{ marginBottom:16 }}><GroupeScoresChart scores={scores} /></div>}
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
