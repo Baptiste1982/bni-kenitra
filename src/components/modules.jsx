@@ -203,13 +203,13 @@ export function Reporting() {
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Reporting" sub={`MK-01 Kénitra Atlantique · ${moisLabel}`} />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-        <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="Affaires entre membres"
+        <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="6 mois glissants · entre membres"
           topBg={kpis?.tyfcb >= 300000 ? '#A7F3D0' : kpis?.tyfcb >= 50000 ? '#FDE68A' : '#FECACA'}
           valueColor={kpis?.tyfcb >= 300000 ? '#065F46' : kpis?.tyfcb >= 50000 ? '#854D0E' : '#991B1B'}
           style={{ background: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2' }} />
-        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total"
+        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="6 mois glissants · score total"
           topBg="#FDE68A" valueColor="#854D0E" style={{ background:'#FEF9C3' }} />
-        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe"
+        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="6 mois glissants · moyenne groupe"
           topBg={kpis?.pRate >= 95 ? '#A7F3D0' : kpis?.pRate >= 88 ? '#FDE68A' : '#FECACA'}
           valueColor={kpis?.pRate >= 95 ? '#065F46' : kpis?.pRate >= 88 ? '#854D0E' : '#991B1B'}
           style={{ background: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2' }} />
@@ -248,9 +248,9 @@ export function Reporting() {
             <SectionTitle>📊 Taux de participation — {moisLabel}</SectionTitle>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
               {[
-                { label:'Ont fait ≥ 1 TàT', value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
-                { label:'Ont fait ≥ 1 Reco.', value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
-                { label:'100% présence', value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
+                { label:`≥ 1 TàT ce mois`, value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
+                { label:`≥ 1 Reco. ce mois`, value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
+                { label:`100% présence ce mois`, value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
               ].map(p => {
                 const pct = p.total > 0 ? Math.round(p.value/p.total*100) : 0
                 const bg = pct >= 80 ? '#D1FAE5' : pct >= 50 ? '#FEF9C3' : '#FEE2E2'
