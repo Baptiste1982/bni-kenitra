@@ -5,7 +5,6 @@ import { PageHeader, SectionTitle, TableWrap, Card, Spinner } from './ui'
 const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre', 'Inv.': 'invites', 'TàT': 'tat', 'MPB': 'mpb', 'UEG': 'ueg' }
 
 // Objectifs mensuels (4 réunions/mois)
-const OBJECTIFS = { tat: 4, refs: 4, invites: 1, ueg: 4 }
 
 function normalize(s) { return (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') }
 
@@ -34,6 +33,18 @@ export default function SuiviHebdo() {
   const finMois = new Date(annee, mois, 0)
   const joursRestants = Math.max(1, Math.round((finMois - now) / (1000 * 60 * 60 * 24)))
   const semainesRestantes = Math.max(0, Math.round(joursRestants / 7))
+
+  // Nombre de jeudis dans le mois = nombre de réunions
+  const nbJeudis = (() => {
+    let count = 0
+    for (let d = 1; d <= finMois.getDate(); d++) {
+      if (new Date(annee, mois - 1, d).getDay() === 4) count++
+    }
+    return count
+  })()
+  // Objectifs mensuels basés sur le nombre de jeudis
+  const objTat = nbJeudis  // 1 TàT par réunion
+  const objRefs = Math.ceil(nbJeudis * 1.25)  // 1.25 réf par semaine
 
   const loadMonth = async () => {
     setLoading(true)
@@ -164,8 +175,8 @@ export default function SuiviHebdo() {
     }
   })
 
-  const prevision = (cumul, derniere) => cumul + (derniere * semainesRestantes)
-  const prevColor = (prev, objectif) => prev >= objectif ? '#059669' : prev >= objectif * 0.6 ? '#D97706' : '#DC2626'
+  const manque = (cumul, objectif) => Math.max(0, objectif - cumul)
+  const manqueColor = (val) => val === 0 ? '#059669' : val <= 2 ? '#D97706' : '#DC2626'
 
   const sorted = Object.values(membresMap).sort((a, b) => b.cumul.tat + b.cumul.refs - (a.cumul.tat + a.cumul.refs))
 
@@ -206,7 +217,7 @@ export default function SuiviHebdo() {
       </Card>
 
       {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
-      <SectionTitle>Suivi du mois — {moisLabel} ({dates.length} réunion{dates.length > 1 ? 's' : ''} saisie{dates.length > 1 ? 's' : ''}, ~{semainesRestantes} sem. restantes)</SectionTitle>
+      <SectionTitle>Suivi du mois — {moisLabel} ({dates.length}/{nbJeudis} réunions saisies, {nbJeudis - dates.length} restante{nbJeudis - dates.length > 1 ? 's' : ''})</SectionTitle>
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
@@ -231,10 +242,10 @@ export default function SuiviHebdo() {
                   <th style={{ ...th, background: '#F7F6F3', fontSize: 9 }}>mois</th>
                   <th style={{ ...th, fontSize: 9 }}>mois</th>
                   <th style={{ ...th, fontSize: 9, color: '#C41E3A' }}>sem.</th>
-                  <th style={{ ...th, fontSize: 9 }}>prévi.</th>
+                  <th style={{ ...th, fontSize: 9, color: '#DC2626' }}>manque</th>
                   <th style={{ ...th, fontSize: 9 }}>mois</th>
                   <th style={{ ...th, fontSize: 9, color: '#C41E3A' }}>sem.</th>
-                  <th style={{ ...th, fontSize: 9 }}>prévi.</th>
+                  <th style={{ ...th, fontSize: 9, color: '#DC2626' }}>manque</th>
                   <th style={{ ...th, fontSize: 9 }}>mois</th>
                   <th style={{ ...th, fontSize: 9 }}>mois</th>
                   <th style={{ ...th, fontSize: 9 }}>mois</th>
@@ -242,18 +253,18 @@ export default function SuiviHebdo() {
               </thead>
               <tbody>
                 {sorted.map((m, i) => {
-                  const prevTat = prevision(m.cumul.tat, m.derniere.tat)
-                  const prevRefs = prevision(m.cumul.refs, m.derniere.refs)
+                  const mTat = manque(m.cumul.tat, objTat)
+                  const mRefs = manque(m.cumul.refs, objRefs)
                   return (
                     <tr key={i} onMouseEnter={e => e.currentTarget.style.background = '#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <td style={tdName}>{m.prenom} {m.nom}</td>
                       <td style={{ ...td, background: '#F7F6F3', fontWeight: 600 }}>{m.cumul.presences}/{m.cumul.presences + m.cumul.absences}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{m.cumul.tat}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>
-                      <td style={{ ...td, fontWeight: 700, color: prevColor(prevTat, OBJECTIFS.tat) }}>{prevTat}</td>
+                      <td style={{ ...td, fontWeight: 700, color: manqueColor(mTat) }}>{mTat === 0 ? '✓' : mTat}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{m.cumul.refs}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>
-                      <td style={{ ...td, fontWeight: 700, color: prevColor(prevRefs, OBJECTIFS.refs) }}>{prevRefs}</td>
+                      <td style={{ ...td, fontWeight: 700, color: manqueColor(mRefs) }}>{mRefs === 0 ? '✓' : mRefs}</td>
                       <td style={td}>{m.cumul.invites}</td>
                       <td style={td}>{Number(m.cumul.mpb).toLocaleString('fr-FR')}</td>
                       <td style={td}>{m.cumul.ueg}</td>
