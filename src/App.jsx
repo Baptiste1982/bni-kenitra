@@ -36,6 +36,7 @@ export default function App() {
   const [active, setActive] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [alertCount, setAlertCount] = useState(4)
+  const [onlineUsers, setOnlineUsers] = useState([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -55,6 +56,23 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Update last_seen + load online users
+  useEffect(() => {
+    if (!user) return
+    // Mettre à jour last_seen
+    supabase.from('profils').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {})
+    // Charger les profils pour le statut en ligne
+    supabase.from('profils').select('id, prenom, nom, role, last_seen, actif').eq('actif', true)
+      .then(({ data }) => { if (data) setOnlineUsers(data) })
+    // Rafraîchir last_seen toutes les 2 minutes
+    const interval = setInterval(() => {
+      supabase.from('profils').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {})
+      supabase.from('profils').select('id, prenom, nom, role, last_seen, actif').eq('actif', true)
+        .then(({ data }) => { if (data) setOnlineUsers(data) })
+    }, 120000)
+    return () => clearInterval(interval)
+  }, [user])
 
   // Live alert count via Realtime
   useEffect(() => {
@@ -114,8 +132,19 @@ export default function App() {
         </div>
       </div>
 
+      {/* Alertes live — au-dessus du nav */}
+      <div style={{ padding:'8px 10px' }}>
+        <button onClick={() => navigate('dashboard')} style={{ width:'100%', display:'flex', alignItems:'center', gap:8, background: alertCount > 0 ? 'rgba(196,30,58,0.15)' : 'rgba(5,150,105,0.12)', borderRadius:7, padding:'8px 11px', border:'none', cursor:'pointer' }}>
+          <div style={{ width:7, height:7, borderRadius:'50%', background: alertCount > 0 ? '#C41E3A' : '#059669', flexShrink:0, animation: alertCount > 0 ? 'pulse 2s ease-in-out infinite' : 'none' }} />
+          <span style={{ color:'rgba(255,255,255,0.6)', fontSize:11 }}>
+            {alertCount > 0 ? `${alertCount} alerte${alertCount > 1 ? 's' : ''}` : 'Aucune alerte'}
+          </span>
+          {alertCount > 0 && <span style={{ marginLeft:'auto', background:'#C41E3A', color:'#fff', fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:10 }}>{alertCount}</span>}
+        </button>
+      </div>
+
       {/* Nav */}
-      <nav style={{ flex:1, padding:'12px 10px', display:'flex', flexDirection:'column', gap:2 }}>
+      <nav style={{ flex:1, padding:'4px 10px', display:'flex', flexDirection:'column', gap:2 }}>
         {NAV.map(n => (
           <button key={n.id} onClick={() => navigate(n.id)} style={{ display:'flex', alignItems:'center', gap:9, width:'100%', padding:'9px 10px', borderRadius:7, border:'none', cursor:'pointer', textAlign:'left', background: active===n.id ? 'rgba(196,30,58,0.22)' : 'transparent', color: active===n.id ? '#fff' : 'rgba(255,255,255,0.45)', fontSize:13, fontWeight: active===n.id ? 600 : 400, fontFamily:'DM Sans, sans-serif', transition:'all 0.15s' }}>
             <span style={{ fontSize:15, width:18, textAlign:'center', color: active===n.id?'#C41E3A':'rgba(255,255,255,0.3)' }}>{n.icon}</span>
@@ -125,21 +154,36 @@ export default function App() {
         ))}
       </nav>
 
-      {/* Alertes live */}
-      <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-        <button onClick={() => navigate('dashboard')} style={{ width:'100%', display:'flex', alignItems:'center', gap:8, background:'rgba(196,30,58,0.12)', borderRadius:7, padding:'9px 11px', border:'none', cursor:'pointer' }}>
-          <div style={{ width:7, height:7, borderRadius:'50%', background: alertCount > 0 ? '#C41E3A' : '#059669', flexShrink:0, animation: alertCount > 0 ? 'pulse 2s ease-in-out infinite' : 'none' }} />
-          <span style={{ color:'rgba(255,255,255,0.6)', fontSize:12 }}>
-            {alertCount > 0 ? `${alertCount} alerte${alertCount > 1 ? 's' : ''} active${alertCount > 1 ? 's' : ''}` : 'Aucune alerte'}
-          </span>
-          {alertCount > 0 && <span style={{ marginLeft:'auto', background:'#C41E3A', color:'#fff', fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:10 }}>{alertCount}</span>}
-        </button>
+      {/* Utilisateurs en ligne */}
+      <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Équipe</div>
+        {onlineUsers.map(u => {
+          const now = new Date()
+          const lastSeen = u.last_seen ? new Date(u.last_seen) : null
+          const diffMin = lastSeen ? (now - lastSeen) / 60000 : 999
+          const statusColor = diffMin < 5 ? '#059669' : diffMin < 30 ? '#D97706' : '#6B7280'
+          const statusLabel = diffMin < 5 ? 'En ligne' : diffMin < 30 ? 'Absent' : 'Hors ligne'
+          return (
+            <div key={u.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              <div style={{ position:'relative' }}>
+                <div style={{ width:24, height:24, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:600, color:'#fff' }}>{u.prenom?.[0]}{u.nom?.[0]}</div>
+                <div style={{ position:'absolute', bottom:-1, right:-1, width:8, height:8, borderRadius:'50%', background:statusColor, border:'2px solid #1C1C2E' }} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ color:'#fff', fontSize:10, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.prenom} {u.nom}</div>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* User */}
-      <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-          <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:'#fff', flexShrink:0 }}>{(profil?.prenom?.[0] || '?')}{(profil?.nom?.[0] || '')}</div>
+      {/* User actuel */}
+      <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+          <div style={{ position:'relative' }}>
+            <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:'#fff', flexShrink:0 }}>{(profil?.prenom?.[0] || '?')}{(profil?.nom?.[0] || '')}</div>
+            <div style={{ position:'absolute', bottom:-1, right:-1, width:9, height:9, borderRadius:'50%', background:'#059669', border:'2px solid #1C1C2E' }} />
+          </div>
           <div>
             <div style={{ color:'#fff', fontSize:11, fontWeight:500 }}>{profil ? `${profil.prenom} ${profil.nom}` : '...'}</div>
             <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10 }}>{profil?.titre || profil?.role || ''}</div>
