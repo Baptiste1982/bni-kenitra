@@ -310,17 +310,25 @@ Directeur Exécutif BNI Kénitra`}
                         </span>
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        {confirmDelete === u.id ? (
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <span style={{ fontSize: 11, color: '#DC2626' }}>Confirmer ?</span>
-                            <button onClick={() => handleDelete(u.id)} style={{ padding: '4px 10px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Oui</button>
-                            <button onClick={() => setConfirmDelete(null)} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Non</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setConfirmDelete(u.id)} style={{ padding: '4px 10px', background: 'transparent', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                            Supprimer
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button onClick={() => {
+                            setCreatedCredentials({ prenom: u.prenom, nom: u.nom, email: u.email, password: '(mot de passe défini à la création)', role: roleLabel(u.role) })
+                            setCopied(false)
+                          }} style={{ padding: '4px 10px', background: 'transparent', color: '#1C1C2E', border: '1px solid #E8E6E1', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+                            Identifiants
                           </button>
-                        )}
+                          {confirmDelete === u.id ? (
+                            <>
+                              <span style={{ fontSize: 11, color: '#DC2626', alignSelf: 'center' }}>Confirmer ?</span>
+                              <button onClick={() => handleDelete(u.id)} style={{ padding: '4px 10px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Oui</button>
+                              <button onClick={() => setConfirmDelete(null)} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Non</button>
+                            </>
+                          ) : (
+                            <button onClick={() => setConfirmDelete(u.id)} style={{ padding: '4px 10px', background: 'transparent', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {/* Ligne d'édition des accès */}
