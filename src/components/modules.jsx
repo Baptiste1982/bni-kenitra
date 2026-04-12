@@ -110,9 +110,9 @@ export function Invites() {
                 const inputSt = { padding:'4px 8px', border:'1px solid #E8E6E1', borderRadius:6, fontSize:11, fontFamily:'DM Sans, sans-serif', width:'100%', boxSizing:'border-box' }
                 return (
                   <React.Fragment key={i}>
-                  <tr style={{ borderBottom: isEdit ? 'none' : '1px solid rgba(0,0,0,0.05)', background:statStyle.bg, cursor:'pointer' }}
-                    onClick={() => { if (!isEdit) { setEditId(inv.id); setEditData({...inv}) } }}
-                    onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                  <tr style={{ borderBottom: isEdit ? 'none' : '1px solid rgba(0,0,0,0.05)', background: isEdit ? '#FFFBEB' : statStyle.bg, cursor:'pointer', boxShadow: isEdit ? 'inset 0 0 0 2px #C9A84C' : 'none' }}
+                    onClick={() => { if (isEdit) { setEditId(null) } else { setEditId(inv.id); setEditData({...inv}) } }}
+                    onMouseEnter={e=>{ if(!isEdit) e.currentTarget.style.opacity='0.85'}} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.prenom}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.nom}</td>
@@ -122,7 +122,7 @@ export function Invites() {
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.membre_ca_charge_nom || '—'}</td>
                   </tr>
                   {isEdit && (
-                    <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#fff' }}>
+                    <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#FFFBEB', boxShadow:'inset 0 0 0 2px #C9A84C' }}>
                       <td colSpan={7} style={{ padding:'12px 14px' }}>
                         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:10 }}>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Prénom</label><input value={editData.prenom||''} onChange={e=>setEditData({...editData,prenom:e.target.value})} style={inputSt}/></div>
