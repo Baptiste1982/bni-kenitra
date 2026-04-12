@@ -160,32 +160,42 @@ export function Reporting() {
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>Top TYFCB générés</SectionTitle></div>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>💰 Top TYFCB générés</SectionTitle></div>
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead><tr>{['Membre','TYFCB (MAD)','Traffic Light'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Membre','TYFCB (MAD)','TL'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
               <tbody>
-                {scores.filter(s=>Number(s.tyfcb)>0).sort((a,b)=>Number(b.tyfcb)-Number(a.tyfcb)).slice(0,8).map((s,i)=>(
-                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}>
-                    <td style={{ padding:'10px 14px', fontWeight:500 }}>{s.membres?.prenom} {s.membres?.nom}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:700 }}>{Number(s.tyfcb).toLocaleString('fr-FR')}</td>
-                    <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, padding:'3px 8px', borderRadius:12, background:s.traffic_light==='vert'?'#D1FAE5':s.traffic_light==='orange'?'#FEF3C7':s.traffic_light==='rouge'?'#FEE2E2':'#F3F4F6', color:s.traffic_light==='vert'?'#065F46':s.traffic_light==='orange'?'#92400E':s.traffic_light==='rouge'?'#991B1B':'#4B5563' }}>{s.traffic_light || '—'}</span></td>
-                  </tr>
-                ))}
+                {scores.filter(s=>Number(s.tyfcb)>0).sort((a,b)=>Number(b.tyfcb)-Number(a.tyfcb)).slice(0,8).map((s,i)=>{
+                  const tyb = Number(s.tyfcb) >= 300000 ? {bg:'#D1FAE5',c:'#065F46'} : Number(s.tyfcb) >= 50000 ? {bg:'#FEF9C3',c:'#854D0E'} : Number(s.tyfcb) >= 20000 ? {bg:'#FFEDD5',c:'#9A3412'} : {bg:'#FEE2E2',c:'#991B1B'}
+                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FFEDD5',c:'#9A3412'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
+                  return (
+                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }} onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <td style={{ padding:'8px 12px', fontWeight:500, fontSize:13 }}>{s.membres?.prenom} {s.membres?.nom}</td>
+                      <td style={{ padding:'8px 12px', fontWeight:700, fontSize:13, background:tyb.bg, color:tyb.c, textAlign:'center' }}>{Number(s.tyfcb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                      <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><span style={{ fontSize:11, fontWeight:500, color:tb.c }}>{s.traffic_light||'—'}</span></td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </TableWrap>
           <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>Classement complet</SectionTitle></div>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🏆 Classement complet</SectionTitle></div>
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead><tr>{['Rang','Membre','Score'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
+              <thead><tr>{['#','Membre','Score','TL'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
               <tbody>
-                {scores.filter(s=>s.rank).sort((a,b)=>a.rank-b.rank).map((s,i)=>(
-                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}>
-                    <td style={{ padding:'8px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank}</td>
-                    <td style={{ padding:'8px 14px', fontSize:13 }}>{s.membres?.prenom} {s.membres?.nom}</td>
-                    <td style={{ padding:'8px 14px', fontWeight:700 }}>{Number(s.total_score).toFixed(0)}</td>
-                  </tr>
-                ))}
+                {scores.filter(s=>s.rank).sort((a,b)=>a.rank-b.rank).map((s,i)=>{
+                  const sc = Number(s.total_score||0)
+                  const scBg = sc >= 70 ? {bg:'#D1FAE5',c:'#065F46'} : sc >= 50 ? {bg:'#FEF9C3',c:'#854D0E'} : sc >= 30 ? {bg:'#FEE2E2',c:'#991B1B'} : {bg:'#F3F4F6',c:'#4B5563'}
+                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FFEDD5',c:'#9A3412'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
+                  return (
+                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }} onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{s.rank}</td>
+                      <td style={{ padding:'8px 12px', fontWeight:500, fontSize:13 }}>{s.membres?.prenom} {s.membres?.nom}</td>
+                      <td style={{ padding:'8px 12px', fontWeight:700, fontSize:14, background:scBg.bg, color:scBg.c, textAlign:'center', width:60 }}>{sc}</td>
+                      <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><span style={{ fontSize:11, fontWeight:500, color:tb.c }}>{s.traffic_light||'—'}</span></td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </TableWrap>
