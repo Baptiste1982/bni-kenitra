@@ -137,9 +137,9 @@ export default function Dashboard({ onNavigate, profil }) {
               <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>✅ Aucune alerte active</div>
             ) : (kpis?.alertes || []).map((a, i) => (
               <div key={i} onClick={() => onNavigate(a.type_alerte === 'renouvellement' ? 'membres' : 'invites')}
-                style={{ display:'flex', alignItems:'flex-start', gap:10, padding:12, borderRadius:8, marginBottom:8, background:a.niveau==='danger'?'#FEF2F2':'#FFFBEB', border:`1px solid ${a.niveau==='danger'?'#FEE2E2':'#FEF3C7'}`, cursor:'pointer' }}
+                style={{ display:'flex', alignItems:'flex-start', gap:10, padding:12, borderRadius:8, marginBottom:8, background: a.niveau==='danger'?'#FEF2F2': a.niveau==='relance'?'#DBEAFE':'#FFFBEB', border:`1px solid ${a.niveau==='danger'?'#FEE2E2': a.niveau==='relance'?'#BFDBFE':'#FEF3C7'}`, cursor:'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.opacity='0.8'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background:a.niveau==='danger'?'#DC2626':'#D97706', flexShrink:0, marginTop:3 }} />
+                <div style={{ width:10, height:10, borderRadius:'50%', background: a.niveau==='danger'?'#DC2626': a.niveau==='relance'?'#3B82F6':'#D97706', flexShrink:0, marginTop:3 }} />
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:12, fontWeight:600 }}>{a.titre}</div>
                   <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{a.message}</div>

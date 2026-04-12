@@ -153,16 +153,24 @@ export async function fetchDashboardKPIs() {
   const groupeId = await getGroupeId('MK-01')
   if (!groupeId) return null
 
-  const [membresRes, alertesRes, invitesRes, scoresRes, palmsRes] = await Promise.all([
+  const troisMoisAvant = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0]
+  const [membresRes, alertesRes, invitesRes, scoresRes, palmsRes, recontacterRes] = await Promise.all([
     supabase.from('membres').select('id, statut').eq('groupe_id', groupeId).eq('statut', 'actif'),
     supabase.from('alertes').select('id, niveau, type_alerte, titre, message, date_echeance').eq('lue', false),
     supabase.from('invites').select('id, statut').eq('groupe_id', groupeId),
     supabase.from('scores_bni').select('total_score, traffic_light, tyfcb, rank, attendance_rate, attendance_score, rate_121, score_121, referrals_given_rate, referrals_given_score, visitors, visitor_score, sponsors, sponsor_score, ceu_rate, ceu_score, tyfcb_score, membres(prenom, nom, societe, secteur_activite, date_renouvellement)').eq('groupe_id', groupeId),
     supabase.from('palms_imports').select('presences, absences').eq('groupe_id', groupeId),
+    supabase.from('invites').select('id, prenom, nom, statut, date_visite, profession, societe').eq('groupe_id', groupeId).eq('statut', 'A recontacter').gte('date_visite', troisMoisAvant).order('date_visite'),
   ])
 
   const membres = membresRes.data || []
-  const alertes = alertesRes.data || []
+  const recontacter = (recontacterRes.data || []).map(r => ({
+    id: r.id, niveau: 'relance', type_alerte: 'recontact',
+    titre: `Recontacter ${r.prenom} ${r.nom}`,
+    message: `${r.profession || r.societe || 'Invité'} — visite le ${r.date_visite ? new Date(r.date_visite+'T12:00:00').toLocaleDateString('fr-FR') : '?'}. À relancer.`,
+    date_echeance: null,
+  }))
+  const alertes = [...(alertesRes.data || []), ...recontacter]
   const invites = invitesRes.data || []
   const scores  = scoresRes.data  || []
   const palms   = palmsRes.data   || []
@@ -191,6 +199,7 @@ export async function fetchDashboardKPIs() {
   return {
     membresActifs: membres.length,
     alertesCount: alertes.length,
+    recontacterCount: recontacter.length,
     alertes,
     tyfcb,
     pRate,
