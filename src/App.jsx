@@ -20,13 +20,9 @@ const ALL_MODULES = [
   { id:'admin',     label:'Admin',             icon:'⚙' },
 ]
 
-// Logo BNI Kénitra SVG inline
+// Logo BNI Kénitra
 const BNILogo = () => (
-  <div style={{ width:34, height:34, borderRadius:'50%', background:'#C41E3A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 2px 8px rgba(196,30,58,0.4)' }}>
-    <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
-      <text x="0" y="12" fontFamily="serif" fontSize="13" fontWeight="900" fill="white" letterSpacing="-0.5">BNi</text>
-    </svg>
-  </div>
+  <img src="/logo-bni-kenitra.png" alt="BNI Kénitra" style={{ width:38, height:38, borderRadius:'50%', flexShrink:0, objectFit:'cover', boxShadow:'0 2px 8px rgba(196,30,58,0.4)' }} />
 )
 
 export default function App() {
