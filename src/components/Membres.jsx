@@ -308,15 +308,9 @@ export default function Membres({ profil }) {
                       const palmsRefs = p ? (p.rdi || 0) + (p.rde || 0) : 0
                       const totalTat = palmsTat + (h?.cumulTat || 0)
                       const totalRefs = palmsRefs + (h?.cumulRefs || 0)
-                      // Nb de jeudis couverts par les PALMS consolidés
-                      const palmsJeudis = p?.periode_debut && p?.periode_fin ? (() => {
-                        const today = new Date().toISOString().split('T')[0]
-                        let c=0; const d=new Date(p.periode_debut+'T12:00:00'), e=new Date(today+'T12:00:00')
-                        while(d<=e){if(d.getDay()===4)c++;d.setDate(d.getDate()+1)}; return c
-                      })() : 0
-                      const totalJeudis = palmsJeudis + (h?.nbSemaines || 0)
-                      const rateTat = totalJeudis > 0 ? totalTat / totalJeudis : 0
-                      const rateRefs = totalJeudis > 0 ? totalRefs / totalJeudis : 0
+                      // Taux = total du mois / nombre total de jeudis du mois (pas juste les écoulés)
+                      const rateTat = nbJeudis > 0 ? totalTat / nbJeudis : 0
+                      const rateRefs = nbJeudis > 0 ? totalRefs / nbJeudis : 0
                       const tatBgC = rateBg(rateTat)
                       const refsBgC = rateBg(rateRefs)
                       // Recalculer les scores sur le taux du mois (barème BNI)
