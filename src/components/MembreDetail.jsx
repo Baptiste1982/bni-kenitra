@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { TLBadge } from './ui'
 import { MembreRadarChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
@@ -9,6 +9,9 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailContent, setEmailContent] = useState('')
   const [emailType, setEmailType] = useState('relance')
+  const [expandedKpi, setExpandedKpi] = useState(null)
+  const [hebdoData, setHebdoData] = useState([])
+  const [hebdoLoaded, setHebdoLoaded] = useState(false)
 
   const m = membre
   const s = score || {}
@@ -25,6 +28,15 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
     { label:'TYFCB', rate: s.tyfcb, score: s.tyfcb_score, max:5, format: v => `${Number(v).toLocaleString('fr-FR')} MAD` },
     { label:'CEU', rate: s.ceu_rate, score: s.ceu_score, max:10, format: v => `${Number(v).toFixed(2)}/sem` },
   ]
+
+  // Charger les données hebdo du membre pour les détails
+  useEffect(() => {
+    if (!score?.membre_id) return
+    supabase.from('palms_hebdo').select('*').eq('membre_id', score.membre_id).order('date_reunion')
+      .then(({ data }) => { setHebdoData(data || []); setHebdoLoaded(true) })
+  }, [score?.membre_id])
+
+  const formatDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
 
   const generateEmail = async () => {
     setEmailLoading(true)
@@ -197,23 +209,115 @@ CONSIGNES:
               {criteria.map((c, i) => {
                 const pct = Math.min(100, (Number(c.score)||0) / c.max * 100)
                 const cardBg = pct >= 70 ? { bg:'#D1FAE5', border:'#A7F3D0', color:'#065F46', bar:'#059669' } : pct >= 40 ? { bg:'#FEF9C3', border:'#FDE68A', color:'#854D0E', bar:'#D97706' } : pct > 0 ? { bg:'#FEE2E2', border:'#FECACA', color:'#991B1B', bar:'#DC2626' } : { bg:'#F3F4F6', border:'#E5E7EB', color:'#4B5563', bar:'#9CA3AF' }
+                const isExpanded = expandedKpi === c.label
+
+                // Détails par réunion pour ce KPI
+                const kpiField = { 'Présence':'palms', '1-2-1s':'tat', 'Recommandations':'refs', 'Visiteurs':'invites', 'Parrainages':null, 'TYFCB':'mpb', 'CEU':'ueg' }[c.label]
+
                 return (
-                  <div key={i} style={{ background:cardBg.bg, borderRadius:10, padding:'12px 14px', border:`1px solid ${cardBg.border}`, marginBottom:8, cursor:'pointer', transition:'transform 0.1s' }}
-                    onMouseEnter={e => e.currentTarget.style.transform='scale(1.01)'}
-                    onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:cardBg.color }}>{c.label}</div>
-                        <div style={{ fontSize:11, color:cardBg.color, opacity:0.7, marginTop:1 }}>{c.rate !== undefined && c.rate !== null ? c.format(c.rate) : '—'}</div>
+                  <div key={i} style={{ marginBottom:8 }}>
+                    <div style={{ background:cardBg.bg, borderRadius: isExpanded ? '10px 10px 0 0' : 10, padding:'12px 14px', border:`1px solid ${cardBg.border}`, borderBottom: isExpanded ? 'none' : `1px solid ${cardBg.border}`, cursor:'pointer', transition:'transform 0.1s' }}
+                      onClick={() => setExpandedKpi(isExpanded ? null : c.label)}
+                      onMouseEnter={e => e.currentTarget.style.transform='scale(1.01)'}
+                      onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:600, color:cardBg.color }}>{c.label} <span style={{ fontSize:10, opacity:0.5 }}>{isExpanded ? '▲' : '▼'}</span></div>
+                          <div style={{ fontSize:11, color:cardBg.color, opacity:0.7, marginTop:1 }}>{c.rate !== undefined && c.rate !== null ? c.format(c.rate) : '—'}</div>
+                        </div>
+                        <div style={{ textAlign:'right' }}>
+                          <div style={{ fontSize:18, fontWeight:700, color:cardBg.color }}>{Number(c.score)||0}</div>
+                          <div style={{ fontSize:10, color:cardBg.color, opacity:0.6 }}>/ {c.max} pts</div>
+                        </div>
                       </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:18, fontWeight:700, color:cardBg.color }}>{Number(c.score)||0}</div>
-                        <div style={{ fontSize:10, color:cardBg.color, opacity:0.6 }}>/ {c.max} pts</div>
+                      <div style={{ height:6, background:'rgba(255,255,255,0.5)', borderRadius:3 }}>
+                        <div style={{ height:6, width:`${pct}%`, background:cardBg.bar, borderRadius:3, transition:'width 0.5s ease' }} />
                       </div>
                     </div>
-                    <div style={{ height:6, background:'rgba(255,255,255,0.5)', borderRadius:3 }}>
-                      <div style={{ height:6, width:`${pct}%`, background:cardBg.bar, borderRadius:3, transition:'width 0.5s ease' }} />
-                    </div>
+
+                    {/* Détails dépliés */}
+                    {isExpanded && hebdoLoaded && (
+                      <div style={{ background:'#fff', borderRadius:'0 0 10px 10px', border:`1px solid ${cardBg.border}`, borderTop:'none', padding:'10px 14px' }}>
+                        {hebdoData.length === 0 ? (
+                          <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:8 }}>Aucune donnée hebdomadaire saisie</div>
+                        ) : c.label === 'Présence' ? (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Détail par réunion</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              {hebdoData.map((h, j) => (
+                                <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:500, background: h.palms === 'P' ? '#D1FAE5' : '#FEE2E2', color: h.palms === 'P' ? '#065F46' : '#991B1B' }}>
+                                  {formatDate(h.date_reunion)} — {h.palms === 'P' ? 'Présent' : 'Absent'}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : c.label === '1-2-1s' ? (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>TàT par réunion</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              {hebdoData.map((h, j) => (
+                                <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: h.tat > 0 ? '#D1FAE5' : '#F3F4F6', color: h.tat > 0 ? '#065F46' : '#9CA3AF' }}>
+                                  {formatDate(h.date_reunion)} — {h.tat || 0} TàT
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ marginTop:8, fontSize:11, color:'#6B7280' }}>Total : {hebdoData.reduce((s,h) => s+(h.tat||0), 0)} TàT sur {hebdoData.length} réunion(s)</div>
+                          </div>
+                        ) : c.label === 'Recommandations' ? (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Recommandations par réunion</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              {hebdoData.map((h, j) => {
+                                const refs = (h.rdi||0) + (h.rde||0)
+                                return (
+                                  <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: refs > 0 ? '#D1FAE5' : '#F3F4F6', color: refs > 0 ? '#065F46' : '#9CA3AF' }}>
+                                    {formatDate(h.date_reunion)} — {refs} ({h.rdi||0} int. + {h.rde||0} ext.)
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            <div style={{ marginTop:8, fontSize:11, color:'#6B7280' }}>Total : {hebdoData.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)} reco. ({hebdoData.reduce((s,h) => s+(h.rdi||0), 0)} int. + {hebdoData.reduce((s,h) => s+(h.rde||0), 0)} ext.)</div>
+                          </div>
+                        ) : c.label === 'TYFCB' ? (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>TYFCB par réunion</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              {hebdoData.filter(h => Number(h.mpb) > 0).map((h, j) => (
+                                <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background:'#D1FAE5', color:'#065F46' }}>
+                                  {formatDate(h.date_reunion)} — {Number(h.mpb).toLocaleString('de-DE')} MAD
+                                </div>
+                              ))}
+                              {hebdoData.filter(h => Number(h.mpb) > 0).length === 0 && <div style={{ fontSize:11, color:'#9CA3AF' }}>Aucun TYFCB déclaré ce mois</div>}
+                            </div>
+                            <div style={{ marginTop:8, fontSize:11, color:'#6B7280' }}>Total mois : {hebdoData.reduce((s,h) => s+Number(h.mpb||0), 0).toLocaleString('de-DE')} MAD</div>
+                          </div>
+                        ) : c.label === 'Visiteurs' ? (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Visiteurs par réunion</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              {hebdoData.map((h, j) => (
+                                <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: (h.invites||0) > 0 ? '#D1FAE5' : '#F3F4F6', color: (h.invites||0) > 0 ? '#065F46' : '#9CA3AF' }}>
+                                  {formatDate(h.date_reunion)} — {h.invites || 0} visiteur(s)
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : c.label === 'CEU' ? (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>CEU par réunion</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                              {hebdoData.map((h, j) => (
+                                <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: (h.ueg||0) > 0 ? '#D1FAE5' : '#F3F4F6', color: (h.ueg||0) > 0 ? '#065F46' : '#9CA3AF' }}>
+                                  {formatDate(h.date_reunion)} — {h.ueg || 0} CEU
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:8 }}>Données sur 6 mois glissants (consolidé)</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
