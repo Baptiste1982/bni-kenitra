@@ -20,6 +20,15 @@ export default function Membres({ profil }) {
   const finMois = new Date(annee, mois, 0)
   const semainesRestantes = Math.max(0, Math.round((finMois - now) / (1000 * 60 * 60 * 24 * 7)))
 
+  // Nombre de jeudis dans le mois (= nombre de réunions)
+  const nbJeudis = (() => {
+    let count = 0
+    for (let d = 1; d <= finMois.getDate(); d++) {
+      if (new Date(annee, mois - 1, d).getDay() === 4) count++
+    }
+    return count
+  })()
+
   const load = () => {
     setLoading(true)
     Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee), fetchPalmsMK01()])
@@ -194,8 +203,9 @@ export default function Membres({ profil }) {
                     })()}
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
-                      // Objectif max/mois : TàT >=1/sem = 4/mois, Réf >=1.25/sem = 5/mois
-                      const objTat = 4, objRefs = 5
+                      // Objectif max/mois basé sur le nombre de jeudis
+                      // TàT : 1 par semaine = nbJeudis, Réf : 1.25 par semaine
+                      const objTat = nbJeudis, objRefs = Math.ceil(nbJeudis * 1.25)
                       const manqueTat = p ? Math.max(0, objTat - p.cumulTat) : objTat
                       const manqueRefs = p ? Math.max(0, objRefs - p.cumulRefs) : objRefs
                       return <>
