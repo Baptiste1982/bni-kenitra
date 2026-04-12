@@ -289,10 +289,11 @@ export default function Membres({ profil }) {
                 const m = s.membres || {}
                 const renouv = m.date_renouvellement ? new Date(m.date_renouvellement) : null
                 const isUrgent = renouv && (renouv - new Date()) < 90 * 24 * 60 * 60 * 1000
+                const rowBg = { vert:'rgba(5,150,105,0.06)', orange:'rgba(217,119,6,0.06)', rouge:'rgba(220,38,38,0.06)', gris:'rgba(156,163,175,0.04)' }[s.traffic_light] || 'transparent'
                 return (
-                  <tr key={i} onClick={() => setSelected(s)} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
-                    onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                  <tr key={i} onClick={() => setSelected(s)} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer', background:rowBg }}
+                    onMouseEnter={e => e.currentTarget.style.background='rgba(0,0,0,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background=rowBg}>
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:nameColor(s.total_score) }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
