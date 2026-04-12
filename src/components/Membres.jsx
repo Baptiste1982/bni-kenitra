@@ -127,7 +127,7 @@ export default function Membres({ profil }) {
       ) : (
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre','Société','Score','Traffic Light', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Prévi. TàT','Prévi. Réf.'] : []),'Présence','TYFCB','Renouvellement',''].map(h => (
+            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Prévi. TàT','Prévi. Réf.'] : []),'Renouvellement',''].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
@@ -144,17 +144,17 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 40 ? '#D97706' : Number(s.total_score) >= 20 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: p ? (p.score >= 70 ? '#059669' : p.score >= 40 ? '#D97706' : '#DC2626') : '#9CA3AF' }}>{p ? p.score : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: p ? (p.score >= 70 ? '#059669' : p.score >= 40 ? '#D97706' : p.score >= 20 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{p ? p.score : '—'}</td>
                         <td style={{ padding:'10px 14px' }}>{p ? <TLBadge tl={p.tl} /> : '—'}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: p ? prevColor(p.tat, 4) : '#9CA3AF' }}>{p ? p.tat : '—'}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: p ? prevColor(p.refs, 4) : '#9CA3AF' }}>{p ? p.refs : '—'}</td>
                       </>
                     })()}
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:isUrgent?'#DC2626':'inherit', fontWeight:isUrgent?700:400 }}>
                       {renouv ? renouv.toLocaleDateString('fr-FR') : '—'} {isUrgent ? '⚠️' : ''}
                     </td>
