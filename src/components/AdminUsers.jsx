@@ -216,6 +216,33 @@ export default function AdminUsers() {
         <Card style={{ marginBottom:24 }}>
           <SectionTitle>📋 Journal de connexion</SectionTitle>
           {(() => {
+            // Calculer les durées de session (login → logout du même user)
+            const sessions = {}
+            // Parcourir les logs du plus ancien au plus récent pour matcher login/logout
+            const sorted = [...logs].reverse()
+            sorted.forEach(l => {
+              if (l.action === 'login') {
+                if (!sessions[l.user_id]) sessions[l.user_id] = []
+                sessions[l.user_id].push({ login: new Date(l.connected_at), logout: null })
+              } else if (l.action === 'logout' && sessions[l.user_id]?.length) {
+                const last = sessions[l.user_id].find(s => !s.logout)
+                if (last) last.logout = new Date(l.connected_at)
+              }
+            })
+            // Map pour retrouver la durée d'un login
+            const getDuration = (userId, connectedAt) => {
+              const userSessions = sessions[userId] || []
+              const session = userSessions.find(s => s.login.getTime() === new Date(connectedAt).getTime())
+              if (!session) return null
+              const end = session.logout || new Date()
+              const diffMin = Math.round((end - session.login) / 60000)
+              if (diffMin < 1) return '< 1 min'
+              if (diffMin < 60) return `${diffMin} min`
+              const h = Math.floor(diffMin / 60)
+              const m = diffMin % 60
+              return `${h}h${m > 0 ? m.toString().padStart(2,'0') : ''}`
+            }
+
             // Grouper par jour
             const byDay = {}
             logs.forEach(l => {
@@ -225,31 +252,37 @@ export default function AdminUsers() {
             })
             return Object.entries(byDay).length === 0 ? (
               <div style={{ padding:20, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucune connexion enregistrée</div>
-            ) : Object.entries(byDay).map(([day, entries]) => (
-              <div key={day} style={{ marginBottom:16 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{day}</div>
-                  <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{entries.length} événement{entries.length > 1 ? 's' : ''}</div>
+            ) : Object.entries(byDay).map(([day, entries]) => {
+              const nbLogins = entries.filter(e => e.action === 'login').length
+              return (
+                <div key={day} style={{ marginBottom:16 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{day}</div>
+                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#D1FAE5', color:'#065F46' }}>{nbLogins} connexion{nbLogins > 1 ? 's' : ''}</div>
+                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{entries.length} événement{entries.length > 1 ? 's' : ''}</div>
+                  </div>
+                  <div style={{ borderLeft:'2px solid #E8E6E1', marginLeft:6, paddingLeft:16 }}>
+                    {entries.map((l, i) => {
+                      const time = new Date(l.connected_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+                      const isLogin = l.action === 'login'
+                      const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[l.role] || '?'
+                      const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[l.role] || '#6B7280'
+                      const duration = isLogin ? getDuration(l.user_id, l.connected_at) : null
+                      return (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, position:'relative' }}>
+                          <div style={{ position:'absolute', left:-22, width:10, height:10, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
+                          <div style={{ fontSize:11, fontWeight:600, color:'#9CA3AF', width:60, flexShrink:0 }}>{time}</div>
+                          <div style={{ width:22, height:22, borderRadius:'50%', background:roleCol+'33', border:`1.5px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
+                          <div style={{ fontSize:12, fontWeight:500, color:'#1C1C2E', flex:1 }}>{l.prenom} {l.nom}</div>
+                          <span style={{ fontSize:10, fontWeight:600, padding:'2px 6px', borderRadius:6, background: isLogin ? '#D1FAE5' : '#FEE2E2', color: isLogin ? '#065F46' : '#991B1B' }}>{isLogin ? 'Connexion' : 'Déconnexion'}</span>
+                          {duration && <span style={{ fontSize:10, fontWeight:500, padding:'2px 8px', borderRadius:6, background:'#EDE9FE', color:'#5B21B6' }}>⏱ {duration}</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-                <div style={{ borderLeft:'2px solid #E8E6E1', marginLeft:6, paddingLeft:16 }}>
-                  {entries.map((l, i) => {
-                    const time = new Date(l.connected_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
-                    const isLogin = l.action === 'login'
-                    const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[l.role] || '?'
-                    const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[l.role] || '#6B7280'
-                    return (
-                      <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, position:'relative' }}>
-                        <div style={{ position:'absolute', left:-22, width:10, height:10, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
-                        <div style={{ fontSize:11, fontWeight:600, color:'#9CA3AF', width:60, flexShrink:0 }}>{time}</div>
-                        <div style={{ width:22, height:22, borderRadius:'50%', background:roleCol+'33', border:`1.5px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
-                        <div style={{ fontSize:12, fontWeight:500, color:'#1C1C2E' }}>{l.prenom} {l.nom}</div>
-                        <span style={{ fontSize:10, fontWeight:600, padding:'2px 6px', borderRadius:6, background: isLogin ? '#D1FAE5' : '#FEE2E2', color: isLogin ? '#065F46' : '#991B1B' }}>{isLogin ? 'Connexion' : 'Déconnexion'}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))
+              )
+            })
           })()}
         </Card>
       )}
