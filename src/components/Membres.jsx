@@ -118,6 +118,19 @@ export default function Membres({ profil }) {
   const prevColor = (val, obj) => val >= obj ? '#059669' : val >= obj * 0.6 ? '#D97706' : '#DC2626'
   const hasPrevisions = Object.keys(previsions).length > 0
 
+  // Couleurs de fond style Traffic Light BNI
+  const tlBg = (level) => ({
+    vert: { bg: '#D1FAE5', color: '#065F46' },
+    jaune: { bg: '#FEF9C3', color: '#854D0E' },
+    orange: { bg: '#FFEDD5', color: '#9A3412' },
+    rouge: { bg: '#FEE2E2', color: '#991B1B' },
+    gris: { bg: '#F3F4F6', color: '#4B5563' },
+  }[level] || { bg: '#F3F4F6', color: '#4B5563' })
+  const scoreBg = (score) => score >= 70 ? tlBg('vert') : score >= 50 ? tlBg('jaune') : score >= 30 ? tlBg('rouge') : tlBg('gris')
+  const presBg = (rate) => rate >= 0.95 ? tlBg('vert') : rate >= 0.88 ? tlBg('jaune') : tlBg('rouge')
+  const rateBg = (rate) => rate >= 1 ? tlBg('vert') : rate >= 0.5 ? tlBg('jaune') : rate >= 0.25 ? tlBg('orange') : tlBg('rouge')
+  const tyfcbBg = (val) => val >= 300000 ? tlBg('vert') : val >= 50000 ? tlBg('jaune') : val >= 20000 ? tlBg('orange') : val > 0 ? tlBg('rouge') : tlBg('gris')
+
   const filtered = scores.filter(s => {
     const m = s.membres || {}
     const q = `${m.prenom||''} ${m.nom||''} ${m.societe||''} ${m.secteur_activite||''}`.toLowerCase()
@@ -230,12 +243,12 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:500 }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:700, color: Number(s.total_score || 0) >= 70 ? '#059669' : Number(s.total_score || 0) >= 50 ? '#D97706' : Number(s.total_score || 0) >= 30 ? '#DC2626' : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td>
+                    {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     {(() => {
-                      const att = s.attendance_rate ? Number(s.attendance_rate) : null
-                      const attColor = att === null ? '#9CA3AF' : att >= 0.95 ? '#059669' : att >= 0.88 ? '#D97706' : '#DC2626'
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: attColor }}>{att !== null ? `${Math.round(att*100)}%` : '0%'}</td>
+                      const att = s.attendance_rate ? Number(s.attendance_rate) : 0
+                      const bg = presBg(att)
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:bg.bg, color:bg.color, textAlign:'center' }}>{att ? `${Math.round(att*100)}%` : '0%'}</td>
                     })()}
                     {(() => {
                       const p = palmsData[s.membre_id]
@@ -254,17 +267,17 @@ export default function Membres({ profil }) {
                       const totalJeudis = palmsJeudis + (h?.nbSemaines || 0)
                       const rateTat = totalJeudis > 0 ? totalTat / totalJeudis : 0
                       const rateRefs = totalJeudis > 0 ? totalRefs / totalJeudis : 0
-                      const tatColor = rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
-                      const refsColor = rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
+                      const tatBgC = rateBg(rateTat)
+                      const refsBgC = rateBg(rateRefs)
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{totalTat}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{totalRefs}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:tatBgC.bg, color:tatBgC.color, textAlign:'center' }}>{totalTat}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:refsBgC.bg, color:refsBgC.color, textAlign:'center' }}>{totalRefs}</td>
                       </>
                     })()}
                     {(() => {
-                      const tyfcb = s.tyfcb ? Number(s.tyfcb) : null
-                      const tyfcbColor = tyfcb === null ? '#9CA3AF' : tyfcb >= 30000 ? '#059669' : tyfcb >= 5000 ? '#D97706' : '#DC2626'
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tyfcbColor }}>{(tyfcb || 0).toLocaleString('fr-FR')+' MAD'}</td>
+                      const tyfcb = Number(s.tyfcb || 0)
+                      const bg = tyfcbBg(tyfcb)
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:bg.bg, color:bg.color, textAlign:'center' }}>{tyfcb.toLocaleString('fr-FR')+' MAD'}</td>
                     })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
