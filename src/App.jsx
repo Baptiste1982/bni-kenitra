@@ -43,11 +43,19 @@ export default function App() {
       }
       setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
         supabase.from('profils').select('prenom, nom, email, telephone, titre, role, modules_access').eq('id', session.user.id).single()
-          .then(({ data }) => { if (data) setProfil(data) })
+          .then(({ data }) => {
+            if (data) {
+              setProfil(data)
+              // Logger la connexion
+              if (event === 'SIGNED_IN') {
+                supabase.from('connection_logs').insert({ user_id: session.user.id, email: data.email, prenom: data.prenom, nom: data.nom, role: data.role, action: 'login' }).then(() => {})
+              }
+            }
+          })
       } else { setProfil(null) }
     })
     return () => subscription.unsubscribe()
@@ -85,6 +93,9 @@ export default function App() {
   }, [user])
 
   const handleLogout = async () => {
+    if (user && profil) {
+      await supabase.from('connection_logs').insert({ user_id: user.id, email: profil.email, prenom: profil.prenom, nom: profil.nom, role: profil.role, action: 'logout' })
+    }
     await supabase.auth.signOut()
     setUser(null)
   }

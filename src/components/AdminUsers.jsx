@@ -62,6 +62,8 @@ export default function AdminUsers() {
   const [editAccess, setEditAccess] = useState(null)
   const [createdCredentials, setCreatedCredentials] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [showLogs, setShowLogs] = useState(false)
+  const [logs, setLogs] = useState([])
   const [resetPwd, setResetPwd] = useState(null)
   const [newPassword, setNewPassword] = useState('')
   const [actionMenu, setActionMenu] = useState(null) // user id for dropdown
@@ -90,6 +92,12 @@ export default function AdminUsers() {
   }
 
   useEffect(() => { load() }, [])
+
+  const loadLogs = async () => {
+    const { data } = await supabase.from('connection_logs').select('*').order('connected_at', { ascending: false }).limit(200)
+    setLogs(data || [])
+  }
+  useEffect(() => { if (showLogs) loadLogs() }, [showLogs])
 
   // Quand le rôle change dans le formulaire, mettre à jour les accès par défaut
   const handleRoleChange = (role) => {
@@ -190,12 +198,61 @@ export default function AdminUsers() {
         title="Gestion des utilisateurs"
         sub={`${users.length} compte${users.length > 1 ? 's' : ''} · Rôles et accès aux modules`}
         right={
-          <button onClick={() => setShowForm(!showForm)}
-            style={{ padding: '9px 16px', background: showForm ? '#1C1C2E' : '#C41E3A', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-            {showForm ? '✕ Annuler' : '+ Nouveau compte'}
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => { setShowLogs(!showLogs); if (!showLogs) setShowForm(false) }}
+              style={{ padding:'9px 16px', background: showLogs ? '#1C1C2E' : '#fff', color: showLogs ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              {showLogs ? '✕ Fermer' : '📋 Journal'}
+            </button>
+            <button onClick={() => { setShowForm(!showForm); if (!showForm) setShowLogs(false) }}
+              style={{ padding:'9px 16px', background: showForm ? '#1C1C2E' : '#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              {showForm ? '✕ Annuler' : '+ Nouveau compte'}
+            </button>
+          </div>
         }
       />
+
+      {/* Journal de connexion */}
+      {showLogs && (
+        <Card style={{ marginBottom:24 }}>
+          <SectionTitle>📋 Journal de connexion</SectionTitle>
+          {(() => {
+            // Grouper par jour
+            const byDay = {}
+            logs.forEach(l => {
+              const day = new Date(l.connected_at).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+              if (!byDay[day]) byDay[day] = []
+              byDay[day].push(l)
+            })
+            return Object.entries(byDay).length === 0 ? (
+              <div style={{ padding:20, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucune connexion enregistrée</div>
+            ) : Object.entries(byDay).map(([day, entries]) => (
+              <div key={day} style={{ marginBottom:16 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{day}</div>
+                  <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{entries.length} événement{entries.length > 1 ? 's' : ''}</div>
+                </div>
+                <div style={{ borderLeft:'2px solid #E8E6E1', marginLeft:6, paddingLeft:16 }}>
+                  {entries.map((l, i) => {
+                    const time = new Date(l.connected_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+                    const isLogin = l.action === 'login'
+                    const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[l.role] || '?'
+                    const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[l.role] || '#6B7280'
+                    return (
+                      <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, position:'relative' }}>
+                        <div style={{ position:'absolute', left:-22, width:10, height:10, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
+                        <div style={{ fontSize:11, fontWeight:600, color:'#9CA3AF', width:60, flexShrink:0 }}>{time}</div>
+                        <div style={{ width:22, height:22, borderRadius:'50%', background:roleCol+'33', border:`1.5px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
+                        <div style={{ fontSize:12, fontWeight:500, color:'#1C1C2E' }}>{l.prenom} {l.nom}</div>
+                        <span style={{ fontSize:10, fontWeight:600, padding:'2px 6px', borderRadius:6, background: isLogin ? '#D1FAE5' : '#FEE2E2', color: isLogin ? '#065F46' : '#991B1B' }}>{isLogin ? 'Connexion' : 'Déconnexion'}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          })()}
+        </Card>
+      )}
 
       {error && <div style={{ marginBottom: 16, padding: 12, background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: 8, fontSize: 13, color: '#DC2626' }}>{error}</div>}
       {success && <div style={{ marginBottom: 16, padding: 12, background: '#D1FAE5', border: '1px solid #A7F3D0', borderRadius: 8, fontSize: 13, color: '#065F46' }}>{success}</div>}
