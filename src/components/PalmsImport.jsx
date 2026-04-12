@@ -15,6 +15,7 @@ export default function PalmsImport({ onImportDone }) {
     const data = []
     let headers = []
     let headerFound = false
+    let meta = { depuis: null, jusqua: null }
 
     rows.forEach((row) => {
       // Extraire les cellules en respectant ss:Index pour les colonnes vides
@@ -28,8 +29,12 @@ export default function PalmsImport({ onImportDone }) {
 
       if (vals.every(v => !v)) return
 
-      // Chercher la ligne d'en-tête (contient "Prénom" et "Nom")
+      // Extraire les dates de période des métadonnées
       if (!headerFound) {
+        const depuisIdx = vals.indexOf('Depuis le :')
+        if (depuisIdx >= 0 && vals[depuisIdx + 1]) meta.depuis = vals[depuisIdx + 1].split('T')[0]
+        const jusquaIdx = vals.indexOf("Jusqu'au :")
+        if (jusquaIdx >= 0 && vals[jusquaIdx + 1]) meta.jusqua = vals[jusquaIdx + 1].split('T')[0]
         if (vals.includes('Prénom') && vals.includes('Nom')) {
           headers = vals
           headerFound = true
@@ -41,7 +46,7 @@ export default function PalmsImport({ onImportDone }) {
       headers.forEach((h, j) => { obj[h] = vals[j] || '' })
       if (obj['Prénom'] || obj['Nom']) data.push(obj)
     })
-    return data
+    return { data, meta }
   }
 
   const processFile = async (file) => {
@@ -54,9 +59,12 @@ export default function PalmsImport({ onImportDone }) {
       const text = await file.text()
       let rows = []
 
+      let meta = {}
       // Try XML (SpreadsheetML)
       if (text.includes('<?xml') || text.includes('<Workbook')) {
-        rows = parseXML(text)
+        const parsed = parseXML(text)
+        rows = parsed.data
+        meta = parsed.meta
       } else {
         setError('Format non reconnu. Utilisez l\'export XLS de BNI Connect.')
         setLoading(false)
@@ -77,8 +85,8 @@ export default function PalmsImport({ onImportDone }) {
       const { data: membres } = await supabase.from('membres').select('id,prenom,nom').eq('groupe_id', groupeId)
       
       let imported = 0, skipped = 0
-      const periode_debut = '2025-10-01'
-      const periode_fin = '2026-03-31'
+      const periode_debut = meta.depuis || '2025-10-01'
+      const periode_fin = meta.jusqua || '2026-03-31'
 
       for (const row of rows) {
         const prenom = (row['Prénom'] || '').trim()
@@ -118,7 +126,11 @@ export default function PalmsImport({ onImportDone }) {
         imported++
       }
 
-      setResult({ imported, skipped, total: rows.length })
+      // Calculer nombre de semaines
+      const nbSemaines = periode_debut && periode_fin
+        ? Math.round((new Date(periode_fin) - new Date(periode_debut)) / (1000*60*60*24*7))
+        : null
+      setResult({ imported, skipped, total: rows.length, periode_debut, periode_fin, nbSemaines })
       if (onImportDone) onImportDone()
 
     } catch (err) {
@@ -173,6 +185,11 @@ export default function PalmsImport({ onImportDone }) {
             <div style={{ fontSize:12, color:'#059669' }}>
               {result.imported} membres importés · {result.skipped} non trouvés · {result.total} lignes traitées
             </div>
+            {result.periode_debut && result.periode_fin && (
+              <div style={{ fontSize:12, color:'#065F46', marginTop:4 }}>
+                Période : du {new Date(result.periode_debut).toLocaleDateString('fr-FR')} au {new Date(result.periode_fin).toLocaleDateString('fr-FR')} ({result.nbSemaines} semaines)
+              </div>
+            )}
           </div>
         )}
 
