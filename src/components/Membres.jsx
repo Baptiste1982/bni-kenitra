@@ -143,7 +143,7 @@ export default function Membres({ profil }) {
       ) : (
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Prévi. TàT','Prévi. Réf.'] : []),'Renouvellement',''].map(h => (
+            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','1-2-1','Réf.','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Prévi. TàT','Prévi. Réf.'] : []),'Renouvellement',''].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
@@ -161,6 +161,8 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 50 ? '#D97706' : Number(s.total_score) >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.rate_121 ? Number(s.rate_121).toFixed(2)+'/sem' : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.referrals_given_rate ? Number(s.referrals_given_rate).toFixed(2)+'/sem' : '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
