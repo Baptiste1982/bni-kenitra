@@ -93,7 +93,7 @@ export default function Membres({ profil }) {
           const totalInv = (consolidé ? Number(consolidé.visitors) || 0 : 0) + prevInv
           const totalMpb = (consolidé ? Number(consolidé.tyfcb) || 0 : 0) + prevMpb
           const { score, tl } = bniScore(rateTat, rateRefs, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
-          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs }
+          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs, nbSemaines: nbSemaines }
         })
         setPrevisions(prev)
         setLoading(false)
@@ -172,16 +172,22 @@ export default function Membres({ profil }) {
                     })()}
                     {(() => {
                       const p = palmsData[s.membre_id]; const h = previsions[s.membre_id]
-                      const tat = p || h ? Number(p?.tat || 0) + (h?.cumulTat || 0) : null
-                      const refs = p || h ? ((p?.rdi || 0) + (p?.rde || 0)) + (h?.cumulRefs || 0) : null
-                      // Couleur basée sur le score BNI officiel du KPI
-                      const scoreTat = Number(s.score_121) || 0  // max 20
-                      const tatColor = tat === null ? '#9CA3AF' : scoreTat >= 15 ? '#059669' : scoreTat >= 5 ? '#D97706' : '#DC2626'
-                      const scoreRefs = Number(s.referrals_given_score) || 0  // max 25
-                      const refsColor = refs === null ? '#9CA3AF' : scoreRefs >= 15 ? '#059669' : scoreRefs >= 5 ? '#D97706' : '#DC2626'
+                      // Cumul mois = PALMS consolidés (déjà du mois en cours) + hebdo
+                      const totalTat = (p ? Number(p.tat || 0) : 0) + (h?.cumulTat || 0)
+                      const totalRefs = (p ? (p.rdi || 0) + (p.rde || 0) : 0) + (h?.cumulRefs || 0)
+                      const hasData = p || h
+                      // Nb semaines écoulées dans le mois (~date actuelle / 7)
+                      const joursDansMois = now.getDate()
+                      const semEcoulees = Math.max(1, Math.round(joursDansMois / 7))
+                      // Taux par semaine du mois en cours
+                      const rateTat = totalTat / semEcoulees
+                      const rateRefs = totalRefs / semEcoulees
+                      // Couleur barème BNI : >=1/sem→vert, >=0.5→orange, <0.5→rouge
+                      const tatColor = !hasData ? '#9CA3AF' : rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
+                      const refsColor = !hasData ? '#9CA3AF' : rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{tat !== null ? tat : '—'}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{refs !== null ? refs : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{hasData ? totalTat : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{hasData ? totalRefs : '—'}</td>
                       </>
                     })()}
                     {(() => {
