@@ -165,12 +165,31 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 50 ? '#D97706' : Number(s.total_score) >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
-                    {(() => { const p = palmsData[s.membre_id]; const h = previsions[s.membre_id]; return <>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p || h ? Number(p?.tat || 0) + (h?.cumulTat || 0) : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p || h ? ((p?.rdi || 0) + (p?.rde || 0)) + (h?.cumulRefs || 0) : '—'}</td>
-                    </> })()}
-                    <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
+                    {(() => {
+                      const att = s.attendance_rate ? Number(s.attendance_rate) : null
+                      const attColor = att === null ? '#9CA3AF' : att >= 0.95 ? '#059669' : att >= 0.88 ? '#D97706' : '#DC2626'
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: attColor }}>{att !== null ? `${Math.round(att*100)}%` : '—'}</td>
+                    })()}
+                    {(() => {
+                      const p = palmsData[s.membre_id]; const h = previsions[s.membre_id]
+                      const tat = p || h ? Number(p?.tat || 0) + (h?.cumulTat || 0) : null
+                      const refs = p || h ? ((p?.rdi || 0) + (p?.rde || 0)) + (h?.cumulRefs || 0) : null
+                      // Couleur TàT basée sur rate_121 (par semaine) : >=1→vert, >=0.5→orange, <0.5→rouge
+                      const rateTat = s.rate_121 ? Number(s.rate_121) : 0
+                      const tatColor = tat === null ? '#9CA3AF' : rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
+                      // Couleur Réf basée sur referrals_given_rate : >=1→vert, >=0.5→orange, <0.5→rouge
+                      const rateRefs = s.referrals_given_rate ? Number(s.referrals_given_rate) : 0
+                      const refsColor = refs === null ? '#9CA3AF' : rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
+                      return <>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{tat !== null ? tat : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{refs !== null ? refs : '—'}</td>
+                      </>
+                    })()}
+                    {(() => {
+                      const tyfcb = s.tyfcb ? Number(s.tyfcb) : null
+                      const tyfcbColor = tyfcb === null ? '#9CA3AF' : tyfcb >= 30000 ? '#059669' : tyfcb >= 5000 ? '#D97706' : '#DC2626'
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tyfcbColor }}>{tyfcb !== null ? tyfcb.toLocaleString('fr-FR')+' MAD' : '—'}</td>
+                    })()}
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
                       return <>
