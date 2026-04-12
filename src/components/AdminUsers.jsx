@@ -300,7 +300,7 @@ Directeur Exécutif BNI Kénitra`}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
       ) : (
-        <TableWrap>
+        <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>{['Utilisateur', 'Email', 'Rôle', 'Groupe', 'Accès modules', 'Statut', 'Actions'].map(h => (
               <th key={h} style={{ background: '#F9F8F6', padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #E8E6E1' }}>{h}</th>
@@ -344,14 +344,14 @@ Directeur Exécutif BNI Kénitra`}
                           {u.actif ? 'Actif' : 'Désactivé'}
                         </span>
                       </td>
-                      <td style={{ padding: '10px 14px' }}>
+                      <td style={{ padding: '10px 14px', position:'relative', overflow:'visible' }}>
                         <div ref={actionMenu === u.id ? menuRef : null} style={{ position:'relative', display:'inline-block' }}>
                           <button onClick={() => setActionMenu(actionMenu === u.id ? null : u.id)}
                             style={{ padding:'6px 12px', background: actionMenu === u.id ? '#1C1C2E' : '#fff', color: actionMenu === u.id ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
                             Actions ▾
                           </button>
                           {actionMenu === u.id && (
-                            <div style={{ position:'absolute', right:0, top:32, background:'#fff', border:'1px solid #E8E6E1', borderRadius:8, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', zIndex:20, minWidth:180, overflow:'hidden' }}>
+                            <div style={{ position:'absolute', right:0, top:32, background:'#fff', border:'1px solid #E8E6E1', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,0.15)', zIndex:9999, minWidth:200, overflow:'hidden' }}>
                               <div onClick={() => startEdit(u)} style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
                                 onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                                 ✏️ Éditer le profil
@@ -454,7 +454,7 @@ Directeur Exécutif BNI Kénitra`}
               })}
             </tbody>
           </table>
-        </TableWrap>
+        </div>
       )}
     </div>
   )
