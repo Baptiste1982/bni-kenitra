@@ -142,7 +142,7 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:500 }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:700 }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 40 ? '#D97706' : Number(s.total_score) >= 20 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
