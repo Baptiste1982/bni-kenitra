@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01 } from '../lib/bniService'
+import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois, fetchMonthlySnapshots } from '../lib/bniService'
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
@@ -141,15 +141,67 @@ export function Groupes() {
 export function Reporting() {
   const [scores, setScores] = useState([])
   const [kpis, setKpis] = useState(null)
+  const [hebdo, setHebdo] = useState([])
+  const [prevSnapshot, setPrevSnapshot] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const now = new Date()
+  const mois = now.getMonth() + 1, annee = now.getFullYear()
+  const moisLabel = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
+  const nbJeudis = (() => { let c=0; const fin=new Date(annee,mois,0); for(let d=1;d<=fin.getDate();d++){if(new Date(annee,mois-1,d).getDay()===4)c++} return c })()
+  const prevMois = mois === 1 ? 12 : mois - 1
+  const prevAnnee = mois === 1 ? annee - 1 : annee
+
   useEffect(() => {
-    Promise.all([fetchScoresMK01(), fetchDashboardKPIs()]).then(([s, k]) => { setScores(s); setKpis(k); setLoading(false) })
+    Promise.all([fetchScoresMK01(), fetchDashboardKPIs(), fetchPalmsHebdoMois(mois, annee), fetchMonthlySnapshots(prevMois, prevAnnee)])
+      .then(([s, k, h, ps]) => { setScores(s); setKpis(k); setHebdo(h); setPrevSnapshot(ps); setLoading(false) })
   }, [])
+
+  // Agréger les données hebdo du mois
+  const hebdoMap = {}
+  hebdo.filter(r => r.membre_id).forEach(r => {
+    if (!hebdoMap[r.membre_id]) hebdoMap[r.membre_id] = { tat:0, refs:0, invites:0, mpb:0, presences:0, absences:0 }
+    const m = hebdoMap[r.membre_id]
+    m.tat += r.tat||0; m.refs += (r.rdi||0)+(r.rde||0); m.invites += r.invites||0
+    m.mpb += Number(r.mpb)||0
+    if (r.palms==='P') m.presences += r.nb_reunions||1; else m.absences += r.nb_reunions||1
+  })
+
+  const totalMembres = scores.length || 25
+  const membresAvecTat = Object.values(hebdoMap).filter(m => m.tat > 0).length
+  const membresAvecReco = Object.values(hebdoMap).filter(m => m.refs > 0).length
+  const totalTatMois = Object.values(hebdoMap).reduce((s,m) => s+m.tat, 0)
+  const totalRecoMois = Object.values(hebdoMap).reduce((s,m) => s+m.refs, 0)
+  const totalMpbMois = Object.values(hebdoMap).reduce((s,m) => s+m.mpb, 0)
+
+  // Membres à risque : score < 30 OU 0 TàT ce mois OU absences > 1
+  const membresRisque = scores.filter(s => {
+    const h = hebdoMap[s.membre_id]
+    return Number(s.total_score||0) < 30 || (!h || h.tat === 0) || (h && h.absences > 1)
+  })
+
+  // Top contributeurs et inactifs
+  const sorted = Object.entries(hebdoMap).map(([id, d]) => ({ id, ...d, score: scores.find(s=>s.membre_id===id) })).sort((a,b) => (b.tat+b.refs)-(a.tat+a.refs))
+  const top5 = sorted.slice(0, 5)
+  const bottom5 = sorted.filter(s => s.tat === 0 && s.refs === 0).slice(0, 5)
+
+  // Évolution vs mois précédent
+  const prevMap = {}
+  prevSnapshot.forEach(s => { prevMap[s.membre_id] = s })
+  const prevTotalTat = prevSnapshot.reduce((s,m) => s+(m.total_tat||0), 0)
+  const prevTotalReco = prevSnapshot.reduce((s,m) => s+(m.total_refs||0), 0)
+  const hasPrev = prevSnapshot.length > 0
+
+  const nameColor = sc => Number(sc||0) >= 70 ? '#065F46' : Number(sc||0) >= 50 ? '#854D0E' : Number(sc||0) >= 30 ? '#991B1B' : '#6B7280'
+  const ProgressBar = ({ value, max, color }) => (
+    <div style={{ height:8, background:'#F3F2EF', borderRadius:4, overflow:'hidden', flex:1 }}>
+      <div style={{ height:'100%', width:`${Math.min(100,value/max*100)}%`, background:color, borderRadius:4, transition:'width 0.4s' }} />
+    </div>
+  )
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title="Reporting" sub="MK-01 Kénitra Atlantique · Oct 2025 → Mars 2026" />
+      <PageHeader title="Reporting" sub={`MK-01 Kénitra Atlantique · ${moisLabel}`} />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
         <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="Affaires entre membres"
           topBg={kpis?.tyfcb >= 300000 ? '#A7F3D0' : kpis?.tyfcb >= 50000 ? '#FDE68A' : '#FECACA'}
@@ -212,6 +264,135 @@ export function Reporting() {
             </table>
           </TableWrap>
         </div>
+      )}
+
+      {/* ─── NOUVELLES SECTIONS VP ─── */}
+      {!loading && (
+        <>
+          {/* Objectifs collectifs du mois */}
+          <div style={{ marginTop:24 }}>
+            <SectionTitle>🎯 Objectifs collectifs — {moisLabel}</SectionTitle>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:24 }}>
+              {[
+                { label:'Total TàT groupe', value:totalTatMois, obj:nbJeudis*totalMembres, color:'#C41E3A' },
+                { label:'Total Reco. groupe', value:totalRecoMois, obj:Math.ceil(nbJeudis*1.25*totalMembres), color:'#8B5CF6' },
+                { label:'TYFCB du mois', value:totalMpbMois, obj:50000, color:'#3B82F6', isMoney:true },
+              ].map(o => (
+                <div key={o.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1' }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>{o.label}</div>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8 }}>
+                    <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'Playfair Display, serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
+                    <span style={{ fontSize:12, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
+                  </div>
+                  <ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Taux de participation */}
+          <div style={{ marginTop:8 }}>
+            <SectionTitle>📊 Taux de participation — {moisLabel}</SectionTitle>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:24 }}>
+              {[
+                { label:'Ont fait ≥ 1 TàT', value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
+                { label:'Ont fait ≥ 1 Reco.', value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
+                { label:'100% présence', value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
+              ].map(p => {
+                const pct = p.total > 0 ? Math.round(p.value/p.total*100) : 0
+                const bg = pct >= 80 ? '#D1FAE5' : pct >= 50 ? '#FEF9C3' : '#FEE2E2'
+                return (
+                  <div key={p.label} style={{ background:bg, borderRadius:12, padding:'16px 18px', border:'1px solid rgba(0,0,0,0.06)' }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>{p.label}</div>
+                    <div style={{ fontSize:28, fontWeight:700, color:p.color, fontFamily:'Playfair Display, serif' }}>{pct}%</div>
+                    <div style={{ fontSize:12, color:'#6B7280' }}>{p.value}/{p.total} membres</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Top contributeurs vs Inactifs */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
+            <TableWrap>
+              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🌟 Top contributeurs du mois</SectionTitle></div>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead><tr>{['Membre','TàT','Reco.','TYFCB'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
+                <tbody>{top5.map((m,i) => (
+                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#D1FAE5' }}>
+                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#065F46' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.tat}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.refs}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#065F46' }}>{Number(m.mpb).toLocaleString('de-DE')}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </TableWrap>
+            <TableWrap>
+              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>⚠️ Membres inactifs ce mois</SectionTitle></div>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead><tr>{['Membre','TàT','Reco.','Score'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
+                <tbody>{(bottom5.length > 0 ? bottom5 : [{id:null,tat:0,refs:0,score:null}]).map((m,i) => m.score ? (
+                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#FEE2E2' }}>
+                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#991B1B' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
+                    <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#991B1B' }}>{Number(m.score?.total_score||0)}</td>
+                  </tr>
+                ) : (
+                  <tr key={i}><td colSpan={4} style={{ padding:'16px', textAlign:'center', color:'#059669', fontSize:13 }}>Tous les membres sont actifs ce mois</td></tr>
+                ))}</tbody>
+              </table>
+            </TableWrap>
+          </div>
+
+          {/* Membres à risque */}
+          <div style={{ marginBottom:24 }}>
+            <SectionTitle>🚨 Membres à risque ({membresRisque.length})</SectionTitle>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {membresRisque.slice(0,15).map((s,i) => {
+                const sc = Number(s.total_score||0)
+                const h = hebdoMap[s.membre_id]
+                return (
+                  <div key={i} style={{ background:'#FEE2E2', borderRadius:8, padding:'8px 12px', border:'1px solid #FECACA' }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{s.membres?.prenom} {s.membres?.nom}</div>
+                    <div style={{ fontSize:10, color:'#DC2626', marginTop:2 }}>
+                      Score: {sc} · TàT: {h?.tat||0} · Abs: {h?.absences||0}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Évolution vs mois précédent */}
+          {hasPrev && (
+            <div style={{ marginBottom:24 }}>
+              <SectionTitle>📈 Évolution vs mois précédent</SectionTitle>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                {[
+                  { label:'TàT', current:totalTatMois, prev:prevTotalTat },
+                  { label:'Recommandations', current:totalRecoMois, prev:prevTotalReco },
+                ].map(e => {
+                  const diff = e.current - e.prev
+                  const pct = e.prev > 0 ? Math.round((diff/e.prev)*100) : 0
+                  return (
+                    <div key={e.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>{e.label}</div>
+                        <div style={{ fontSize:22, fontWeight:700, fontFamily:'Playfair Display, serif' }}>{e.current}</div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:18, fontWeight:700, color: diff >= 0 ? '#059669' : '#DC2626' }}>{diff >= 0 ? '↑' : '↓'} {Math.abs(diff)}</div>
+                        <div style={{ fontSize:11, color: diff >= 0 ? '#059669' : '#DC2626' }}>{pct >= 0 ? '+' : ''}{pct}%</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

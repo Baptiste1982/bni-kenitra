@@ -249,3 +249,43 @@ export async function resetUserPassword(userId, password) {
   if (data?.error) throw new Error(data.error)
   return data
 }
+
+// ─── MONTHLY SNAPSHOTS ──────────────────────────────────────────────────────
+export async function cloturerMois(mois, annee, userId) {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) throw new Error('Groupe introuvable')
+  const hebdo = await fetchPalmsHebdoMois(mois, annee)
+  const membres = await fetchMembresForMatch()
+  const map = {}
+  hebdo.filter(r => r.membre_id).forEach(r => {
+    if (!map[r.membre_id]) map[r.membre_id] = { tat:0, refs:0, invites:0, mpb:0, ueg:0, presences:0, absences:0 }
+    const m = map[r.membre_id]
+    m.tat += r.tat || 0; m.refs += (r.rdi||0)+(r.rde||0); m.invites += r.invites||0
+    m.mpb += Number(r.mpb)||0; m.ueg += r.ueg||0
+    if (r.palms === 'P') m.presences += r.nb_reunions||1; else m.absences += r.nb_reunions||1
+  })
+  const snapshots = membres.map(mb => {
+    const d = map[mb.id] || { tat:0, refs:0, invites:0, mpb:0, ueg:0, presences:0, absences:0 }
+    return { groupe_id:groupeId, membre_id:mb.id, mois, annee, total_tat:d.tat, total_refs:d.refs, total_invites:d.invites, total_mpb:d.mpb, total_ueg:d.ueg, presences:d.presences, absences:d.absences, cloture_par:userId }
+  })
+  const { error } = await supabase.from('monthly_snapshots').upsert(snapshots, { onConflict:'membre_id,mois,annee' })
+  if (error) throw error
+  return { count: snapshots.length }
+}
+
+export async function fetchMonthlySnapshots(mois, annee) {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) return []
+  const { data, error } = await supabase.from('monthly_snapshots').select('*, membres(prenom, nom)').eq('groupe_id', groupeId).eq('mois', mois).eq('annee', annee)
+  if (error) throw error
+  return data || []
+}
+
+export async function fetchAllSnapshots() {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) return []
+  const { data, error } = await supabase.from('monthly_snapshots').select('mois, annee, cloture_at').eq('groupe_id', groupeId).order('annee',{ascending:false}).order('mois',{ascending:false})
+  if (error) throw error
+  const seen = new Set()
+  return (data||[]).filter(d => { const k=`${d.annee}-${d.mois}`; if(seen.has(k))return false; seen.add(k); return true })
+}

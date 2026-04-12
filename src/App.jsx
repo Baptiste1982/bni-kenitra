@@ -86,7 +86,7 @@ export default function App() {
   if (!user) return <Login onLogin={setUser} />
 
   const MODULES = {
-    dashboard: <Dashboard onNavigate={navigate} />,
+    dashboard: <Dashboard onNavigate={navigate} profil={profil} />,
     membres:   <Membres profil={profil} />,
     hebdo:     <SuiviHebdo />,
     invites:   <Invites />,

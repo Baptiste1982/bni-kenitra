@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { fetchDashboardKPIs } from '../lib/bniService'
+import { fetchDashboardKPIs, fetchPalmsHebdoMois, cloturerMois } from '../lib/bniService'
+import { supabase } from '../lib/supabase'
 import { TLBadge, SectionTitle, PageHeader, TableWrap } from './ui'
 
 const scoreBg = (score) => score >= 70 ? { bg:'#D1FAE5', color:'#065F46' } : score >= 50 ? { bg:'#FEF9C3', color:'#854D0E' } : score >= 30 ? { bg:'#FEE2E2', color:'#991B1B' } : { bg:'#F3F4F6', color:'#4B5563' }
@@ -8,13 +9,47 @@ const tyfcbBg = (val) => val >= 300000 ? {bg:'#D1FAE5',color:'#065F46'} : val >=
 const nameColor = (score) => Number(score||0) >= 70 ? '#065F46' : Number(score||0) >= 50 ? '#854D0E' : Number(score||0) >= 30 ? '#991B1B' : '#6B7280'
 const rowBg = (tl) => ({ vert:'#D1FAE5', orange:'#FEF9C3', rouge:'#FEE2E2', gris:'#F9FAFB' }[tl] || '#fff')
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, profil }) {
   const [kpis, setKpis] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [reunionsSaisies, setReunionsSaisies] = useState(0)
+  const [cloturing, setCloturing] = useState(false)
+  const [clotureMsg, setClotureMsg] = useState('')
+
+  const now = new Date()
+  const mois = now.getMonth() + 1
+  const annee = now.getFullYear()
+  const moisLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  const nbJeudis = (() => { let c=0; const fin=new Date(annee,mois,0); for(let d=1;d<=fin.getDate();d++){if(new Date(annee,mois-1,d).getDay()===4)c++} return c })()
+  const canCloture = ['super_admin','directeur_executif','directrice_consultante','vice_president'].includes(profil?.role)
 
   useEffect(() => {
-    fetchDashboardKPIs().then(data => { setKpis(data); setLoading(false) }).catch(() => setLoading(false))
+    Promise.all([
+      fetchDashboardKPIs(),
+      fetchPalmsHebdoMois(mois, annee)
+    ]).then(([data, hebdo]) => {
+      setKpis(data)
+      // Compter réunions saisies
+      const memberRows = hebdo.filter(r => r.membre_id)
+      let maxR = 0
+      const perMember = {}
+      memberRows.forEach(r => { if(!perMember[r.membre_id]) perMember[r.membre_id]=0; perMember[r.membre_id]+= r.nb_reunions||1 })
+      Object.values(perMember).forEach(v => { if(v>maxR) maxR=v })
+      setReunionsSaisies(maxR)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
+
+  const handleCloture = async () => {
+    if (!window.confirm(`Clôturer le mois de ${moisLabel} ? Les données seront sauvegardées.`)) return
+    setCloturing(true); setClotureMsg('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const result = await cloturerMois(mois, annee, session?.user?.id)
+      setClotureMsg(`Mois clôturé — ${result.count} membres sauvegardés`)
+    } catch(e) { setClotureMsg('Erreur : ' + e.message) }
+    setCloturing(false)
+  }
 
   const hover = e => { e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'; e.currentTarget.style.transform='translateY(-1px)' }
   const unhover = e => { e.currentTarget.style.boxShadow='none'; e.currentTarget.style.transform='none' }
@@ -35,7 +70,7 @@ export default function Dashboard({ onNavigate }) {
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader
-        title="Bonjour, Jean Baptiste 👋"
+        title={`Bonjour, ${profil?.prenom || 'Jean Baptiste'} 👋`}
         sub="MK-01 Kénitra Atlantique · Données en temps réel"
         right={
           <div style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:10, padding:'10px 16px', textAlign:'right' }}>
@@ -44,6 +79,28 @@ export default function Dashboard({ onNavigate }) {
           </div>
         }
       />
+
+      {/* Mois en cours */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={{ fontSize:22, fontWeight:700, fontFamily:'Playfair Display, serif', textTransform:'capitalize' }}>{moisLabel}</div>
+          <div style={{ fontSize:12, opacity:0.6 }}>{reunionsSaisies}/{nbJeudis} réunions saisies</div>
+          <div style={{ display:'flex', gap:3 }}>
+            {Array.from({length:nbJeudis}).map((_,i) => (
+              <div key={i} style={{ width:10, height:10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          {clotureMsg && <span style={{ fontSize:11, color: clotureMsg.startsWith('Erreur') ? '#FECACA' : '#A7F3D0' }}>{clotureMsg}</span>}
+          {canCloture && (
+            <button onClick={handleCloture} disabled={cloturing}
+              style={{ padding:'8px 16px', background: cloturing ? 'rgba(196,30,58,0.5)' : '#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor: cloturing ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              {cloturing ? 'Clôture...' : 'Clôturer le mois'}
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Stat cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
