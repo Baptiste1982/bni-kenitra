@@ -171,23 +171,20 @@ export default function Membres({ profil }) {
                       return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: attColor }}>{att !== null ? `${Math.round(att*100)}%` : '—'}</td>
                     })()}
                     {(() => {
-                      const p = palmsData[s.membre_id]; const h = previsions[s.membre_id]
-                      // Cumul mois = PALMS consolidés (déjà du mois en cours) + hebdo
-                      const totalTat = (p ? Number(p.tat || 0) : 0) + (h?.cumulTat || 0)
-                      const totalRefs = (p ? (p.rdi || 0) + (p.rde || 0) : 0) + (h?.cumulRefs || 0)
-                      const hasData = p || h
-                      // Nb semaines écoulées dans le mois (~date actuelle / 7)
-                      const joursDansMois = now.getDate()
-                      const semEcoulees = Math.max(1, Math.round(joursDansMois / 7))
+                      const h = previsions[s.membre_id]
+                      // Données du mois en cours = uniquement hebdo
+                      const totalTat = h?.cumulTat || 0
+                      const totalRefs = h?.cumulRefs || 0
+                      const nbSem = h?.nbSemaines || 0
                       // Taux par semaine du mois en cours
-                      const rateTat = totalTat / semEcoulees
-                      const rateRefs = totalRefs / semEcoulees
+                      const rateTat = nbSem > 0 ? totalTat / nbSem : 0
+                      const rateRefs = nbSem > 0 ? totalRefs / nbSem : 0
                       // Couleur barème BNI : >=1/sem→vert, >=0.5→orange, <0.5→rouge
-                      const tatColor = !hasData ? '#9CA3AF' : rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
-                      const refsColor = !hasData ? '#9CA3AF' : rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
+                      const tatColor = nbSem === 0 ? '#9CA3AF' : rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
+                      const refsColor = nbSem === 0 ? '#9CA3AF' : rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{hasData ? totalTat : '—'}</td>
-                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{hasData ? totalRefs : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{nbSem > 0 ? totalTat : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{nbSem > 0 ? totalRefs : '—'}</td>
                       </>
                     })()}
                     {(() => {
