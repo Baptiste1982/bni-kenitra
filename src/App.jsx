@@ -153,11 +153,12 @@ export default function App() {
           const lastSeen = u.last_seen ? new Date(u.last_seen) : null
           const diffMin = lastSeen ? (now - lastSeen) / 60000 : 999
           const statusColor = diffMin < 5 ? '#059669' : diffMin < 30 ? '#D97706' : '#6B7280'
-          const statusLabel = diffMin < 5 ? 'En ligne' : diffMin < 30 ? 'Absent' : 'Hors ligne'
+          const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[u.role] || '?'
+          const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[u.role] || '#6B7280'
           return (
             <div key={u.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
               <div style={{ position:'relative' }}>
-                <div style={{ width:24, height:24, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:600, color:'#fff' }}>{u.prenom?.[0]}{u.nom?.[0]}</div>
+                <div style={{ width:26, height:26, borderRadius:'50%', background:roleCol+'33', border:`2px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:roleCol }}>{roleAbr}</div>
                 <div style={{ position:'absolute', bottom:-1, right:-1, width:8, height:8, borderRadius:'50%', background:statusColor, border:'2px solid #1C1C2E' }} />
               </div>
               <div style={{ flex:1, minWidth:0 }}>
@@ -171,10 +172,14 @@ export default function App() {
       {/* User actuel */}
       <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-          <div style={{ position:'relative' }}>
-            <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:'#fff', flexShrink:0 }}>{(profil?.prenom?.[0] || '?')}{(profil?.nom?.[0] || '')}</div>
-            <div style={{ position:'absolute', bottom:-1, right:-1, width:9, height:9, borderRadius:'50%', background:'#059669', border:'2px solid #1C1C2E' }} />
-          </div>
+          {(() => {
+            const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[profil?.role] || '?'
+            const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[profil?.role] || '#6B7280'
+            return <div style={{ position:'relative' }}>
+              <div style={{ width:32, height:32, borderRadius:'50%', background:roleCol+'33', border:`2px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
+              <div style={{ position:'absolute', bottom:-1, right:-1, width:9, height:9, borderRadius:'50%', background:'#059669', border:'2px solid #1C1C2E' }} />
+            </div>
+          })()}
           <div>
             <div style={{ color:'#fff', fontSize:11, fontWeight:500 }}>{profil ? `${profil.prenom} ${profil.nom}` : '...'}</div>
             <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10 }}>{profil?.titre || profil?.role || ''}</div>
