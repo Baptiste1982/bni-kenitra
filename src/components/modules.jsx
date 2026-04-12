@@ -79,7 +79,10 @@ export function Invites() {
   const BASE_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
   const ALL_STATUTS = [...new Set([...BASE_STATUTS, ...invites.map(i => i.statut).filter(Boolean), ...extraStatuts])]
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
-  const filtered = filter === 'tous' ? invites : invites.filter(i => i.statut === filter)
+  const couleurKeys = Object.keys(COULEURS)
+  const filtered = filter === 'tous' ? invites
+    : couleurKeys.includes(filter) ? invites.filter(i => (statutColors[i.statut] || 'gris') === filter)
+    : invites.filter(i => i.statut === filter)
 
   // Pipeline dynamique basé sur les statuts réels + couleurs
   const statutCounts = {}
@@ -101,20 +104,54 @@ export function Invites() {
           </div>
         }
       />
-      {/* Filtres par statut — pastilles colorées */}
-      <div style={{ display:'flex', gap:6, marginBottom:20, flexWrap:'wrap' }}>
-        <button onClick={() => setFilter('tous')}
-          style={{ padding:'7px 14px', borderRadius:20, border: filter==='tous' ? '2px solid #1C1C2E' : '1px solid #E8E6E1', fontSize:12, fontWeight:filter==='tous'?700:500, background: filter==='tous' ? '#1C1C2E' : '#fff', color: filter==='tous' ? '#fff' : '#1C1C2E', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-          Tous ({invites.length})
-        </button>
-        {pipeline.map(p => (
-          <button key={p.statut} onClick={() => setFilter(filter === p.statut ? 'tous' : p.statut)}
-            style={{ padding:'7px 14px', borderRadius:20, border: filter===p.statut ? `2px solid ${p.color}` : '1px solid #E8E6E1', fontSize:12, fontWeight: filter===p.statut ? 700 : 500, background: filter===p.statut ? p.bg : '#fff', color: filter===p.statut ? p.color : '#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ width:8, height:8, borderRadius:'50%', background:p.color, flexShrink:0 }} />
-            {p.statut} ({p.n})
-          </button>
-        ))}
-      </div>
+      {/* Cards par catégorie de couleur */}
+      {(() => {
+        const total = invites.length || 1
+        const byCouleur = { vert:[], bleu:[], jaune:[], orange:[], rouge:[], gris:[] }
+        pipeline.forEach(p => { const c = statutColors[p.statut] || 'gris'; if(byCouleur[c]) byCouleur[c].push(p); else byCouleur.gris.push(p) })
+        const cards = [
+          { label:'Convertis', couleur:'vert', icon:'✓', desc:'Devenus membres' },
+          { label:'En cours', couleur:'bleu', icon:'→', desc:'Fiches envoyées, Membres BNI' },
+          { label:'À suivre', couleur:'jaune', icon:'◎', desc:'Recontacter, Collaborateurs' },
+          { label:'En attente', couleur:'orange', icon:'⏸', desc:'Stand-by, Temporiser' },
+          { label:'Perdus', couleur:'rouge', icon:'✕', desc:'Pas intéressé, Injoignable' },
+          { label:'Autres', couleur:'gris', icon:'—', desc:'Doublons, Sans statut' },
+        ].map(c => {
+          const statuts = byCouleur[c.couleur] || []
+          const n = statuts.reduce((s, p) => s + p.n, 0)
+          const pct = Math.round(n / total * 100)
+          return { ...c, n, pct, statuts, style: COULEURS[c.couleur] }
+        }).filter(c => c.n > 0)
+
+        return <>
+          <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(cards.length, 6)},1fr)`, gap:12, marginBottom:16 }}>
+            {cards.map(c => (
+              <div key={c.couleur} onClick={() => {
+                const statNames = c.statuts.map(s=>s.statut)
+                if (filter === c.couleur) setFilter('tous')
+                else setFilter(c.couleur)
+              }}
+                style={{ background:c.style.bg, borderRadius:12, padding:'14px 16px', border:`1px solid ${c.style.badge}`, cursor:'pointer', transition:'transform 0.1s' }}
+                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
+                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:c.style.color, marginBottom:4 }}>{c.label}</div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+                  <span style={{ fontSize:26, fontWeight:700, fontFamily:'Playfair Display, serif', color:c.style.color }}>{c.n}</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:c.style.color, opacity:0.6 }}>{c.pct}%</span>
+                </div>
+                <div style={{ fontSize:9, color:c.style.color, opacity:0.5, marginTop:2 }}>{c.desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
+            <button onClick={() => setFilter('tous')} style={{ padding:'5px 12px', borderRadius:16, border: filter==='tous'?'2px solid #1C1C2E':'1px solid #E8E6E1', fontSize:11, fontWeight:filter==='tous'?700:400, background:filter==='tous'?'#1C1C2E':'#fff', color:filter==='tous'?'#fff':'#6B7280', cursor:'pointer' }}>Tous ({invites.length})</button>
+            {pipeline.map(p => {
+              const st = getStatutStyle(p.statut)
+              const isActive = filter === p.statut
+              return <button key={p.statut} onClick={() => setFilter(isActive ? 'tous' : p.statut)} style={{ padding:'5px 10px', borderRadius:16, border:isActive?`2px solid ${st.color}`:'1px solid #E8E6E1', fontSize:10, fontWeight:isActive?600:400, background:isActive?st.bg:'#fff', color:isActive?st.color:'#9CA3AF', cursor:'pointer' }}>{p.statut} ({p.n})</button>
+            })}
+          </div>
+        </>
+      })()}
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (() => {
         // Grouper par mois
         const byMonth = {}
