@@ -1,0 +1,42 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #C41E3A;
+  --dark: #1C1C2E;
+  --gold: #C9A84C;
+  --bg: #F7F6F3;
+  --white: #ffffff;
+  --text: #1C1C2E;
+  --muted: #6B7280;
+  --border: #E8E6E1;
+  --green: #059669;
+  --orange: #D97706;
+  --rouge: #DC2626;
+  --gris: #9CA3AF;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+button { cursor: pointer; font-family: var(--font-body); }
+input, textarea { font-family: var(--font-body); }
