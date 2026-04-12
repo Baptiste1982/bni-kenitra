@@ -54,16 +54,29 @@ export function Invites() {
             ))}</tr></thead>
             <tbody>
               {filtered.map((inv, i) => {
-                const statCol = inv.statut==='Devenu Membre'||inv.statut==='Validé par CM' ? '#059669' : inv.statut==='A recontacter'||inv.statut==='Fiche envoyée' ? '#D97706' : '#9CA3AF'
+                const st = inv.statut || ''
+                const statStyle = st==='Devenu Membre' ? { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0' }
+                  : st==='Validé par CM' ? { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0' }
+                  : st==='Membre BNI' ? { bg:'#DBEAFE', color:'#1E40AF', badge:'#BFDBFE' }
+                  : st==='Fiche envoyée au postulant' || st==='Fiche envoyée' ? { bg:'#DBEAFE', color:'#1E40AF', badge:'#BFDBFE' }
+                  : st==='En cours traitement par CM' ? { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A' }
+                  : st==='A recontacter' ? { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A' }
+                  : st==='Collaborateur d\'un membre BNI' ? { bg:'#FEF9C3', color:'#854D0E', badge:'#FDE68A' }
+                  : st==='En stand-by' || st==='A temporiser' ? { bg:'#FFEDD5', color:'#9A3412', badge:'#FED7AA' }
+                  : st==='Pas intéressé pour le moment' || st==='Pas de budget pour le moment' ? { bg:'#FEE2E2', color:'#991B1B', badge:'#FECACA' }
+                  : st==='Injoignable' || st==='absente' ? { bg:'#FEE2E2', color:'#991B1B', badge:'#FECACA' }
+                  : st==='Doublon — orienté groupe 2' ? { bg:'#F3F4F6', color:'#4B5563', badge:'#E5E7EB' }
+                  : { bg:'#F9FAFB', color:'#6B7280', badge:'#F3F4F6' }
                 return (
-                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }} onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                    <td style={{ padding:'10px 14px', fontSize:12, color:'#6B7280' }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:500 }}>{inv.prenom}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:500 }}>{inv.nom}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12, color:'#6B7280' }}>{inv.profession || '—'}</td>
-                    <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:500, padding:'3px 8px', borderRadius:12, background:statCol+'22', color:statCol }}>{inv.statut || '—'}</span></td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{inv.invite_par_nom || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{inv.membre_ca_charge_nom || '—'}</td>
+                  <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:statStyle.bg }}
+                    onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                    <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.prenom}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.nom}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.profession || '—'}</td>
+                    <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:12, background:statStyle.badge, color:statStyle.color }}>{inv.statut || '—'}</span></td>
+                    <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.membre_ca_charge_nom || '—'}</td>
                   </tr>
                 )
               })}
