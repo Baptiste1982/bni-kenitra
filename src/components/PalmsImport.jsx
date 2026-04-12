@@ -9,32 +9,36 @@ export default function PalmsImport({ onImportDone }) {
   const fileRef = useRef()
 
   const parseXML = (text) => {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(text, 'text/xml')
-    const rows = doc.querySelectorAll('Row')
     const data = []
     let headers = []
     let headerFound = false
     let meta = { depuis: null, jusqua: null }
 
-    rows.forEach((row) => {
-      // Extraire les cellules en respectant ss:Index pour les colonnes vides
-      const cells = Array.from(row.querySelectorAll('Cell'))
+    // Extraire les dates depuis les métadonnées
+    const depuisMatch = text.match(/Depuis le[\s:]*<\/Data>[\s\S]*?<Data[^>]*>(\d{4}-\d{2}-\d{2})/i)
+      || text.match(/Depuis le :[\s\S]*?(\d{4}-\d{2}-\d{2})/)
+    if (depuisMatch) meta.depuis = depuisMatch[1]
+    const jusquaMatch = text.match(/Jusqu'au[\s:]*<\/Data>[\s\S]*?<Data[^>]*>(\d{4}-\d{2}-\d{2})/i)
+      || text.match(/Jusqu'au :[\s\S]*?(\d{4}-\d{2}-\d{2})/)
+    if (jusquaMatch) meta.jusqua = jusquaMatch[1]
+
+    // Splitter par Row
+    const rowChunks = text.split(/<Row[^>]*>/i).slice(1)
+
+    rowChunks.forEach(chunk => {
+      const cellMatches = [...chunk.matchAll(/<Cell([^>]*)>[\s\S]*?<Data[^>]*>([\s\S]*?)<\/Data>/g)]
+      if (!cellMatches.length) return
+
       const vals = []
-      cells.forEach(c => {
-        const idx = c.getAttribute('ss:Index')
-        if (idx) { while (vals.length < parseInt(idx) - 1) vals.push('') }
-        vals.push(c.querySelector('Data')?.textContent?.trim() || '')
+      cellMatches.forEach(m => {
+        const idxMatch = m[1].match(/ss:Index="(\d+)"/)
+        if (idxMatch) { while (vals.length < parseInt(idxMatch[1]) - 1) vals.push('') }
+        vals.push(m[2].trim())
       })
 
       if (vals.every(v => !v)) return
 
-      // Extraire les dates de période des métadonnées
       if (!headerFound) {
-        const depuisIdx = vals.indexOf('Depuis le :')
-        if (depuisIdx >= 0 && vals[depuisIdx + 1]) meta.depuis = vals[depuisIdx + 1].split('T')[0]
-        const jusquaIdx = vals.indexOf("Jusqu'au :")
-        if (jusquaIdx >= 0 && vals[jusquaIdx + 1]) meta.jusqua = vals[jusquaIdx + 1].split('T')[0]
         if (vals.includes('Prénom') && vals.includes('Nom')) {
           headers = vals
           headerFound = true
