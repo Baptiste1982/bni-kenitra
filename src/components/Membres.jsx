@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchScoresMK01 } from '../lib/bniService'
+import { fetchScoresMK01, fetchPalmsHebdoMois } from '../lib/bniService'
 import { TLBadge, PageHeader, TableWrap } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
@@ -11,13 +11,51 @@ export default function Membres({ profil }) {
   const [tlFilter, setTlFilter] = useState('tous')
   const [selected, setSelected] = useState(null)
   const [showImport, setShowImport] = useState(false)
+  const [previsions, setPrevisions] = useState({})
+
+  const now = new Date()
+  const mois = now.getMonth() + 1
+  const annee = now.getFullYear()
+  const finMois = new Date(annee, mois, 0)
+  const semainesRestantes = Math.max(0, Math.round((finMois - now) / (1000 * 60 * 60 * 24 * 7)))
 
   const load = () => {
     setLoading(true)
-    fetchScoresMK01().then(data => { setScores(data); setLoading(false) }).catch(() => setLoading(false))
+    Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee)])
+      .then(([scoresData, hebdoData]) => {
+        setScores(scoresData)
+        // Agréger les prévisions par membre
+        const map = {}
+        const dates = [...new Set(hebdoData.filter(r => r.membre_id).map(r => r.date_reunion))].sort()
+        const lastDate = dates[dates.length - 1] || null
+        hebdoData.filter(r => r.membre_id).forEach(r => {
+          if (!map[r.membre_id]) map[r.membre_id] = { cumul: { tat: 0, refs: 0 }, derniere: { tat: 0, refs: 0 } }
+          const m = map[r.membre_id]
+          m.cumul.tat += r.tat || 0
+          m.cumul.refs += (r.rdi || 0) + (r.rde || 0)
+          if (r.date_reunion === lastDate) {
+            m.derniere.tat = r.tat || 0
+            m.derniere.refs = (r.rdi || 0) + (r.rde || 0)
+          }
+        })
+        // Calculer prévisions
+        const prev = {}
+        Object.entries(map).forEach(([id, m]) => {
+          prev[id] = {
+            tat: m.cumul.tat + (m.derniere.tat * semainesRestantes),
+            refs: m.cumul.refs + (m.derniere.refs * semainesRestantes),
+          }
+        })
+        setPrevisions(prev)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [])
+
+  const prevColor = (val, obj) => val >= obj ? '#059669' : val >= obj * 0.6 ? '#D97706' : '#DC2626'
+  const hasPrevisions = Object.keys(previsions).length > 0
 
   const filtered = scores.filter(s => {
     const m = s.membres || {}
@@ -61,8 +99,8 @@ export default function Membres({ profil }) {
       ) : (
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','TYFCB','Renouvellement',''].map(h => (
-              <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','TYFCB', ...(hasPrevisions ? ['Prévi. TàT','Prévi. Réf.'] : []),'Renouvellement',''].map(h => (
+              <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
               {filtered.map((s, i) => {
@@ -80,6 +118,13 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
+                    {hasPrevisions && (() => {
+                      const p = previsions[s.membre_id]
+                      return <>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: p ? prevColor(p.tat, 4) : '#9CA3AF' }}>{p ? p.tat : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: p ? prevColor(p.refs, 4) : '#9CA3AF' }}>{p ? p.refs : '—'}</td>
+                      </>
+                    })()}
                     <td style={{ padding:'10px 14px', fontSize:12, color:isUrgent?'#DC2626':'inherit', fontWeight:isUrgent?700:400 }}>
                       {renouv ? renouv.toLocaleDateString('fr-FR') : '—'} {isUrgent ? '⚠️' : ''}
                     </td>
