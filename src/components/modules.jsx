@@ -81,15 +81,12 @@ export function Invites() {
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
   const filtered = filter === 'tous' ? invites : invites.filter(i => i.statut === filter)
 
-  const pipeline = [
-    { statut:'Validé par CM', col:'#059669' },
-    { statut:'Fiche envoyée au postulant', col:'#3B82F6' },
-    { statut:'En stand-by', col:'#8B5CF6' },
-    { statut:'A recontacter', col:'#D97706' },
-    { statut:'Devenu Membre', col:'#059669' },
-    { statut:'Pas intéressé pour le moment', col:'#9CA3AF' },
-    { statut:'Injoignable', col:'#9CA3AF' },
-  ].map(p => ({ ...p, n: invites.filter(i => i.statut === p.statut).length }))
+  // Pipeline dynamique basé sur les statuts réels + couleurs
+  const statutCounts = {}
+  invites.forEach(i => { if (i.statut) statutCounts[i.statut] = (statutCounts[i.statut]||0) + 1 })
+  const pipeline = Object.entries(statutCounts)
+    .map(([statut, n]) => ({ statut, n, ...getStatutStyle(statut) }))
+    .sort((a, b) => b.n - a.n)
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
@@ -104,18 +101,17 @@ export function Invites() {
           </div>
         }
       />
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
-        {pipeline.slice(0,4).map(p => (
-          <div key={p.statut} onClick={() => setFilter(p.statut)} style={{ background:'#fff', borderRadius:10, padding:16, border:'1px solid #E8E6E1', borderTop:`3px solid ${p.col}`, cursor:'pointer' }} onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-            <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em', color:'#6B7280', marginBottom:6 }}>{p.statut}</div>
-            <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:p.col }}>{loading ? '...' : p.n}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
-        {['tous','Validé par CM','A recontacter','Devenu Membre','Pas intéressé pour le moment'].map(s => (
-          <button key={s} onClick={() => setFilter(s)} style={{ padding:'6px 12px', borderRadius:20, border:'1px solid #E8E6E1', fontSize:12, background:filter===s?'#C41E3A':'#fff', color:filter===s?'#fff':'#6B7280', cursor:'pointer' }}>
-            {s === 'tous' ? `Tous (${invites.length})` : s}
+      {/* Filtres par statut — pastilles colorées */}
+      <div style={{ display:'flex', gap:6, marginBottom:20, flexWrap:'wrap' }}>
+        <button onClick={() => setFilter('tous')}
+          style={{ padding:'7px 14px', borderRadius:20, border: filter==='tous' ? '2px solid #1C1C2E' : '1px solid #E8E6E1', fontSize:12, fontWeight:filter==='tous'?700:500, background: filter==='tous' ? '#1C1C2E' : '#fff', color: filter==='tous' ? '#fff' : '#1C1C2E', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+          Tous ({invites.length})
+        </button>
+        {pipeline.map(p => (
+          <button key={p.statut} onClick={() => setFilter(filter === p.statut ? 'tous' : p.statut)}
+            style={{ padding:'7px 14px', borderRadius:20, border: filter===p.statut ? `2px solid ${p.color}` : '1px solid #E8E6E1', fontSize:12, fontWeight: filter===p.statut ? 700 : 500, background: filter===p.statut ? p.bg : '#fff', color: filter===p.statut ? p.color : '#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:6 }}>
+            <span style={{ width:8, height:8, borderRadius:'50%', background:p.color, flexShrink:0 }} />
+            {p.statut} ({p.n})
           </button>
         ))}
       </div>
