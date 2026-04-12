@@ -1,15 +1,54 @@
 import React, { useState, useEffect } from 'react'
 import { fetchUsers, createUser, deleteUser, toggleUserActive, fetchGroupes } from '../lib/bniService'
+import { supabase } from '../lib/supabase'
 import { PageHeader, Card, SectionTitle, TableWrap, Spinner } from './ui'
 
 const ROLES = [
-  { value: 'super_admin', label: 'Super Admin', desc: 'Accès total + gestion utilisateurs' },
-  { value: 'directeur_executif', label: 'Directeur Exécutif', desc: 'Accès total + gestion utilisateurs' },
-  { value: 'directrice_consultante', label: 'Directrice Consultante', desc: 'Tous les modules sauf Admin' },
-  { value: 'lecture', label: 'Lecture seule', desc: 'Dashboard + Membres uniquement' },
+  { value: 'super_admin', label: 'Super Admin', abbr: 'SA' },
+  { value: 'directeur_executif', label: 'Directeur Exécutif', abbr: 'DE' },
+  { value: 'directrice_consultante', label: 'Directrice Consultante', abbr: 'DC' },
+  { value: 'president', label: 'Président', abbr: 'P' },
+  { value: 'vice_president', label: 'Vice-Président', abbr: 'VP' },
+  { value: 'secretaire_tresorier', label: 'Secrétaire Trésorier', abbr: 'ST' },
+  { value: 'lecture', label: 'Lecture seule', abbr: 'L' },
 ]
 
+const MODULES = [
+  { id: 'dashboard', label: 'Tableau de bord' },
+  { id: 'membres', label: 'Membres' },
+  { id: 'hebdo', label: 'Suivi Hebdo' },
+  { id: 'invites', label: 'Invités' },
+  { id: 'groupes', label: 'Groupes' },
+  { id: 'reporting', label: 'Reporting' },
+  { id: 'agent', label: 'Agent IA' },
+  { id: 'admin', label: 'Admin' },
+]
+
+// Accès par défaut selon le rôle
+const DEFAULT_ACCESS = {
+  super_admin: ['dashboard', 'membres', 'hebdo', 'invites', 'groupes', 'reporting', 'agent', 'admin'],
+  directeur_executif: ['dashboard', 'membres', 'hebdo', 'invites', 'groupes', 'reporting', 'agent', 'admin'],
+  directrice_consultante: ['dashboard', 'membres', 'hebdo', 'invites', 'groupes', 'reporting', 'agent'],
+  president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting'],
+  vice_president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting'],
+  secretaire_tresorier: ['dashboard', 'membres', 'invites', 'reporting'],
+  lecture: ['dashboard', 'membres'],
+}
+
 const roleLabel = (role) => ROLES.find(r => r.value === role)?.label || role
+const roleAbbr = (role) => ROLES.find(r => r.value === role)?.abbr || '?'
+const roleBadge = (role) => {
+  const colors = {
+    super_admin: { bg: '#FEF3C7', color: '#92400E' },
+    directeur_executif: { bg: '#FEF3C7', color: '#92400E' },
+    directrice_consultante: { bg: '#DBEAFE', color: '#1E40AF' },
+    president: { bg: '#E0E7FF', color: '#3730A3' },
+    vice_president: { bg: '#EDE9FE', color: '#5B21B6' },
+    secretaire_tresorier: { bg: '#FEE2E2', color: '#991B1B' },
+    lecture: { bg: '#F3F4F6', color: '#4B5563' },
+  }
+  return colors[role] || colors.lecture
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([])
@@ -20,8 +59,10 @@ export default function AdminUsers() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [editAccess, setEditAccess] = useState(null) // user id being edited
 
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '', role: 'directrice_consultante', groupe_id: '', titre: '', telephone: '' })
+  const [formAccess, setFormAccess] = useState([...DEFAULT_ACCESS.directrice_consultante])
 
   const load = async () => {
     setLoading(true)
@@ -35,14 +76,25 @@ export default function AdminUsers() {
 
   useEffect(() => { load() }, [])
 
+  // Quand le rôle change dans le formulaire, mettre à jour les accès par défaut
+  const handleRoleChange = (role) => {
+    setForm({ ...form, role })
+    setFormAccess([...(DEFAULT_ACCESS[role] || DEFAULT_ACCESS.lecture)])
+  }
+
+  const toggleFormModule = (moduleId) => {
+    setFormAccess(prev => prev.includes(moduleId) ? prev.filter(m => m !== moduleId) : [...prev, moduleId])
+  }
+
   const handleCreate = async () => {
     setError(''); setSuccess(''); setSaving(true)
     try {
       if (!form.email || !form.password || !form.prenom || !form.nom) throw new Error('Prénom, nom, email et mot de passe sont requis')
       if (form.password.length < 6) throw new Error('Le mot de passe doit faire au moins 6 caractères')
-      await createUser({ ...form, groupe_id: form.groupe_id || null })
+      await createUser({ ...form, groupe_id: form.groupe_id || null, modules_access: formAccess })
       setSuccess(`Compte créé pour ${form.prenom} ${form.nom}`)
       setForm({ prenom: '', nom: '', email: '', password: '', role: 'directrice_consultante', groupe_id: '', titre: '', telephone: '' })
+      setFormAccess([...DEFAULT_ACCESS.directrice_consultante])
       setShowForm(false)
       await load()
     } catch (e) { setError(e.message) }
@@ -66,14 +118,38 @@ export default function AdminUsers() {
     } catch (e) { setError(e.message) }
   }
 
+  // Sauvegarder les accès modifiés d'un utilisateur existant
+  const saveAccess = async (userId, modules) => {
+    try {
+      const { error } = await supabase.from('profils').update({ modules_access: modules }).eq('id', userId)
+      if (error) throw error
+      setEditAccess(null)
+      setSuccess('Accès mis à jour')
+      await load()
+    } catch (e) { setError(e.message) }
+  }
+
   const inputStyle = { width: '100%', padding: '9px 12px', border: '1px solid #E8E6E1', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box' }
   const labelStyle = { fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, display: 'block' }
+  const checkboxStyle = { display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, padding: '4px 0' }
+
+  const AccessCheckboxes = ({ modules, onToggle, disabled }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+      {MODULES.map(m => (
+        <label key={m.id} style={{ ...checkboxStyle, opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer' }}>
+          <input type="checkbox" checked={modules.includes(m.id)} onChange={() => !disabled && onToggle(m.id)} disabled={disabled}
+            style={{ accentColor: '#C41E3A' }} />
+          <span style={{ color: modules.includes(m.id) ? '#1C1C2E' : '#9CA3AF', fontWeight: modules.includes(m.id) ? 500 : 400 }}>{m.label}</span>
+        </label>
+      ))}
+    </div>
+  )
 
   return (
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
       <PageHeader
         title="Gestion des utilisateurs"
-        sub={`${users.length} compte${users.length > 1 ? 's' : ''} · Rôles et accès`}
+        sub={`${users.length} compte${users.length > 1 ? 's' : ''} · Rôles et accès aux modules`}
         right={
           <button onClick={() => setShowForm(!showForm)}
             style={{ padding: '9px 16px', background: showForm ? '#1C1C2E' : '#C41E3A', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
@@ -108,8 +184,8 @@ export default function AdminUsers() {
             </div>
             <div>
               <label style={labelStyle}>Rôle *</label>
-              <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={inputStyle}>
-                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label} — {r.desc}</option>)}
+              <select value={form.role} onChange={e => handleRoleChange(e.target.value)} style={inputStyle}>
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.abbr} — {r.label}</option>)}
               </select>
             </div>
             <div>
@@ -128,6 +204,13 @@ export default function AdminUsers() {
               <input value={form.telephone} onChange={e => setForm({ ...form, telephone: e.target.value })} style={inputStyle} placeholder="+212 6 00 00 00 00" />
             </div>
           </div>
+          {/* Cases à cocher modules */}
+          <div style={{ marginTop: 16 }}>
+            <label style={labelStyle}>Accès aux modules</label>
+            <div style={{ padding: 12, background: '#F7F6F3', borderRadius: 8 }}>
+              <AccessCheckboxes modules={formAccess} onToggle={toggleFormModule} />
+            </div>
+          </div>
           <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
             <button onClick={handleCreate} disabled={saving}
               style={{ padding: '10px 24px', background: saving ? 'rgba(196,30,58,0.5)' : '#C41E3A', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -143,45 +226,87 @@ export default function AdminUsers() {
       ) : (
         <TableWrap>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{['Utilisateur', 'Email', 'Rôle', 'Groupe', 'Statut', 'Actions'].map(h => (
+            <thead><tr>{['Utilisateur', 'Email', 'Rôle', 'Groupe', 'Accès modules', 'Statut', 'Actions'].map(h => (
               <th key={h} style={{ background: '#F9F8F6', padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
-              {users.map(u => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #F3F2EF' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#FAFAF8'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <td style={{ padding: '10px 14px' }}>
-                    <div style={{ fontWeight: 500 }}>{u.prenom} {u.nom}</div>
-                    {u.titre && <div style={{ fontSize: 11, color: '#6B7280' }}>{u.titre}</div>}
-                  </td>
-                  <td style={{ padding: '10px 14px', fontSize: 12, color: '#6B7280' }}>{u.email}</td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 500, padding: '3px 8px', borderRadius: 12, background: u.role === 'super_admin' || u.role === 'directeur_executif' ? '#FEF3C7' : u.role === 'directrice_consultante' ? '#DBEAFE' : '#F3F4F6', color: u.role === 'super_admin' || u.role === 'directeur_executif' ? '#92400E' : u.role === 'directrice_consultante' ? '#1E40AF' : '#4B5563' }}>
-                      {roleLabel(u.role)}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 14px', fontSize: 12, color: '#6B7280' }}>{u.groupes?.code || 'Tous'}</td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <span onClick={() => handleToggle(u.id, u.actif)} style={{ cursor: 'pointer', fontSize: 11, fontWeight: 500, padding: '3px 8px', borderRadius: 12, background: u.actif ? '#D1FAE5' : '#FEE2E2', color: u.actif ? '#065F46' : '#991B1B' }}>
-                      {u.actif ? 'Actif' : 'Désactivé'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 14px' }}>
-                    {confirmDelete === u.id ? (
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#DC2626' }}>Confirmer ?</span>
-                        <button onClick={() => handleDelete(u.id)} style={{ padding: '4px 10px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Oui</button>
-                        <button onClick={() => setConfirmDelete(null)} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Non</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setConfirmDelete(u.id)} style={{ padding: '4px 10px', background: 'transparent', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                        Supprimer
-                      </button>
+              {users.map(u => {
+                const badge = roleBadge(u.role)
+                const userModules = u.modules_access || DEFAULT_ACCESS[u.role] || []
+                const isEditing = editAccess === u.id
+                return (
+                  <React.Fragment key={u.id}>
+                    <tr style={{ borderBottom: isEditing ? 'none' : '1px solid #F3F2EF' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#FAFAF8'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ fontWeight: 500 }}>{u.prenom} {u.nom}</div>
+                        {u.titre && <div style={{ fontSize: 11, color: '#6B7280' }}>{u.titre}</div>}
+                      </td>
+                      <td style={{ padding: '10px 14px', fontSize: 12, color: '#6B7280' }}>{u.email}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12, background: badge.bg, color: badge.color }}>
+                          {roleAbbr(u.role)} · {roleLabel(u.role)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', fontSize: 12, color: '#6B7280' }}>{u.groupes?.code || 'Tous'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {MODULES.map(m => (
+                            <span key={m.id} style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, background: userModules.includes(m.id) ? '#D1FAE5' : '#F3F4F6', color: userModules.includes(m.id) ? '#065F46' : '#9CA3AF', fontWeight: 500 }}>
+                              {m.label}
+                            </span>
+                          ))}
+                          <button onClick={() => setEditAccess(isEditing ? null : u.id)}
+                            style={{ fontSize: 10, color: '#C41E3A', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, marginLeft: 4 }}>
+                            {isEditing ? '✕' : 'Modifier'}
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span onClick={() => handleToggle(u.id, u.actif)} style={{ cursor: 'pointer', fontSize: 11, fontWeight: 500, padding: '3px 8px', borderRadius: 12, background: u.actif ? '#D1FAE5' : '#FEE2E2', color: u.actif ? '#065F46' : '#991B1B' }}>
+                          {u.actif ? 'Actif' : 'Désactivé'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        {confirmDelete === u.id ? (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: '#DC2626' }}>Confirmer ?</span>
+                            <button onClick={() => handleDelete(u.id)} style={{ padding: '4px 10px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Oui</button>
+                            <button onClick={() => setConfirmDelete(null)} style={{ padding: '4px 10px', background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Non</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setConfirmDelete(u.id)} style={{ padding: '4px 10px', background: 'transparent', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+                            Supprimer
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {/* Ligne d'édition des accès */}
+                    {isEditing && (
+                      <tr style={{ borderBottom: '1px solid #F3F2EF' }}>
+                        <td colSpan={7} style={{ padding: '12px 14px', background: '#F7F6F3' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', whiteSpace: 'nowrap' }}>Modifier les accès :</span>
+                            <AccessCheckboxes
+                              modules={userModules}
+                              onToggle={(moduleId) => {
+                                const updated = userModules.includes(moduleId) ? userModules.filter(m => m !== moduleId) : [...userModules, moduleId]
+                                // Mettre à jour localement
+                                setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, modules_access: updated } : usr))
+                              }}
+                            />
+                            <button onClick={() => saveAccess(u.id, users.find(usr => usr.id === u.id)?.modules_access || userModules)}
+                              style={{ padding: '6px 14px', background: '#C41E3A', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                              Sauvegarder
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </React.Fragment>
+                )
+              })}
             </tbody>
           </table>
         </TableWrap>

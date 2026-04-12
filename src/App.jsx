@@ -9,15 +9,15 @@ import SuiviHebdo from './components/SuiviHebdo'
 import AdminUsers from './components/AdminUsers'
 
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
-const ALL_NAV = [
-  { id:'dashboard', label:'Tableau de bord', icon:'▦', roles:'all' },
-  { id:'membres',   label:'Membres',          icon:'◈', roles:'all' },
-  { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧', roles:'all' },
-  { id:'invites',   label:'Invités',           icon:'◉', roles:'all' },
-  { id:'groupes',   label:'Groupes',           icon:'⬟', roles:'all' },
-  { id:'reporting', label:'Reporting',         icon:'◫', roles:'all' },
-  { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA', roles:'all' },
-  { id:'admin',     label:'Admin',             icon:'⚙', roles:ADMIN_ROLES },
+const ALL_MODULES = [
+  { id:'dashboard', label:'Tableau de bord', icon:'▦' },
+  { id:'membres',   label:'Membres',          icon:'◈' },
+  { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
+  { id:'invites',   label:'Invités',           icon:'◉' },
+  { id:'groupes',   label:'Groupes',           icon:'⬟' },
+  { id:'reporting', label:'Reporting',         icon:'◫' },
+  { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA' },
+  { id:'admin',     label:'Admin',             icon:'⚙' },
 ]
 
 // Logo BNI Kénitra SVG inline
@@ -41,7 +41,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        supabase.from('profils').select('prenom, nom, email, telephone, titre, role').eq('id', session.user.id).single()
+        supabase.from('profils').select('prenom, nom, email, telephone, titre, role, modules_access').eq('id', session.user.id).single()
           .then(({ data }) => { if (data) setProfil(data) })
       }
       setLoading(false)
@@ -49,7 +49,7 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        supabase.from('profils').select('prenom, nom, email, telephone, titre, role').eq('id', session.user.id).single()
+        supabase.from('profils').select('prenom, nom, email, telephone, titre, role, modules_access').eq('id', session.user.id).single()
           .then(({ data }) => { if (data) setProfil(data) })
       } else { setProfil(null) }
     })
@@ -97,7 +97,9 @@ export default function App() {
   }
 
   const userRole = profil?.role || 'lecture'
-  const NAV = ALL_NAV.filter(n => n.roles === 'all' || (Array.isArray(n.roles) && n.roles.includes(userRole)))
+  // Accès modules : si modules_access est défini, l'utiliser, sinon admin voit tout
+  const userModules = profil?.modules_access || (ADMIN_ROLES.includes(userRole) ? ALL_MODULES.map(m => m.id) : ['dashboard', 'membres'])
+  const NAV = ALL_MODULES.filter(m => userModules.includes(m.id))
 
   const Sidebar = () => (
     <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%' }}>
