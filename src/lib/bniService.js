@@ -250,6 +250,86 @@ export async function resetUserPassword(userId, password) {
   return data
 }
 
+// ─── GOOGLE SHEETS SYNC ─────────────────────────────────────────────────────
+export async function readGoogleSheet() {
+  const { data, error } = await supabase.functions.invoke('sync-invites', {
+    body: { action: 'read' }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+export async function syncSheetToSupabase() {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) throw new Error('Groupe introuvable')
+
+  const sheetData = await readGoogleSheet()
+  const rows = sheetData.values || []
+  if (rows.length < 2) throw new Error('Sheet vide')
+
+  const headers = rows[0].map(h => h.trim().toLowerCase())
+  let synced = 0
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]
+    if (!r || r.length < 3) continue
+    const prenom = (r[headers.indexOf('prénom')] || r[headers.indexOf('prénom ')] || '').trim()
+    const nom = (r[headers.indexOf('nom')] || '').trim()
+    if (!prenom && !nom) continue
+
+    const dateStr = r[headers.indexOf('date')] || ''
+    let dateVisite = null
+    if (dateStr) {
+      const parts = dateStr.split('/')
+      if (parts.length === 3) dateVisite = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
+    }
+
+    const inviteData = {
+      groupe_id: groupeId,
+      prenom, nom,
+      societe: r[headers.indexOf('société')] || null,
+      profession: r[headers.indexOf('profession')] || null,
+      telephone: r[headers.indexOf('téléphone')] || null,
+      invite_par_nom: r[headers.indexOf('invité par')] || null,
+      type_visite: r[headers.indexOf('type')] || null,
+      statut: r[headers.indexOf('statut')] || null,
+      membre_ca_charge_nom: r[headers.indexOf('membre ca en charge')] || null,
+      commentaires: r[headers.indexOf('commentaires')] || null,
+      date_visite: dateVisite,
+    }
+
+    // Upsert par prenom+nom+date
+    const { data: existing } = await supabase.from('invites')
+      .select('id').eq('groupe_id', groupeId)
+      .ilike('prenom', prenom).ilike('nom', nom).limit(1)
+
+    if (existing?.length) {
+      await supabase.from('invites').update(inviteData).eq('id', existing[0].id)
+    } else {
+      await supabase.from('invites').insert(inviteData)
+    }
+    synced++
+  }
+  return { synced, total: rows.length - 1 }
+}
+
+export async function writeInviteToSheet(invite) {
+  const row = [
+    invite.date_visite ? new Date(invite.date_visite).toLocaleDateString('fr-FR') : '',
+    invite.prenom || '', invite.nom || '', invite.societe || '',
+    invite.profession || '', invite.telephone || '', invite.invite_par_nom || '',
+    invite.type_visite || '', invite.statut || '', invite.membre_ca_charge_nom || '',
+    invite.commentaires || ''
+  ]
+  const { data, error } = await supabase.functions.invoke('sync-invites', {
+    body: { action: 'write_row', row }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
 // ─── MONTHLY SNAPSHOTS ──────────────────────────────────────────────────────
 export async function cloturerMois(mois, annee, userId) {
   const groupeId = await getGroupeId('MK-01')

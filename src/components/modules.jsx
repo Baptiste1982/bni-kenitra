@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois, fetchMonthlySnapshots } from '../lib/bniService'
+import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet } from '../lib/bniService'
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
@@ -10,17 +10,32 @@ export function Invites() {
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('tous')
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true)
     fetchInvites().then(data => { setInvites(data); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
+  }
 
-  const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Pas intéressé pour le moment','Injoignable']
+  useEffect(() => { load() }, [])
+
+  const handleSync = async () => {
+    setSyncing(true); setSyncMsg('')
+    try {
+      const result = await syncSheetToSupabase()
+      setSyncMsg(`Sync terminée — ${result.synced} invités synchronisés`)
+      load()
+    } catch (e) { setSyncMsg('Erreur : ' + e.message) }
+    setSyncing(false)
+  }
+
+  const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
   const filtered = filter === 'tous' ? invites : invites.filter(i => i.statut === filter)
 
   const pipeline = [
     { statut:'Validé par CM', col:'#059669' },
-    { statut:'Fiche envoyée', col:'#3B82F6' },
+    { statut:'Fiche envoyée au postulant', col:'#3B82F6' },
     { statut:'En stand-by', col:'#8B5CF6' },
     { statut:'A recontacter', col:'#D97706' },
     { statut:'Devenu Membre', col:'#059669' },
@@ -30,7 +45,17 @@ export function Invites() {
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title="Pipeline Invités" sub={`MK-01 · ${invites.length} invités depuis déc 2025`} />
+      <PageHeader title="Pipeline Invités" sub={`MK-01 · ${invites.length} invités depuis déc 2025`}
+        right={
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
+            <button onClick={handleSync} disabled={syncing}
+              style={{ padding:'9px 16px', background: syncing ? '#9CA3AF' : '#1C1C2E', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor: syncing ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:6 }}>
+              {syncing ? 'Sync...' : '🔄 Sync Google Sheet'}
+            </button>
+          </div>
+        }
+      />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
         {pipeline.slice(0,4).map(p => (
           <div key={p.statut} onClick={() => setFilter(p.statut)} style={{ background:'#fff', borderRadius:10, padding:16, border:'1px solid #E8E6E1', borderTop:`3px solid ${p.col}`, cursor:'pointer' }} onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
