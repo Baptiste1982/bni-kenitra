@@ -40,9 +40,10 @@ export function Invites() {
       await supabase.from('invites').update(editData).eq('id', editId)
       // Aussi écrire dans Google Sheet
       try { await writeInviteToSheet(editData) } catch(e) { console.log('Sheet write skipped:', e) }
+      // Mettre à jour localement sans recharger (évite le scroll en haut)
+      setInvites(prev => prev.map(inv => inv.id === editId ? { ...inv, ...editData } : inv))
       setEditId(null)
       setSyncMsg('Invité mis à jour')
-      load()
     } catch(e) { setSyncMsg('Erreur : ' + e.message) }
   }
 
