@@ -159,7 +159,7 @@ export default function Membres({ profil }) {
               {(() => {
                 const first = Object.values(palmsData)[0]
                 if (!first?.periode_debut || !first?.periode_fin) return null
-                const countJ = (from, to) => { let c=0; const d=new Date(from), e=new Date(to); while(d<=e){if(d.getDay()===4)c++;d.setDate(d.getDate()+1)} return c }
+                const countJ = (from, to) => { let c=0; const d=new Date(from+'T12:00:00'), e=new Date(to+'T12:00:00'); while(d<=e){if(d.getDay()===4)c++;d.setDate(d.getDate()+1)} return c }
                 const totalJ = countJ(first.periode_debut, first.periode_fin)
                 return (
                   <div style={{ fontSize:11, color:'#6B7280' }}>

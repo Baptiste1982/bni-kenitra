@@ -92,8 +92,8 @@ export default function PalmsImport({ onImportDone }) {
       // Compter les jeudis entre debut et date d'import = réunions couvertes
       const countJeudis = (from, to) => {
         let count = 0
-        const d = new Date(from)
-        const end = new Date(to)
+        const d = new Date(from + 'T12:00:00')
+        const end = new Date(to + 'T12:00:00')
         while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
         return count
       }
