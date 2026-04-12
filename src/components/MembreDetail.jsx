@@ -196,21 +196,23 @@ CONSIGNES:
             <div>
               {criteria.map((c, i) => {
                 const pct = Math.min(100, (Number(c.score)||0) / c.max * 100)
-                const barCol = pct >= 70 ? '#059669' : pct >= 40 ? '#D97706' : '#DC2626'
+                const cardBg = pct >= 70 ? { bg:'#D1FAE5', border:'#A7F3D0', color:'#065F46', bar:'#059669' } : pct >= 40 ? { bg:'#FEF9C3', border:'#FDE68A', color:'#854D0E', bar:'#D97706' } : pct > 0 ? { bg:'#FEE2E2', border:'#FECACA', color:'#991B1B', bar:'#DC2626' } : { bg:'#F3F4F6', border:'#E5E7EB', color:'#4B5563', bar:'#9CA3AF' }
                 return (
-                  <div key={i} style={{ background:'#fff', borderRadius:10, padding:'12px 14px', border:'1px solid #E8E6E1', marginBottom:8 }}>
+                  <div key={i} style={{ background:cardBg.bg, borderRadius:10, padding:'12px 14px', border:`1px solid ${cardBg.border}`, marginBottom:8, cursor:'pointer', transition:'transform 0.1s' }}
+                    onMouseEnter={e => e.currentTarget.style.transform='scale(1.01)'}
+                    onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:600 }}>{c.label}</div>
-                        <div style={{ fontSize:11, color:'#9CA3AF', marginTop:1 }}>{c.rate !== undefined && c.rate !== null ? c.format(c.rate) : '—'}</div>
+                        <div style={{ fontSize:13, fontWeight:600, color:cardBg.color }}>{c.label}</div>
+                        <div style={{ fontSize:11, color:cardBg.color, opacity:0.7, marginTop:1 }}>{c.rate !== undefined && c.rate !== null ? c.format(c.rate) : '—'}</div>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:18, fontWeight:700, color:barCol }}>{Number(c.score)||0}</div>
-                        <div style={{ fontSize:10, color:'#9CA3AF' }}>/ {c.max} pts</div>
+                        <div style={{ fontSize:18, fontWeight:700, color:cardBg.color }}>{Number(c.score)||0}</div>
+                        <div style={{ fontSize:10, color:cardBg.color, opacity:0.6 }}>/ {c.max} pts</div>
                       </div>
                     </div>
-                    <div style={{ height:6, background:'#F3F2EF', borderRadius:3 }}>
-                      <div style={{ height:6, width:`${pct}%`, background:barCol, borderRadius:3, transition:'width 0.5s ease' }} />
+                    <div style={{ height:6, background:'rgba(255,255,255,0.5)', borderRadius:3 }}>
+                      <div style={{ height:6, width:`${pct}%`, background:cardBg.bar, borderRadius:3, transition:'width 0.5s ease' }} />
                     </div>
                   </div>
                 )
