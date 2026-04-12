@@ -22,13 +22,26 @@ export const Card = ({ children, style={}, accent }) => (
   </div>
 )
 
-export const StatCard = ({ label, value, sub, accent, style={}, children }) => (
-  <Card accent={accent} style={style}>
-    <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{label}</div>
-    <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:'#1C1C2E' }}>{value}</div>
-    {sub && <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{sub}</div>}
-    {children}
-  </Card>
+export const StatCard = ({ label, value, sub, accent, topBg, valueColor, style={}, children }) => (
+  topBg ? (
+    <div style={{ borderRadius:12, border:'1px solid rgba(0,0,0,0.06)', overflow:'hidden', ...style }}>
+      <div style={{ background:topBg, padding:'10px 20px' }}>
+        <div style={{ fontSize:11, fontWeight:600, color:valueColor || '#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{label}</div>
+      </div>
+      <div style={{ padding:'14px 20px 18px' }}>
+        <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:valueColor || '#1C1C2E' }}>{value}</div>
+        {sub && <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{sub}</div>}
+        {children}
+      </div>
+    </div>
+  ) : (
+    <Card accent={accent} style={style}>
+      <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{label}</div>
+      <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:valueColor || '#1C1C2E' }}>{value}</div>
+      {sub && <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{sub}</div>}
+      {children}
+    </Card>
+  )
 )
 
 export const SectionTitle = ({ children }) => (

@@ -151,10 +151,20 @@ export function Reporting() {
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Reporting" sub="MK-01 Kénitra Atlantique · Oct 2025 → Mars 2026" />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-        <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="Affaires entre membres" accent="#3B82F6" style={{ background: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2' }} />
-        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total" accent="#8B5CF6" style={{ background:'#FEF9C3' }} />
-        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe" accent="#059669" style={{ background: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2' }} />
-        <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`} accent="#C41E3A" style={{ background: kpis?.invitesConvertis > 3 ? '#D1FAE5' : kpis?.invitesConvertis > 0 ? '#FEF9C3' : '#FEE2E2' }} />
+        <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="Affaires entre membres"
+          topBg={kpis?.tyfcb >= 300000 ? '#A7F3D0' : kpis?.tyfcb >= 50000 ? '#FDE68A' : '#FECACA'}
+          valueColor={kpis?.tyfcb >= 300000 ? '#065F46' : kpis?.tyfcb >= 50000 ? '#854D0E' : '#991B1B'}
+          style={{ background: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2' }} />
+        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total"
+          topBg="#FDE68A" valueColor="#854D0E" style={{ background:'#FEF9C3' }} />
+        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe"
+          topBg={kpis?.pRate >= 95 ? '#A7F3D0' : kpis?.pRate >= 88 ? '#FDE68A' : '#FECACA'}
+          valueColor={kpis?.pRate >= 95 ? '#065F46' : kpis?.pRate >= 88 ? '#854D0E' : '#991B1B'}
+          style={{ background: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2' }} />
+        <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`}
+          topBg={kpis?.invitesConvertis > 3 ? '#A7F3D0' : kpis?.invitesConvertis > 0 ? '#FDE68A' : '#FECACA'}
+          valueColor={kpis?.invitesConvertis > 3 ? '#065F46' : kpis?.invitesConvertis > 0 ? '#854D0E' : '#991B1B'}
+          style={{ background: kpis?.invitesConvertis > 3 ? '#D1FAE5' : kpis?.invitesConvertis > 0 ? '#FEF9C3' : '#FEE2E2' }} />
       </div>
       {!loading && <div style={{ marginBottom:16 }}><GroupeScoresChart scores={scores} /></div>}
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (

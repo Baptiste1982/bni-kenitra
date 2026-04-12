@@ -48,18 +48,22 @@ export default function Dashboard({ onNavigate }) {
       {/* Stat cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
         {[
-          { label:'Membres actifs', value: kpis?.membresActifs ?? '—', sub:'Objectif : 30 membres', nav:'membres', prog: kpis ? kpis.membresActifs/30*100 : 0, bg: kpis?.membresActifs >= 25 ? '#D1FAE5' : kpis?.membresActifs >= 20 ? '#FEF9C3' : '#FEE2E2', valueColor: kpis?.membresActifs >= 25 ? '#065F46' : kpis?.membresActifs >= 20 ? '#854D0E' : '#991B1B', accent:'#C41E3A' },
-          { label:'Alertes actives', value: kpis?.alertesCount ?? '—', sub:'Cliquez pour voir le détail', nav:'invites', bg: kpis?.alertesCount === 0 ? '#D1FAE5' : kpis?.alertesCount <= 2 ? '#FEF9C3' : '#FEE2E2', valueColor: kpis?.alertesCount === 0 ? '#065F46' : '#991B1B', accent:'#F59E0B' },
-          { label:'TYFCB généré', value: kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '—', sub:'En 4 mois de réunions', nav:'reporting', bg: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2', valueColor: kpis?.tyfcb >= 300000 ? '#065F46' : kpis?.tyfcb >= 50000 ? '#854D0E' : '#991B1B', accent:'#3B82F6' },
-          { label:'Taux de présence', value: kpis ? `${kpis.pRate}%` : '—', sub:'Moyenne groupe', nav:'reporting', bg: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2', valueColor: kpis?.pRate >= 95 ? '#065F46' : kpis?.pRate >= 88 ? '#854D0E' : '#991B1B', accent:'#059669' },
+          { label:'Membres actifs', value: kpis?.membresActifs ?? '—', sub:'Objectif : 30 membres', nav:'membres', prog: kpis ? kpis.membresActifs/30*100 : 0, bg: kpis?.membresActifs >= 25 ? '#D1FAE5' : kpis?.membresActifs >= 20 ? '#FEF9C3' : '#FEE2E2', topBg: kpis?.membresActifs >= 25 ? '#A7F3D0' : kpis?.membresActifs >= 20 ? '#FDE68A' : '#FECACA', valueColor: kpis?.membresActifs >= 25 ? '#065F46' : kpis?.membresActifs >= 20 ? '#854D0E' : '#991B1B', accent:'#C41E3A' },
+          { label:'Alertes actives', value: kpis?.alertesCount ?? '—', sub:'Cliquez pour voir le détail', nav:'invites', bg: kpis?.alertesCount === 0 ? '#D1FAE5' : kpis?.alertesCount <= 2 ? '#FEF9C3' : '#FEE2E2', topBg: kpis?.alertesCount === 0 ? '#A7F3D0' : kpis?.alertesCount <= 2 ? '#FDE68A' : '#FECACA', valueColor: kpis?.alertesCount === 0 ? '#065F46' : '#991B1B', accent:'#F59E0B' },
+          { label:'TYFCB généré', value: kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '—', sub:'En 4 mois de réunions', nav:'reporting', bg: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2', topBg: kpis?.tyfcb >= 300000 ? '#A7F3D0' : kpis?.tyfcb >= 50000 ? '#FDE68A' : '#FECACA', valueColor: kpis?.tyfcb >= 300000 ? '#065F46' : kpis?.tyfcb >= 50000 ? '#854D0E' : '#991B1B', accent:'#3B82F6' },
+          { label:'Taux de présence', value: kpis ? `${kpis.pRate}%` : '—', sub:'Moyenne groupe', nav:'reporting', bg: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2', topBg: kpis?.pRate >= 95 ? '#A7F3D0' : kpis?.pRate >= 88 ? '#FDE68A' : '#FECACA', valueColor: kpis?.pRate >= 95 ? '#065F46' : kpis?.pRate >= 88 ? '#854D0E' : '#991B1B', accent:'#059669' },
         ].map(c => (
           <div key={c.label} onClick={() => onNavigate(c.nav)} onMouseEnter={hover} onMouseLeave={unhover}
-            style={{ background:c.bg || '#fff', borderRadius:12, padding:'18px 20px', border:'1px solid rgba(0,0,0,0.06)', borderTop:`3px solid ${c.accent}`, cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}>
-            <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{c.label}</div>
-            <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color: c.valueColor || '#1C1C2E' }}>{c.value}</div>
-            <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{c.sub}</div>
-            {c.prog !== undefined && <div style={{ height:4, background:'rgba(255,255,255,0.5)', borderRadius:2, marginTop:10 }}><div style={{ height:4, width:`${Math.min(100,c.prog)}%`, background:c.accent, borderRadius:2 }} /></div>}
-            <div style={{ fontSize:11, color:c.accent, marginTop:6, fontWeight:500 }}>Voir le détail →</div>
+            style={{ background:c.bg, borderRadius:12, border:'1px solid rgba(0,0,0,0.06)', overflow:'hidden', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}>
+            <div style={{ background:c.topBg, padding:'10px 20px' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:c.valueColor, textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{c.label}</div>
+            </div>
+            <div style={{ padding:'14px 20px 18px' }}>
+              <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:c.valueColor }}>{c.value}</div>
+              <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{c.sub}</div>
+              {c.prog !== undefined && <div style={{ height:4, background:'rgba(255,255,255,0.5)', borderRadius:2, marginTop:10 }}><div style={{ height:4, width:`${Math.min(100,c.prog)}%`, background:c.valueColor, borderRadius:2, opacity:0.5 }} /></div>}
+              <div style={{ fontSize:11, color:c.valueColor, marginTop:6, fontWeight:500, opacity:0.7 }}>Voir le détail →</div>
+            </div>
           </div>
         ))}
       </div>
