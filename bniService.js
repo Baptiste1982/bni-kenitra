@@ -22,10 +22,16 @@ export async function fetchScoresMK01() {
   if (!groupeId) return []
   const { data, error } = await supabase
     .from('scores_bni')
-    .select('*, membres(prenom, nom, societe, secteur_activite, date_renouvellement)')
+    .select(`
+      rank, total_score, traffic_light, tyfcb, tyfcb_score,
+      attendance_rate, attendance_score, ceu_rate, ceu_score,
+      rate_121, score_121, referrals_given_rate, referrals_given_score,
+      visitors, visitor_score, sponsors, sponsor_score,
+      membres(prenom, nom, societe, secteur_activite, date_renouvellement)
+    `)
     .eq('groupe_id', groupeId)
-    .order('rank', { nullsLast: true })
-  if (error) throw error
+    .order('rank', { ascending: true, nullsLast: true })
+  if (error) { console.error('fetchScoresMK01 error:', error); return [] }
   return data || []
 }
 
