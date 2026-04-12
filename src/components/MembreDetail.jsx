@@ -29,11 +29,79 @@ export default function MembreDetail({ membre, score, onClose }) {
   const generateEmail = async () => {
     setEmailLoading(true)
     setEmailContent('')
-    const weakPoints = criteria.filter(c => Number(c.score) < c.max * 0.5).map(c => c.label).join(', ')
+
+    // Objectifs BNI semestriels (6 mois = ~26 semaines)
+    const objectifs = {
+      '1-2-1s': { cible: 1, unite: '/semaine', importance: 'Les tête-à-tête sont le cœur du réseautage BNI. C\'est là que se construisent la confiance et les recommandations qualifiées.' },
+      'Références': { cible: 1, unite: '/semaine', importance: 'Donner des références, c\'est activer le principe du Givers Gain. Plus tu donnes, plus tu reçois.' },
+      'Visiteurs': { cible: 2, unite: 'en 6 mois', importance: 'Inviter des visiteurs renforce le groupe et montre ton engagement. Chaque visiteur est un membre potentiel.' },
+      'Sponsors': { cible: 1, unite: 'en 6 mois', importance: 'Sponsoriser un nouveau membre montre ton leadership et contribue directement à la croissance du groupe.' },
+      'Présence': { cible: 1, unite: '(100%)', importance: 'La présence est la base de tout. Sans présence régulière, impossible de construire la confiance avec les autres membres.' },
+      'CEU': { cible: 1, unite: '/semaine', importance: 'La formation continue (CEU) te rend plus efficace en réseautage et montre ta volonté de progresser.' },
+    }
+
+    // Construire le détail des KPI avec écarts
+    const kpiDetails = criteria.map(c => {
+      const obj = objectifs[c.label]
+      const scoreNum = Number(c.score) || 0
+      const rateNum = Number(c.rate) || 0
+      const pct = Math.round(scoreNum / c.max * 100)
+      let detail = `- ${c.label}: ${scoreNum}/${c.max} pts (${pct}%) — actuel: ${c.format(rateNum)}`
+      if (obj) {
+        detail += ` — objectif: ${obj.cible}${obj.unite}`
+        if (pct < 50) detail += ' ⚠️ EN DESSOUS DE L\'OBJECTIF'
+      }
+      return detail
+    }).join('\n')
+
+    const kpiImportance = criteria
+      .filter(c => Number(c.score) < c.max * 0.5 && objectifs[c.label])
+      .map(c => `- ${c.label}: ${objectifs[c.label].importance}`)
+      .join('\n')
+
+    const weeksLeft = daysToRenew ? Math.max(0, Math.round(daysToRenew / 7)) : null
+    const scoreGap = 70 - (Number(s.total_score) || 0)
+
+    const kpiContext = `
+SITUATION ACTUELLE DE ${m.prenom} ${m.nom}:
+Score: ${s.total_score}/100 (objectif BNI: 70/100, il manque ${scoreGap > 0 ? scoreGap : 0} points)
+Traffic Light: ${s.traffic_light}
+Rang: ${s.rank || '—'}/20
+${renouv ? `Renouvellement: ${renouv.toLocaleDateString('fr-FR')} (dans ${daysToRenew} jours, soit ~${weeksLeft} semaines)` : ''}
+
+DÉTAIL DES KPIs:
+${kpiDetails}
+
+${kpiImportance ? `IMPORTANCE DES KPIs À AMÉLIORER:\n${kpiImportance}` : ''}`
+
     const prompts = {
-      relance: `Génère un email de relance professionnel pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}). Score actuel: ${s.total_score}/100, Traffic light: ${s.traffic_light}. Points faibles: ${weakPoints || 'aucun'}. Motivant, sans condescendance. Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra".`,
-      renouvellement: `Génère un email de rappel de renouvellement pour ${m.prenom} ${m.nom}. Date de renouvellement: ${renouv?.toLocaleDateString('fr-FR')} (dans ${daysToRenew} jours). Chaleureux, valorise les bénéfices BNI. Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra".`,
-      felicitations: `Génère un email de félicitations pour ${m.prenom} ${m.nom} (${m.societe}) — top du classement BNI Kénitra avec ${s.total_score}/100. Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra".`
+      relance: `Génère un email de relance professionnel et personnalisé pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
+${kpiContext}
+
+CONSIGNES:
+- Cite les KPIs concrets à améliorer avec des actions précises (ex: "il te manque X tête-à-tête d'ici le [date]")
+- Rappelle pourquoi chaque KPI est important pour son business
+- Ton motivant et bienveillant, pas condescendant
+- Propose 2-3 actions concrètes à faire cette semaine
+- Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`,
+      renouvellement: `Génère un email de rappel de renouvellement pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
+${kpiContext}
+
+CONSIGNES:
+- Date de renouvellement: ${renouv?.toLocaleDateString('fr-FR')} (dans ${daysToRenew} jours)
+- Valorise ce que BNI lui a apporté (TYFCB: ${Number(s.tyfcb || 0).toLocaleString('fr-FR')} MAD de chiffre d'affaires généré)
+- Mentionne les KPIs où il/elle peut encore progresser avant le renouvellement
+- Chaleureux et valorisant
+- Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`,
+      felicitations: `Génère un email de félicitations pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
+${kpiContext}
+
+CONSIGNES:
+- Félicite pour les KPIs forts (score >= 50% du max)
+- Mentionne le rang ${s.rank}/20 et le score ${s.total_score}/100
+- Encourage à maintenir l'effort et viser le Traffic Light vert (70+ pts)
+- Valorise l'impact positif sur le groupe
+- Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra"`
     }
     try {
       const { data, error } = await supabase.functions.invoke('generate-email', {
