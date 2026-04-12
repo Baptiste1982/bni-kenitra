@@ -93,7 +93,7 @@ export default function Membres({ profil }) {
           const totalInv = (consolidé ? Number(consolidé.visitors) || 0 : 0) + prevInv
           const totalMpb = (consolidé ? Number(consolidé.tyfcb) || 0 : 0) + prevMpb
           const { score, tl } = bniScore(rateTat, rateRefs, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
-          prev[id] = { tat: prevTat, refs: prevRefs, score, tl }
+          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs }
         })
         setPrevisions(prev)
         setLoading(false)
@@ -166,9 +166,9 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 50 ? '#D97706' : Number(s.total_score) >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
-                    {(() => { const p = palmsData[s.membre_id]; return <>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p ? Number(p.tat || 0) : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p ? (p.rdi || 0) + (p.rde || 0) : '—'}</td>
+                    {(() => { const p = palmsData[s.membre_id]; const h = previsions[s.membre_id]; return <>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p || h ? Number(p?.tat || 0) + (h?.cumulTat || 0) : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p || h ? ((p?.rdi || 0) + (p?.rde || 0)) + (h?.cumulRefs || 0) : '—'}</td>
                     </> })()}
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
                     {hasPrevisions && (() => {
