@@ -3,7 +3,7 @@ import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois,
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, StatCard } from './ui'
+import { PageHeader, SectionTitle, TableWrap, StatCard, fullName, cap } from './ui'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
 export function Invites() {
@@ -153,8 +153,8 @@ export function Invites() {
                     onClick={() => { if (isEdit) { setEditId(null) } else { setEditId(inv.id); setEditData({...inv}) } }}
                     onMouseEnter={e=>{ if(!isEdit) e.currentTarget.style.opacity='0.85'}} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.prenom}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{inv.nom}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.prenom)}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.nom)}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.profession || '—'}</td>
                     <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:12, background:statStyle.badge, color:statStyle.color }}>{inv.statut || '—'}</span></td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
@@ -421,7 +421,7 @@ export function Reporting() {
                 <thead><tr>{['Membre','TàT','Reco.','TYFCB'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
                 <tbody>{top5.map((m,i) => (
                   <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#D1FAE5' }}>
-                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#065F46' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#065F46' }}>{fullName(m.score?.membres?.prenom, m.score?.membres?.nom)}</td>
                     <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.tat}</td>
                     <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.refs}</td>
                     <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#065F46' }}>{Number(m.mpb).toLocaleString('de-DE')}</td>
@@ -435,7 +435,7 @@ export function Reporting() {
                 <thead><tr>{['Membre','TàT','Reco.','Score'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
                 <tbody>{(bottom5.length > 0 ? bottom5 : [{id:null,tat:0,refs:0,score:null}]).map((m,i) => m.score ? (
                   <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#FEE2E2' }}>
-                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#991B1B' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#991B1B' }}>{fullName(m.score?.membres?.prenom, m.score?.membres?.nom)}</td>
                     <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
                     <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
                     <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#991B1B' }}>{Number(m.score?.total_score||0)}</td>
@@ -456,7 +456,7 @@ export function Reporting() {
                 const h = hebdoMap[s.membre_id]
                 return (
                   <div key={i} style={{ background:'#FEE2E2', borderRadius:8, padding:'8px 12px', border:'1px solid #FECACA' }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{s.membres?.prenom} {s.membres?.nom}</div>
+                    <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</div>
                     <div style={{ fontSize:10, color:'#DC2626', marginTop:2 }}>Score: {sc} · TàT: {h?.tat||0} · Abs: {h?.absences||0}</div>
                   </div>
                 )
@@ -506,7 +506,7 @@ export function Reporting() {
                   const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FEF9C3',c:'#854D0E'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
                   return (
                     <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg }} onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{s.membres?.prenom} {s.membres?.nom}</td>
+                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
                       <td style={{ padding:'8px 12px', fontWeight:700, fontSize:13, background:tyb.bg, color:tyb.c, textAlign:'center' }}>{Number(s.tyfcb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                       <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><span style={{ fontSize:11, fontWeight:500, color:tb.c }}>{s.traffic_light||'—'}</span></td>
                     </tr>
@@ -528,7 +528,7 @@ export function Reporting() {
                   return (
                     <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg2 }} onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                       <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{s.rank}</td>
-                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{s.membres?.prenom} {s.membres?.nom}</td>
+                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
                       <td style={{ padding:'8px 12px', fontWeight:700, fontSize:14, background:scBg.bg, color:scBg.c, textAlign:'center', width:60 }}>{sc}</td>
                       <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><span style={{ fontSize:11, fontWeight:500, color:tb.c }}>{s.traffic_light||'—'}</span></td>
                     </tr>

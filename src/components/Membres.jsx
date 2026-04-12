@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01 } from '../lib/bniService'
-import { TLBadge, PageHeader, TableWrap } from './ui'
+import { TLBadge, PageHeader, TableWrap, fullName } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
 
@@ -244,7 +244,7 @@ export default function Membres({ profil }) {
                     <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
                       onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
                       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{p.membres?.prenom} {p.membres?.nom}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{fullName(p.membres?.prenom, p.membres?.nom)}</td>
                       <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#059669', fontWeight:600 }}>{p.presences || 0}</td>
                       <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color: p.absences > 0 ? '#DC2626' : '#9CA3AF', fontWeight:600 }}>{p.absences || 0}</td>
                       <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.late || 0}</td>
@@ -295,7 +295,7 @@ export default function Membres({ profil }) {
                     onMouseEnter={e => e.currentTarget.style.background='rgba(0,0,0,0.03)'}
                     onMouseLeave={e => e.currentTarget.style.background=rowBg}>
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:600, color:nameColor(s.total_score) }}>{m.prenom} {m.nom}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:600, color:nameColor(s.total_score) }}>{fullName(m.prenom, m.nom)}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}

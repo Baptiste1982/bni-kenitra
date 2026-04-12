@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois } from '../lib/bniService'
-import { PageHeader, SectionTitle, TableWrap, Card, Spinner } from './ui'
+import { PageHeader, SectionTitle, TableWrap, Card, Spinner, fullName } from './ui'
 
 const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre', 'Inv.': 'invites', 'TàT': 'tat', 'MPB': 'mpb', 'UEG': 'ueg' }
 
@@ -272,7 +272,7 @@ export default function SuiviHebdo() {
                   const mRefs = manque(m.cumul.refs, objRefs)
                   return (
                     <tr key={i} onMouseEnter={e => e.currentTarget.style.background = '#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdName}>{m.prenom} {m.nom}</td>
+                      <td style={tdName}>{fullName(m.prenom, m.nom)}</td>
                       <td style={{ ...td, background: '#F7F6F3', fontWeight: 600 }}>{m.cumul.presences}/{m.cumul.presences + m.cumul.absences}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{m.cumul.tat}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>

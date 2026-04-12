@@ -1,5 +1,8 @@
 import React from 'react'
 
+export const cap = (s) => s ? s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : ''
+export const fullName = (prenom, nom) => `${cap(prenom || '')} ${cap(nom || '')}`.trim()
+
 export const TLBadge = ({ tl }) => {
   if (!tl) return <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:500, padding:'3px 8px', borderRadius:12, background:'#F3F4F6', color:'#4B5563' }}>—</span>
   const cfg = {

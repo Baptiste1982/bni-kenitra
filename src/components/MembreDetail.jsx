@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { TLBadge } from './ui'
+import { TLBadge, fullName } from './ui'
 import { MembreRadarChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
@@ -150,7 +150,7 @@ CONSIGNES:
             {(m.prenom?.[0]||'?')}{(m.nom?.[0]||'?')}
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ color:'#fff', fontSize:17, fontWeight:600 }}>{m.prenom} {m.nom}</div>
+            <div style={{ color:'#fff', fontSize:17, fontWeight:600 }}>{fullName(m.prenom, m.nom)}</div>
             <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>{m.societe} · {m.secteur_activite}</div>
           </div>
           <div style={{ textAlign:'right', marginRight:8 }}>
