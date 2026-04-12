@@ -165,7 +165,13 @@ export function Invites() {
                       <td colSpan={7} style={{ padding:'12px 14px' }}>
                         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:10 }}>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Prénom</label><input value={editData.prenom||''} onChange={e=>setEditData({...editData,prenom:e.target.value})} style={inputSt}/></div>
-                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Nom</label><input value={editData.nom||''} onChange={e=>setEditData({...editData,nom:e.target.value})} style={inputSt}/></div>
+                          <div style={{ position:'relative' }}>
+                            <label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Nom</label>
+                            <input value={editData.nom||''} onChange={e=>setEditData({...editData,nom:e.target.value})} style={inputSt}/>
+                            <button onClick={e=>{e.stopPropagation();setEditData({...editData, prenom:editData.nom, nom:editData.prenom})}}
+                              title="Inverser prénom ↔ nom"
+                              style={{ position:'absolute', top:0, right:0, background:'#1C1C2E', color:'#fff', border:'none', borderRadius:4, fontSize:9, padding:'2px 5px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>⇄</button>
+                          </div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Société</label><input value={editData.societe||''} onChange={e=>setEditData({...editData,societe:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Profession</label><input value={editData.profession||''} onChange={e=>setEditData({...editData,profession:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Téléphone</label><input value={editData.telephone||''} onChange={e=>setEditData({...editData,telephone:e.target.value})} style={inputSt}/></div>
