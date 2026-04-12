@@ -14,6 +14,8 @@ export function Invites() {
   const [syncMsg, setSyncMsg] = useState('')
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
+  const [newStatut, setNewStatut] = useState(false)
+  const [customStatut, setCustomStatut] = useState('')
 
   const load = () => {
     setLoading(true)
@@ -130,7 +132,20 @@ export function Invites() {
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Société</label><input value={editData.societe||''} onChange={e=>setEditData({...editData,societe:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Profession</label><input value={editData.profession||''} onChange={e=>setEditData({...editData,profession:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Téléphone</label><input value={editData.telephone||''} onChange={e=>setEditData({...editData,telephone:e.target.value})} style={inputSt}/></div>
-                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Statut</label><select value={editData.statut||''} onChange={e=>setEditData({...editData,statut:e.target.value})} style={inputSt}><option value="">—</option>{ALL_STATUTS.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Statut</label>
+                            {newStatut ? (
+                              <div style={{ display:'flex', gap:4 }}>
+                                <input value={customStatut} onChange={e=>setCustomStatut(e.target.value)} placeholder="Nouveau statut..." style={{...inputSt, flex:1}} autoFocus />
+                                <button onClick={e=>{e.stopPropagation(); if(customStatut.trim()){setEditData({...editData,statut:customStatut.trim()});setNewStatut(false);setCustomStatut('')}}} style={{ padding:'4px 8px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:6, fontSize:10, cursor:'pointer' }}>OK</button>
+                                <button onClick={e=>{e.stopPropagation();setNewStatut(false);setCustomStatut('')}} style={{ padding:'4px 8px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:10, cursor:'pointer' }}>✕</button>
+                              </div>
+                            ) : (
+                              <div style={{ display:'flex', gap:4 }}>
+                                <select value={editData.statut||''} onChange={e=>setEditData({...editData,statut:e.target.value})} style={{...inputSt, flex:1}}><option value="">—</option>{ALL_STATUTS.map(s=><option key={s} value={s}>{s}</option>)}</select>
+                                <button onClick={e=>{e.stopPropagation();setNewStatut(true)}} style={{ padding:'4px 8px', background:'#1C1C2E', color:'#fff', border:'none', borderRadius:6, fontSize:10, cursor:'pointer', whiteSpace:'nowrap' }}>+ Nouveau</button>
+                              </div>
+                            )}
+                          </div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Invité par</label><input value={editData.invite_par_nom||''} onChange={e=>setEditData({...editData,invite_par_nom:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>CA en charge</label><input value={editData.membre_ca_charge_nom||''} onChange={e=>setEditData({...editData,membre_ca_charge_nom:e.target.value})} style={inputSt}/></div>
                         </div>
