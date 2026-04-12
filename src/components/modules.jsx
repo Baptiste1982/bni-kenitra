@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01 } from '../lib/bniService'
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
+import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, StatCard } from './ui'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
@@ -211,11 +212,10 @@ export function AgentIA() {
     setMessages(newMessages)
     setLoading(true)
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, system:BNI_SYSTEM_PROMPT, messages:newMessages.map(m=>({ role:m.role, content:m.content })) })
+      const { data, error } = await supabase.functions.invoke('generate-email', {
+        body: { system: BNI_SYSTEM_PROMPT, max_tokens: 1000, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }
       })
-      const data = await resp.json()
+      if (error) throw error
       setMessages([...newMessages, { role:'assistant', content:data.content?.[0]?.text || 'Désolé, erreur.' }])
     } catch { setMessages([...newMessages, { role:'assistant', content:'Erreur de connexion.' }]) }
     setLoading(false)

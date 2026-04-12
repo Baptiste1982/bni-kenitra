@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { TLBadge } from './ui'
 import { MembreRadarChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
+import { supabase } from '../lib/supabase'
 
 export default function MembreDetail({ membre, score, onClose }) {
   const [tab, setTab] = useState('profil')
@@ -35,11 +36,10 @@ export default function MembreDetail({ membre, score, onClose }) {
       felicitations: `Génère un email de félicitations pour ${m.prenom} ${m.nom} (${m.societe}) — top du classement BNI Kénitra avec ${s.total_score}/100. Signe "Jean Baptiste CHIOTTI, Directeur Exécutif BNI Kénitra".`
     }
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:800, system:BNI_SYSTEM_PROMPT, messages:[{ role:'user', content:prompts[emailType] }] })
+      const { data, error } = await supabase.functions.invoke('generate-email', {
+        body: { system: BNI_SYSTEM_PROMPT, max_tokens: 800, messages: [{ role: 'user', content: prompts[emailType] }] }
       })
-      const data = await resp.json()
+      if (error) throw error
       setEmailContent(data.content?.[0]?.text || '')
     } catch { setEmailContent('Erreur lors de la génération.') }
     setEmailLoading(false)
