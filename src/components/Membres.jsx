@@ -132,7 +132,7 @@ export default function Membres({ profil }) {
   const tlBg = (level) => ({
     vert: { bg: '#D1FAE5', color: '#065F46' },
     jaune: { bg: '#FEF9C3', color: '#854D0E' },
-    orange: { bg: '#FFEDD5', color: '#9A3412' },
+    orange: { bg: '#FEF9C3', color: '#854D0E' },
     rouge: { bg: '#FEE2E2', color: '#991B1B' },
     gris: { bg: '#F3F4F6', color: '#4B5563' },
   }[level] || { bg: '#F3F4F6', color: '#4B5563' })
@@ -289,7 +289,7 @@ export default function Membres({ profil }) {
                 const m = s.membres || {}
                 const renouv = m.date_renouvellement ? new Date(m.date_renouvellement) : null
                 const isUrgent = renouv && (renouv - new Date()) < 90 * 24 * 60 * 60 * 1000
-                const rowBg = { vert:'#D1FAE5', orange:'#FEF9C3', rouge:'#FEE2E2', gris:'#F3F4F6' }[s.traffic_light] || '#fff'
+                const rowBg = { vert:'#D1FAE5', orange:'#FEF9C3', rouge:'#FEE2E2', gris:'#F9FAFB' }[s.traffic_light] || '#fff'
                 return (
                   <tr key={i} onClick={() => setSelected(s)} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer', background:rowBg }}
                     onMouseEnter={e => e.currentTarget.style.background='rgba(0,0,0,0.03)'}
