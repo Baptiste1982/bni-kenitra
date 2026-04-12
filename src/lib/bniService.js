@@ -100,7 +100,7 @@ export async function fetchDashboardKPIs() {
     supabase.from('membres').select('id, statut').eq('groupe_id', groupeId).eq('statut', 'actif'),
     supabase.from('alertes').select('id, niveau, type_alerte, titre, message, date_echeance').eq('lue', false),
     supabase.from('invites').select('id, statut').eq('groupe_id', groupeId),
-    supabase.from('scores_bni').select('total_score, traffic_light, tyfcb').eq('groupe_id', groupeId),
+    supabase.from('scores_bni').select('total_score, traffic_light, tyfcb, rank, attendance_rate, attendance_score, rate_121, score_121, referrals_given_rate, referrals_given_score, visitors, visitor_score, sponsors, sponsor_score, ceu_rate, ceu_score, tyfcb_score, membres(prenom, nom, societe, secteur_activite, date_renouvellement)').eq('groupe_id', groupeId),
     supabase.from('palms_imports').select('presences, absences').eq('groupe_id', groupeId),
   ])
 
