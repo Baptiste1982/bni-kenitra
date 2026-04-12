@@ -6,15 +6,18 @@ import Membres from './components/Membres'
 import RealtimeAlerts from './components/RealtimeAlerts'
 import { Invites, Groupes, Reporting, AgentIA } from './components/modules'
 import SuiviHebdo from './components/SuiviHebdo'
+import AdminUsers from './components/AdminUsers'
 
-const NAV = [
-  { id:'dashboard', label:'Tableau de bord', icon:'▦' },
-  { id:'membres',   label:'Membres',          icon:'◈' },
-  { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
-  { id:'invites',   label:'Invités',           icon:'◉' },
-  { id:'groupes',   label:'Groupes',           icon:'⬟' },
-  { id:'reporting', label:'Reporting',         icon:'◫' },
-  { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA' },
+const ADMIN_ROLES = ['super_admin', 'directeur_executif']
+const ALL_NAV = [
+  { id:'dashboard', label:'Tableau de bord', icon:'▦', roles:'all' },
+  { id:'membres',   label:'Membres',          icon:'◈', roles:'all' },
+  { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧', roles:'all' },
+  { id:'invites',   label:'Invités',           icon:'◉', roles:'all' },
+  { id:'groupes',   label:'Groupes',           icon:'⬟', roles:'all' },
+  { id:'reporting', label:'Reporting',         icon:'◫', roles:'all' },
+  { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA', roles:'all' },
+  { id:'admin',     label:'Admin',             icon:'⚙', roles:ADMIN_ROLES },
 ]
 
 // Logo BNI Kénitra SVG inline
@@ -90,7 +93,11 @@ export default function App() {
     groupes:   <Groupes />,
     reporting: <Reporting />,
     agent:     <AgentIA />,
+    admin:     <AdminUsers />,
   }
+
+  const userRole = profil?.role || 'lecture'
+  const NAV = ALL_NAV.filter(n => n.roles === 'all' || (Array.isArray(n.roles) && n.roles.includes(userRole)))
 
   const Sidebar = () => (
     <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%' }}>
@@ -130,10 +137,10 @@ export default function App() {
       {/* User */}
       <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-          <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:'#fff', flexShrink:0 }}>JB</div>
+          <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:'#fff', flexShrink:0 }}>{(profil?.prenom?.[0] || '?')}{(profil?.nom?.[0] || '')}</div>
           <div>
-            <div style={{ color:'#fff', fontSize:11, fontWeight:500 }}>Jean Baptiste Chiotti</div>
-            <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10 }}>DE · Région Kénitra</div>
+            <div style={{ color:'#fff', fontSize:11, fontWeight:500 }}>{profil ? `${profil.prenom} ${profil.nom}` : '...'}</div>
+            <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10 }}>{profil?.titre || profil?.role || ''}</div>
           </div>
         </div>
         <button onClick={handleLogout} style={{ fontSize:11, color:'rgba(255,255,255,0.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:'DM Sans, sans-serif' }}>Déconnexion →</button>

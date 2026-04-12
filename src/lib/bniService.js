@@ -203,3 +203,40 @@ export async function fetchDashboardKPIs() {
     palms,
   }
 }
+
+// ─── ADMIN USERS ────────────────────────────────────────────────────────────
+export async function fetchUsers() {
+  const { data, error } = await supabase
+    .from('profils')
+    .select('id, prenom, nom, email, role, titre, telephone, actif, groupe_id, created_at, groupes(nom, code)')
+    .order('created_at')
+  if (error) throw error
+  return data || []
+}
+
+export async function createUser(params) {
+  const { data, error } = await supabase.functions.invoke('manage-users', {
+    body: { action: 'create', ...params }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+export async function deleteUser(userId) {
+  const { data, error } = await supabase.functions.invoke('manage-users', {
+    body: { action: 'delete', user_id: userId }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+export async function toggleUserActive(userId, actif) {
+  const { data, error } = await supabase.functions.invoke('manage-users', {
+    body: { action: 'toggle', user_id: userId, actif }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
