@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01 } from '../lib/bniService'
 import { TLBadge, PageHeader, TableWrap } from './ui'
 import MembreDetail from './MembreDetail'
@@ -13,6 +13,14 @@ export default function Membres({ profil }) {
   const [showImport, setShowImport] = useState(false)
   const [showPalms, setShowPalms] = useState(false)
   const [showPalmsMenu, setShowPalmsMenu] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    if (!showPalmsMenu) return
+    const handleClick = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowPalmsMenu(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showPalmsMenu])
   const [previsions, setPrevisions] = useState({})
   const [palmsData, setPalmsData] = useState({})
 
@@ -161,7 +169,7 @@ export default function Membres({ profil }) {
                   })()}
                 </div>
               </div>
-              <div style={{ position:'relative' }}>
+              <div ref={menuRef} style={{ position:'relative' }}>
                 <div onClick={e => { e.stopPropagation(); setShowPalmsMenu(!showPalmsMenu) }}
                   style={{ width:24, height:24, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, cursor:'pointer', borderRadius:4 }}
                   onMouseEnter={e => e.currentTarget.style.background='#F3F2EF'}
