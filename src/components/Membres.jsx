@@ -47,32 +47,48 @@ export default function Membres({ profil }) {
             m.derniere = { tat: r.tat || 0, refs, invites: r.invites || 0, mpb: Number(r.mpb) || 0, ueg: r.ueg || 0 }
           }
         })
-        // Calculer prévisions + score prévisionnel
-        // Barème BNI : présence/10, 121/20, refs/25, visiteurs/25, sponsors/5, tyfcb/5, ceu/10 = 100
+        // Barème BNI exact pour le score prévisionnel
+        // On part des scores consolidés et on projette avec les données hebdo
+        const bniScore = (rateTat, rateRefs, ratePres, prevInv, prevMpb, rateUeg, sponsorScore) => {
+          // Attendance /10 : >=95% → 10, >=88% → 5, <88% → 0
+          const sPres = ratePres >= 0.95 ? 10 : ratePres >= 0.88 ? 5 : 0
+          // 1-2-1s /20 (par semaine) : >=1 → 20, >=0.75 → 15, >=0.5 → 10, >=0.25 → 5, <0.25 → 0
+          const sTat = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
+          // Referrals /25 (par semaine) : >=1.25 → 25, >=1 → 20, >=0.75 → 15, >=0.50 → 10, >=0.25 → 5, <0.25 → 0
+          const sRefs = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
+          // Visitors /25 (6 mois) : 5+ → 25, 4 → 20, 3 → 15, 2 → 10, 1 → 5, 0 → 0
+          const sInv = prevInv >= 5 ? 25 : prevInv >= 4 ? 20 : prevInv >= 3 ? 15 : prevInv >= 2 ? 10 : prevInv >= 1 ? 5 : 0
+          // TYFCB /5 : >=30 → 5, >=15 → 4, >=5 → 3, >=2 → 2, >0 → 1, 0 → 0
+          const sTyfcb = prevMpb >= 30 ? 5 : prevMpb >= 15 ? 4 : prevMpb >= 5 ? 3 : prevMpb >= 2 ? 2 : prevMpb > 0 ? 1 : 0
+          // CEU /10 (par semaine) : >0.5 → 10, >0 → 5, 0 → 0
+          const sUeg = rateUeg > 0.5 ? 10 : rateUeg > 0 ? 5 : 0
+          // Sponsors /5 : on garde le score consolidé
+          const total = sPres + sTat + sRefs + sInv + sTyfcb + sUeg + (sponsorScore || 0)
+          const tl = total >= 70 ? 'vert' : total >= 50 ? 'orange' : total >= 30 ? 'rouge' : 'gris'
+          return { score: total, tl }
+        }
+
         const prev = {}
         Object.entries(map).forEach(([id, m]) => {
-          const totalSem = nbSemaines + semainesRestantes // semaines totales du mois
+          const totalSem = nbSemaines + semainesRestantes
           const prevTat = m.cumul.tat + (m.derniere.tat * semainesRestantes)
           const prevRefs = m.cumul.refs + (m.derniere.refs * semainesRestantes)
           const prevInv = m.cumul.invites + (m.derniere.invites * semainesRestantes)
-          const prevUeg = m.cumul.ueg + (m.derniere.ueg * semainesRestantes)
           const prevMpb = m.cumul.mpb + (m.derniere.mpb * semainesRestantes)
-          // Taux prévisionnels (par semaine)
+          const prevUeg = m.cumul.ueg + (m.derniere.ueg * semainesRestantes)
+          // Taux par semaine
           const rateTat = totalSem > 0 ? prevTat / totalSem : 0
           const rateRefs = totalSem > 0 ? prevRefs / totalSem : 0
           const ratePres = m.cumul.total > 0 ? m.cumul.presences / m.cumul.total : 1
           const rateUeg = totalSem > 0 ? prevUeg / totalSem : 0
-          // Score prévisionnel (simplifié, barème approximatif)
-          const scorePres = Math.min(10, ratePres >= 1 ? 10 : ratePres >= 0.75 ? 5 : 0)
-          const scoreTat = Math.min(20, rateTat >= 1 ? 20 : rateTat >= 0.5 ? 10 : rateTat > 0 ? 5 : 0)
-          const scoreRefs = Math.min(25, rateRefs >= 1 ? 25 : rateRefs >= 0.5 ? 15 : rateRefs > 0 ? 5 : 0)
-          const scoreInv = Math.min(25, prevInv >= 4 ? 25 : prevInv >= 2 ? 15 : prevInv >= 1 ? 10 : 0)
-          const scoreUeg = Math.min(10, rateUeg >= 1 ? 10 : rateUeg > 0 ? 5 : 0)
-          const scoreTyfcb = Math.min(5, prevMpb > 0 ? (prevMpb >= 10000 ? 5 : prevMpb >= 5000 ? 3 : 1) : 0)
-          // On garde le score sponsors du consolidé (pas dans les données hebdo)
-          const scoreTotal = scorePres + scoreTat + scoreRefs + scoreInv + scoreUeg + scoreTyfcb
-          const tl = scoreTotal >= 70 ? 'vert' : scoreTotal >= 40 ? 'orange' : scoreTotal >= 20 ? 'rouge' : 'gris'
-          prev[id] = { tat: prevTat, refs: prevRefs, score: scoreTotal, tl }
+          // Score sponsors du consolidé
+          const consolidé = scoresData.find(s => s.membre_id === id)
+          const sponsorScore = consolidé ? Number(consolidé.sponsor_score) || 0 : 0
+          // Pour visiteurs et TYFCB, combiner consolidé + hebdo
+          const totalInv = (consolidé ? Number(consolidé.visitors) || 0 : 0) + prevInv
+          const totalMpb = (consolidé ? Number(consolidé.tyfcb) || 0 : 0) + prevMpb
+          const { score, tl } = bniScore(rateTat, rateRefs, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
+          prev[id] = { tat: prevTat, refs: prevRefs, score, tl }
         })
         setPrevisions(prev)
         setLoading(false)
@@ -142,14 +158,14 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:500 }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 40 ? '#D97706' : Number(s.total_score) >= 20 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 50 ? '#D97706' : Number(s.total_score) >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: p ? (p.score >= 70 ? '#059669' : p.score >= 40 ? '#D97706' : p.score >= 20 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{p ? p.score : '—'}</td>
+                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: p ? (p.score >= 70 ? '#059669' : p.score >= 50 ? '#D97706' : p.score >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{p ? p.score : '—'}</td>
                         <td style={{ padding:'10px 14px' }}>{p ? <TLBadge tl={p.tl} /> : '—'}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: p ? prevColor(p.tat, 4) : '#9CA3AF' }}>{p ? p.tat : '—'}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: p ? prevColor(p.refs, 4) : '#9CA3AF' }}>{p ? p.refs : '—'}</td>
