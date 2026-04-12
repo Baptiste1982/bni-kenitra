@@ -166,9 +166,10 @@ export function Reporting() {
               <tbody>
                 {scores.filter(s=>Number(s.tyfcb)>0).sort((a,b)=>Number(b.tyfcb)-Number(a.tyfcb)).slice(0,8).map((s,i)=>{
                   const tyb = Number(s.tyfcb) >= 300000 ? {bg:'#D1FAE5',c:'#065F46'} : Number(s.tyfcb) >= 50000 ? {bg:'#FEF9C3',c:'#854D0E'} : Number(s.tyfcb) >= 20000 ? {bg:'#FFEDD5',c:'#9A3412'} : {bg:'#FEE2E2',c:'#991B1B'}
-                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FFEDD5',c:'#9A3412'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
+                  const rBg = {vert:'#D1FAE5',orange:'#FEF9C3',rouge:'#FEE2E2',gris:'#F9FAFB'}[s.traffic_light]||'#fff'
+                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FEF9C3',c:'#854D0E'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
                   return (
-                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }} onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg }} onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                       <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{s.membres?.prenom} {s.membres?.nom}</td>
                       <td style={{ padding:'8px 12px', fontWeight:700, fontSize:13, background:tyb.bg, color:tyb.c, textAlign:'center' }}>{Number(s.tyfcb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                       <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><span style={{ fontSize:11, fontWeight:500, color:tb.c }}>{s.traffic_light||'—'}</span></td>
@@ -186,9 +187,10 @@ export function Reporting() {
                 {scores.filter(s=>s.rank).sort((a,b)=>a.rank-b.rank).map((s,i)=>{
                   const sc = Number(s.total_score||0)
                   const scBg = sc >= 70 ? {bg:'#D1FAE5',c:'#065F46'} : sc >= 50 ? {bg:'#FEF9C3',c:'#854D0E'} : sc >= 30 ? {bg:'#FEE2E2',c:'#991B1B'} : {bg:'#F3F4F6',c:'#4B5563'}
-                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FFEDD5',c:'#9A3412'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
+                  const rBg2 = {vert:'#D1FAE5',orange:'#FEF9C3',rouge:'#FEE2E2',gris:'#F9FAFB'}[s.traffic_light]||'#fff'
+                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FEF9C3',c:'#854D0E'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
                   return (
-                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }} onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg2 }} onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                       <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{s.rank}</td>
                       <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{s.membres?.prenom} {s.membres?.nom}</td>
                       <td style={{ padding:'8px 12px', fontWeight:700, fontSize:14, background:scBg.bg, color:scBg.c, textAlign:'center', width:60 }}>{sc}</td>

@@ -3,9 +3,10 @@ import { fetchDashboardKPIs } from '../lib/bniService'
 import { TLBadge, SectionTitle, PageHeader, TableWrap } from './ui'
 
 const scoreBg = (score) => score >= 70 ? { bg:'#D1FAE5', color:'#065F46' } : score >= 50 ? { bg:'#FEF9C3', color:'#854D0E' } : score >= 30 ? { bg:'#FEE2E2', color:'#991B1B' } : { bg:'#F3F4F6', color:'#4B5563' }
-const tlBg = (tl) => ({ vert:{bg:'#D1FAE5',color:'#065F46'}, orange:{bg:'#FFEDD5',color:'#9A3412'}, rouge:{bg:'#FEE2E2',color:'#991B1B'}, gris:{bg:'#F3F4F6',color:'#4B5563'} }[tl] || {bg:'#F3F4F6',color:'#4B5563'})
-const tyfcbBg = (val) => val >= 300000 ? {bg:'#D1FAE5',color:'#065F46'} : val >= 50000 ? {bg:'#FEF9C3',color:'#854D0E'} : val >= 20000 ? {bg:'#FFEDD5',color:'#9A3412'} : val > 0 ? {bg:'#FEE2E2',color:'#991B1B'} : {bg:'#F3F4F6',color:'#4B5563'}
+const tlBg = (tl) => ({ vert:{bg:'#D1FAE5',color:'#065F46'}, orange:{bg:'#FEF9C3',color:'#854D0E'}, rouge:{bg:'#FEE2E2',color:'#991B1B'}, gris:{bg:'#F3F4F6',color:'#4B5563'} }[tl] || {bg:'#F3F4F6',color:'#4B5563'})
+const tyfcbBg = (val) => val >= 300000 ? {bg:'#D1FAE5',color:'#065F46'} : val >= 50000 ? {bg:'#FEF9C3',color:'#854D0E'} : val >= 20000 ? {bg:'#FEF9C3',color:'#854D0E'} : val > 0 ? {bg:'#FEE2E2',color:'#991B1B'} : {bg:'#F3F4F6',color:'#4B5563'}
 const nameColor = (score) => Number(score||0) >= 70 ? '#065F46' : Number(score||0) >= 50 ? '#854D0E' : Number(score||0) >= 30 ? '#991B1B' : '#6B7280'
+const rowBg = (tl) => ({ vert:'#D1FAE5', orange:'#FEF9C3', rouge:'#FEE2E2', gris:'#F9FAFB' }[tl] || '#fff')
 
 export default function Dashboard({ onNavigate }) {
   const [kpis, setKpis] = useState(null)
@@ -141,8 +142,8 @@ export default function Dashboard({ onNavigate }) {
                 const sc = scoreBg(Number(s.total_score))
                 const tb = tlBg(s.traffic_light)
                 return (
-                  <tr key={s.rank} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                  <tr key={s.rank} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', cursor:'pointer', background:rowBg(s.traffic_light) }}
+                    onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
                     <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{s.rank}</td>
                     <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:nameColor(s.total_score) }}>{s.membres?.prenom} {s.membres?.nom}</td>
                     <td style={{ padding:'8px 12px', fontWeight:700, fontSize:14, background:sc.bg, color:sc.color, textAlign:'center', width:60 }}>{Number(s.total_score).toFixed(0)}</td>
@@ -168,8 +169,8 @@ export default function Dashboard({ onNavigate }) {
                 const tb = tlBg(s.traffic_light)
                 const tyb = tyfcbBg(Number(s.tyfcb))
                 return (
-                  <tr key={i} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                  <tr key={i} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', cursor:'pointer', background:rowBg(s.traffic_light) }}
+                    onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
                     <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:nameColor(s.total_score) }}>{s.membres?.prenom} {s.membres?.nom}</td>
                     <td style={{ padding:'8px 12px', fontWeight:700, fontSize:13, background:tyb.bg, color:tyb.color, textAlign:'center' }}>{Number(s.tyfcb).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                     <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><TLBadge tl={s.traffic_light} /></td>
