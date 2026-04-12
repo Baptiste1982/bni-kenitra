@@ -123,11 +123,13 @@ export async function fetchDashboardKPIs() {
   scores.forEach(s => { if (s.traffic_light && tlCounts[s.traffic_light] !== undefined) tlCounts[s.traffic_light]++ })
 
   // Invités stats
-  const CONVERTIS_STATUTS = ['Devenu Membre', 'Membre BNI']
+  const CONVERTIS_STATUTS = ['Devenu Membre']
+  const MEMBRES_BNI_STATUTS = ['Membre BNI']
   const INACTIFS_STATUTS  = ['Pas intéressé pour le moment', 'Injoignable', 'Pas de budget pour le moment', 'absente']
 
   const invitesConvertis = invites.filter(i => CONVERTIS_STATUTS.includes(i.statut)).length
-  const invitesEnCours   = invites.filter(i => i.statut && !CONVERTIS_STATUTS.includes(i.statut) && !INACTIFS_STATUTS.includes(i.statut)).length
+  const invitesMembresBNI = invites.filter(i => MEMBRES_BNI_STATUTS.includes(i.statut)).length
+  const invitesEnCours   = invites.filter(i => i.statut && !CONVERTIS_STATUTS.includes(i.statut) && !MEMBRES_BNI_STATUTS.includes(i.statut) && !INACTIFS_STATUTS.includes(i.statut)).length
 
   return {
     membresActifs: membres.length,
@@ -138,6 +140,7 @@ export async function fetchDashboardKPIs() {
     tlCounts,
     invitesTotal: invites.length,
     invitesConvertis,
+    invitesMembresBNI,
     invitesEnCours,
     scores,
     palms,

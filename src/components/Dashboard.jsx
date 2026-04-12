@@ -109,7 +109,7 @@ export default function Dashboard({ onNavigate }) {
               <SectionTitle>Pipeline invités</SectionTitle>
               <span style={{ fontSize:11, color:'#C41E3A', fontWeight:500 }}>Voir →</span>
             </div>
-            {[['Total', kpis?.invitesTotal ?? '—', '#1C1C2E'], ['Convertis', kpis?.invitesConvertis ?? '—', '#059669'], ['En cours', kpis?.invitesEnCours ?? '—', '#D97706']].map(([l, v, col]) => (
+            {[['Total', kpis?.invitesTotal ?? '—', '#1C1C2E'], ['Devenus membres', kpis?.invitesConvertis ?? '—', '#059669'], ['Membres BNI', kpis?.invitesMembresBNI ?? '—', '#6366F1'], ['En cours', kpis?.invitesEnCours ?? '—', '#D97706']].map(([l, v, col]) => (
               <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                 <span style={{ fontSize:12, color:'#6B7280' }}>{l}</span>
                 <span style={{ fontSize:13, fontWeight:700, color:col }}>{v}</span>
