@@ -280,7 +280,7 @@ export default function Membres({ profil }) {
       ) : (
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','1-2-1','Réf.','Visiteurs','Sponsors','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []),'Renouvellement'].map(h => (
+            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','1-2-1','Reco.','Visiteurs','Sponsors','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []),'Renouvellement'].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>

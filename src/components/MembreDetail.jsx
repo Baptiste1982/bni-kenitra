@@ -19,7 +19,7 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
   const criteria = [
     { label:'Présence', rate: s.attendance_rate, score: s.attendance_score, max:10, format: v => `${Math.round(v*100)}%` },
     { label:'1-2-1s', rate: s.rate_121, score: s.score_121, max:20, format: v => `${Number(v).toFixed(2)}/sem` },
-    { label:'Références', rate: s.referrals_given_rate, score: s.referrals_given_score, max:25, format: v => `${Number(v).toFixed(2)}/sem` },
+    { label:'Recommandations', rate: s.referrals_given_rate, score: s.referrals_given_score, max:25, format: v => `${Number(v).toFixed(2)}/sem` },
     { label:'Visiteurs', rate: s.visitors, score: s.visitor_score, max:25, format: v => `${v} en 6 mois` },
     { label:'Sponsors', rate: s.sponsors, score: s.sponsor_score, max:5, format: v => `${v} en 6 mois` },
     { label:'TYFCB', rate: s.tyfcb, score: s.tyfcb_score, max:5, format: v => `${Number(v).toLocaleString('fr-FR')} MAD` },
@@ -38,7 +38,7 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
 
     const objectifs = {
       '1-2-1s': { cibleMois: 4, unite: 'tête-à-tête ce mois', importance: 'Les tête-à-tête sont le cœur du réseautage BNI. C\'est lors de ces rencontres que se construisent la confiance et les recommandations qualifiées. Sans tête-à-tête, pas de références.' },
-      'Références': { cibleMois: 4, unite: 'références données ce mois', importance: 'Donner des références, c\'est activer le principe du Givers Gain. Plus tu donnes, plus tu reçois. C\'est le moteur de ton retour sur investissement BNI.' },
+      'Recommandations': { cibleMois: 4, unite: 'recommandations données ce mois', importance: 'Donner des recommandations, c\'est activer le principe du Givers Gain. Plus tu donnes, plus tu reçois. C\'est le moteur de ton retour sur investissement BNI.' },
       'Visiteurs': { cibleMois: 1, unite: 'visiteur invité ce mois', importance: 'Inviter des visiteurs renforce le groupe et montre ton engagement. Chaque visiteur est un membre potentiel qui élargit ton réseau.' },
       'Présence': { cibleMois: 4, unite: 'réunions sur 4 ce mois', importance: 'La présence est la base de tout. Sans présence régulière, impossible de construire la confiance avec les autres membres ni de recevoir des références.' },
       'CEU': { cibleMois: 4, unite: 'CEU ce mois', importance: 'La formation continue te rend plus efficace en réseautage et montre ta volonté de progresser au sein du groupe.' },

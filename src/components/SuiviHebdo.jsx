@@ -247,7 +247,7 @@ export default function SuiviHebdo() {
                   <th style={{ ...th, textAlign: 'left', minWidth: 140 }}>Membre</th>
                   <th style={{ ...th, background: '#F7F6F3' }}>Prés.</th>
                   <th style={th} colSpan={3}>Tête-à-tête</th>
-                  <th style={th} colSpan={3}>Références données</th>
+                  <th style={th} colSpan={3}>Recommandations données</th>
                   <th style={th}>Visiteurs</th>
                   <th style={th}>TYFCB</th>
                   <th style={th}>CEU</th>

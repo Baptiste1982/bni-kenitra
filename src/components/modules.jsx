@@ -152,7 +152,7 @@ export function Reporting() {
       <PageHeader title="Reporting" sub="MK-01 Kénitra Atlantique · Oct 2025 → Mars 2026" />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
         <StatCard label="TYFCB total" value={kpis ? `${(kpis.tyfcb/1000).toFixed(0)}K MAD` : '…'} sub="Affaires entre membres" accent="#3B82F6" />
-        <StatCard label="Références données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total" accent="#8B5CF6" />
+        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="Score total" accent="#8B5CF6" />
         <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="Moyenne groupe" accent="#059669" />
         <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`} accent="#C41E3A" />
       </div>
