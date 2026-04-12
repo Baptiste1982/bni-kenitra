@@ -20,13 +20,36 @@ export async function fetchGroupes() {
 export async function fetchScoresMK01() {
   const groupeId = await getGroupeId('MK-01')
   if (!groupeId) return []
-  const { data, error } = await supabase
+
+  // Charger scores avec membres
+  const { data: scoresData, error: scoresErr } = await supabase
     .from('scores_bni')
     .select('*, membres(prenom, nom, societe, secteur_activite, date_renouvellement)')
     .eq('groupe_id', groupeId)
     .order('rank', { nullsLast: true })
-  if (error) throw error
-  return data || []
+  if (scoresErr) throw scoresErr
+
+  // Charger membres sans score
+  const scoredIds = (scoresData || []).map(s => s.membre_id)
+  const { data: membresData } = await supabase
+    .from('membres')
+    .select('id, prenom, nom, societe, secteur_activite, date_renouvellement')
+    .eq('groupe_id', groupeId)
+    .eq('statut', 'actif')
+
+  const unscored = (membresData || [])
+    .filter(m => !scoredIds.includes(m.id))
+    .map(m => ({
+      membre_id: m.id,
+      rank: null, total_score: null, traffic_light: null, tyfcb: null,
+      attendance_rate: null, attendance_score: null, score_121: null, rate_121: null,
+      referrals_given_score: null, referrals_given_rate: null,
+      visitor_score: null, visitors: null, sponsor_score: null, sponsors: null,
+      tyfcb_score: null, ceu_score: null, ceu_rate: null,
+      membres: { prenom: m.prenom, nom: m.nom, societe: m.societe, secteur_activite: m.secteur_activite, date_renouvellement: m.date_renouvellement }
+    }))
+
+  return [...(scoresData || []), ...unscored]
 }
 
 // ─── INVITÉS ─────────────────────────────────────────────────────────────────
