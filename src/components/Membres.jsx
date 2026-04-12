@@ -4,7 +4,7 @@ import { TLBadge, PageHeader, TableWrap } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
 
-export default function Membres() {
+export default function Membres({ profil }) {
   const [scores, setScores] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -100,6 +100,7 @@ export default function Membres() {
         <MembreDetail
           membre={selected.membres || {}}
           score={selected}
+          profil={profil}
           onClose={() => setSelected(null)}
         />
       )}

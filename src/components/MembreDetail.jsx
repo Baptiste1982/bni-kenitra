@@ -4,7 +4,7 @@ import { MembreRadarChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
 
-export default function MembreDetail({ membre, score, onClose }) {
+export default function MembreDetail({ membre, score, profil, onClose }) {
   const [tab, setTab] = useState('profil')
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailContent, setEmailContent] = useState('')
@@ -80,6 +80,10 @@ ${kpiDetails}
 
 ${kpiImportance ? `POURQUOI CES KPIs SONT IMPORTANTS:\n${kpiImportance}` : ''}`
 
+    // Signature dynamique basée sur le profil connecté
+    const p = profil || {}
+    const signature = `${p.prenom || 'Jean Baptiste'} ${p.nom || 'CHIOTTI'}\n${p.titre || 'Directeur Exécutif BNI Kénitra'}${p.email ? '\n📧 ' + p.email : ''}${p.telephone ? '\nTel : ' + p.telephone : ''}`
+
     const prompts = {
       relance: `Génère un email de relance professionnel et personnalisé pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
@@ -91,7 +95,7 @@ CONSIGNES:
 - Propose 2-3 actions concrètes à faire CETTE SEMAINE
 - Ton motivant et bienveillant, pas condescendant
 - En conclusion seulement, mentionne la perspective du renouvellement si pertinent
-- Signe avec:\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra\n📧 jb.chiotti@bni.ma\nTel : +212 6 57 76 26 40`,
+- Signe avec:\n${signature}`,
       renouvellement: `Génère un email de rappel de renouvellement pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
 
@@ -100,7 +104,7 @@ CONSIGNES:
 - Valorise ce que BNI lui a apporté (TYFCB: ${Number(s.tyfcb || 0).toLocaleString('fr-FR')} MAD de chiffre d'affaires généré)
 - Mentionne les KPIs à améliorer ce mois-ci pour arriver au renouvellement dans les meilleures conditions
 - Chaleureux et valorisant
-- Signe avec:\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra\n📧 jb.chiotti@bni.ma\nTel : +212 6 57 76 26 40`,
+- Signe avec:\n${signature}`,
       felicitations: `Génère un email de félicitations pour ${m.prenom} ${m.nom} (${m.societe || m.secteur_activite}).
 ${kpiContext}
 
@@ -109,7 +113,7 @@ CONSIGNES:
 - Mentionne le rang ${s.rank}/20 et le score ${s.total_score}/100
 - Encourage à maintenir l'effort ce mois de ${moisActuel} pour viser le Traffic Light vert (70+ pts)
 - Valorise l'impact positif sur le groupe
-- Signe avec:\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra\n📧 jb.chiotti@bni.ma\nTel : +212 6 57 76 26 40`
+- Signe avec:\n${signature}`
     }
     try {
       const { data, error } = await supabase.functions.invoke('generate-email', {

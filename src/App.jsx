@@ -26,6 +26,7 @@ const BNILogo = () => (
 
 export default function App() {
   const [user, setUser] = useState(null)
+  const [profil, setProfil] = useState(null)
   const [loading, setLoading] = useState(true)
   const [active, setActive] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -34,10 +35,18 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase.from('profils').select('prenom, nom, email, telephone, titre, role').eq('id', session.user.id).single()
+          .then(({ data }) => { if (data) setProfil(data) })
+      }
       setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase.from('profils').select('prenom, nom, email, telephone, titre, role').eq('id', session.user.id).single()
+          .then(({ data }) => { if (data) setProfil(data) })
+      } else { setProfil(null) }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -73,7 +82,7 @@ export default function App() {
 
   const MODULES = {
     dashboard: <Dashboard onNavigate={navigate} />,
-    membres:   <Membres />,
+    membres:   <Membres profil={profil} />,
     invites:   <Invites />,
     groupes:   <Groupes />,
     reporting: <Reporting />,
