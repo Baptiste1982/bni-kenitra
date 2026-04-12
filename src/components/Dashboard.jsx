@@ -126,30 +126,62 @@ export default function Dashboard({ onNavigate, profil }) {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16, marginBottom:16 }}>
-        {/* Alertes live */}
-        <TableWrap>
-          <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <SectionTitle>🚨 Alertes prioritaires — Live</SectionTitle>
-            <button onClick={() => onNavigate('invites')} style={{ fontSize:11, color:'#C41E3A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Voir les invités →</button>
-          </div>
-          <div style={{ padding:12 }}>
-            {(kpis?.alertes || []).length === 0 ? (
-              <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>✅ Aucune alerte active</div>
-            ) : (kpis?.alertes || []).map((a, i) => (
+        {/* Alertes live — catégorisées */}
+        {(() => {
+          const allAlertes = kpis?.alertes || []
+          const alertesMembres = allAlertes.filter(a => a.type_alerte === 'renouvellement' || a.niveau === 'danger')
+          const alertesInvites = allAlertes.filter(a => a.type_alerte === 'recontact' || (a.type_alerte !== 'renouvellement' && a.niveau !== 'danger' && a.niveau !== 'relance'))
+          const alertesRecontact = allAlertes.filter(a => a.niveau === 'relance')
+          const showAll = allAlertes.length <= 4
+          const top4 = allAlertes.slice(0, 4)
+          const [showAllAlertes, setShowAllAlertes] = React.useState ? null : null
+
+          const categories = [
+            { label:'Membres', icon:'👤', alertes: alertesMembres, module:'membres' },
+            { label:'Invités', icon:'◉', alertes: [...alertesInvites.filter(a=>a.niveau!=='relance')], module:'invites' },
+            { label:'À recontacter', icon:'📞', alertes: alertesRecontact, module:'invites' },
+          ].filter(c => c.alertes.length > 0)
+
+          const renderAlerte = (a, i) => {
+            const style = a.niveau==='danger' ? { bg:'#FEF2F2', border:'#FEE2E2', dot:'#DC2626' }
+              : a.niveau==='relance' ? { bg:'#DBEAFE', border:'#BFDBFE', dot:'#3B82F6' }
+              : { bg:'#FFFBEB', border:'#FEF3C7', dot:'#D97706' }
+            return (
               <div key={i} onClick={() => onNavigate(a.type_alerte === 'renouvellement' ? 'membres' : 'invites')}
-                style={{ display:'flex', alignItems:'flex-start', gap:10, padding:12, borderRadius:8, marginBottom:8, background: a.niveau==='danger'?'#FEF2F2': a.niveau==='relance'?'#DBEAFE':'#FFFBEB', border:`1px solid ${a.niveau==='danger'?'#FEE2E2': a.niveau==='relance'?'#BFDBFE':'#FEF3C7'}`, cursor:'pointer' }}
+                style={{ display:'flex', alignItems:'flex-start', gap:10, padding:10, borderRadius:8, marginBottom:6, background:style.bg, border:`1px solid ${style.border}`, cursor:'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.opacity='0.8'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background: a.niveau==='danger'?'#DC2626': a.niveau==='relance'?'#3B82F6':'#D97706', flexShrink:0, marginTop:3 }} />
+                <div style={{ width:8, height:8, borderRadius:'50%', background:style.dot, flexShrink:0, marginTop:4 }} />
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:12, fontWeight:600 }}>{a.titre}</div>
-                  <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{a.message}</div>
-                  {a.date_echeance && <div style={{ fontSize:10, fontWeight:600, color:a.niveau==='danger'?'#DC2626':'#D97706', marginTop:4 }}>Échéance : {new Date(a.date_echeance).toLocaleDateString('fr-FR')}</div>}
+                  <div style={{ fontSize:10, color:'#6B7280', marginTop:1 }}>{a.message}</div>
+                  {a.date_echeance && <div style={{ fontSize:9, fontWeight:600, color:style.dot, marginTop:3 }}>Échéance : {new Date(a.date_echeance).toLocaleDateString('fr-FR')}</div>}
                 </div>
-                <span style={{ fontSize:11, color:'#9CA3AF', flexShrink:0 }}>→</span>
               </div>
-            ))}
-          </div>
-        </TableWrap>
+            )
+          }
+
+          return (
+            <TableWrap>
+              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <SectionTitle>🚨 Alertes prioritaires ({allAlertes.length})</SectionTitle>
+              </div>
+              <div style={{ padding:12, maxHeight:400, overflowY:'auto' }}>
+                {allAlertes.length === 0 ? (
+                  <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>✅ Aucune alerte active</div>
+                ) : categories.map((cat, ci) => (
+                  <div key={ci} style={{ marginBottom:12 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                      <span style={{ fontSize:12 }}>{cat.icon}</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:'#1C1C2E', textTransform:'uppercase', letterSpacing:'0.06em' }}>{cat.label}</span>
+                      <span style={{ fontSize:9, fontWeight:600, padding:'1px 6px', borderRadius:8, background:'#F3F4F6', color:'#6B7280' }}>{cat.alertes.length}</span>
+                    </div>
+                    {cat.alertes.map(renderAlerte)}
+                  </div>
+                ))}
+              </div>
+            </TableWrap>
+          )
+        })()}
 
         {/* Right column */}
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>

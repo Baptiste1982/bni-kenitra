@@ -78,17 +78,22 @@ export default function App() {
     return () => clearInterval(interval)
   }, [user])
 
-  // Live alert count via Realtime
+  // Live alert count via Realtime (alertes + recontacts)
+  const updateAlertCount = async () => {
+    const troisMois = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0]
+    const [alertesRes, recontactRes] = await Promise.all([
+      supabase.from('alertes').select('id', { count:'exact' }).eq('lue', false),
+      supabase.from('invites').select('id', { count:'exact' }).eq('statut', 'A recontacter').gte('date_visite', troisMois),
+    ])
+    setAlertCount((alertesRes.count || 0) + (recontactRes.count || 0))
+  }
   useEffect(() => {
     if (!user) return
-    supabase.from('alertes').select('id', { count:'exact' }).eq('lue', false)
-      .then(({ count }) => { if (count !== null) setAlertCount(count) })
-
+    updateAlertCount()
     const channel = supabase.channel('alert-count')
-      .on('postgres_changes', { event:'*', schema:'public', table:'alertes' }, () => {
-        supabase.from('alertes').select('id', { count:'exact' }).eq('lue', false)
-          .then(({ count }) => { if (count !== null) setAlertCount(count) })
-      }).subscribe()
+      .on('postgres_changes', { event:'*', schema:'public', table:'alertes' }, updateAlertCount)
+      .on('postgres_changes', { event:'*', schema:'public', table:'invites' }, updateAlertCount)
+      .subscribe()
     return () => supabase.removeChannel(channel)
   }, [user])
 
