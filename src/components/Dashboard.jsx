@@ -132,10 +132,6 @@ export default function Dashboard({ onNavigate, profil }) {
           const alertesMembres = allAlertes.filter(a => a.type_alerte === 'renouvellement' || a.niveau === 'danger')
           const alertesInvites = allAlertes.filter(a => a.type_alerte === 'recontact' || (a.type_alerte !== 'renouvellement' && a.niveau !== 'danger' && a.niveau !== 'relance'))
           const alertesRecontact = allAlertes.filter(a => a.niveau === 'relance')
-          const showAll = allAlertes.length <= 4
-          const top4 = allAlertes.slice(0, 4)
-          const [showAllAlertes, setShowAllAlertes] = React.useState ? null : null
-
           const categories = [
             { label:'Membres', icon:'👤', alertes: alertesMembres, module:'membres' },
             { label:'Invités', icon:'◉', alertes: [...alertesInvites.filter(a=>a.niveau!=='relance')], module:'invites' },
