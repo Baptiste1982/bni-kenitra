@@ -174,12 +174,11 @@ export default function Membres({ profil }) {
                       const p = palmsData[s.membre_id]; const h = previsions[s.membre_id]
                       const tat = p || h ? Number(p?.tat || 0) + (h?.cumulTat || 0) : null
                       const refs = p || h ? ((p?.rdi || 0) + (p?.rde || 0)) + (h?.cumulRefs || 0) : null
-                      // Couleur TàT basée sur rate_121 (par semaine) : >=1→vert, >=0.5→orange, <0.5→rouge
-                      const rateTat = s.rate_121 ? Number(s.rate_121) : 0
-                      const tatColor = tat === null ? '#9CA3AF' : rateTat >= 1 ? '#059669' : rateTat >= 0.5 ? '#D97706' : '#DC2626'
-                      // Couleur Réf basée sur referrals_given_rate : >=1→vert, >=0.5→orange, <0.5→rouge
-                      const rateRefs = s.referrals_given_rate ? Number(s.referrals_given_rate) : 0
-                      const refsColor = refs === null ? '#9CA3AF' : rateRefs >= 1 ? '#059669' : rateRefs >= 0.5 ? '#D97706' : '#DC2626'
+                      // Couleur basée sur le score BNI officiel du KPI
+                      const scoreTat = Number(s.score_121) || 0  // max 20
+                      const tatColor = tat === null ? '#9CA3AF' : scoreTat >= 15 ? '#059669' : scoreTat >= 5 ? '#D97706' : '#DC2626'
+                      const scoreRefs = Number(s.referrals_given_score) || 0  // max 25
+                      const refsColor = refs === null ? '#9CA3AF' : scoreRefs >= 15 ? '#059669' : scoreRefs >= 5 ? '#D97706' : '#DC2626'
                       return <>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: tatColor }}>{tat !== null ? tat : '—'}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color: refsColor }}>{refs !== null ? refs : '—'}</td>
