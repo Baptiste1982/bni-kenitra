@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchScoresMK01, fetchPalmsHebdoMois } from '../lib/bniService'
+import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01 } from '../lib/bniService'
 import { TLBadge, PageHeader, TableWrap } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
@@ -12,6 +12,7 @@ export default function Membres({ profil }) {
   const [selected, setSelected] = useState(null)
   const [showImport, setShowImport] = useState(false)
   const [previsions, setPrevisions] = useState({})
+  const [palmsData, setPalmsData] = useState({})
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -21,8 +22,12 @@ export default function Membres({ profil }) {
 
   const load = () => {
     setLoading(true)
-    Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee)])
-      .then(([scoresData, hebdoData]) => {
+    Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee), fetchPalmsMK01()])
+      .then(([scoresData, hebdoData, palmsRaw]) => {
+        // Indexer les PALMS consolidés par membre_id
+        const pMap = {}
+        palmsRaw.forEach(p => { if (p.membre_id) pMap[p.membre_id] = p })
+        setPalmsData(pMap)
         setScores(scoresData)
         // Agréger les prévisions par membre (tous les KPI)
         const map = {}
@@ -161,8 +166,10 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', fontWeight:700, color: s.total_score ? (Number(s.total_score) >= 70 ? '#059669' : Number(s.total_score) >= 50 ? '#D97706' : Number(s.total_score) >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '—'}</td>
                     <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
                     <td style={{ padding:'10px 14px', fontSize:12 }}>{s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.rate_121 ? Number(s.rate_121).toFixed(2)+'/sem' : '—'}</td>
-                    <td style={{ padding:'10px 14px', fontSize:12 }}>{s.referrals_given_rate ? Number(s.referrals_given_rate).toFixed(2)+'/sem' : '—'}</td>
+                    {(() => { const p = palmsData[s.membre_id]; return <>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p ? Number(p.tat || 0) : '—'}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12 }}>{p ? (p.rdi || 0) + (p.rde || 0) : '—'}</td>
+                    </> })()}
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR')+' MAD' : '—'}</td>
                     {hasPrevisions && (() => {
                       const p = previsions[s.membre_id]
