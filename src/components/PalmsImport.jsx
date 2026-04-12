@@ -14,14 +14,29 @@ export default function PalmsImport({ onImportDone }) {
     const rows = doc.querySelectorAll('Row')
     const data = []
     let headers = []
-    
-    rows.forEach((row, i) => {
+    let headerFound = false
+
+    rows.forEach((row) => {
+      // Extraire les cellules en respectant ss:Index pour les colonnes vides
       const cells = Array.from(row.querySelectorAll('Cell'))
-      const vals = cells.map(c => c.querySelector('Data')?.textContent?.trim() || '')
-      
-      if (i === 0) { headers = vals; return }
+      const vals = []
+      cells.forEach(c => {
+        const idx = c.getAttribute('ss:Index')
+        if (idx) { while (vals.length < parseInt(idx) - 1) vals.push('') }
+        vals.push(c.querySelector('Data')?.textContent?.trim() || '')
+      })
+
       if (vals.every(v => !v)) return
-      
+
+      // Chercher la ligne d'en-tête (contient "Prénom" et "Nom")
+      if (!headerFound) {
+        if (vals.includes('Prénom') && vals.includes('Nom')) {
+          headers = vals
+          headerFound = true
+        }
+        return
+      }
+
       const obj = {}
       headers.forEach((h, j) => { obj[h] = vals[j] || '' })
       if (obj['Prénom'] || obj['Nom']) data.push(obj)
