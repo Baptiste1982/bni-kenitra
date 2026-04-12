@@ -16,6 +16,7 @@ export function Invites() {
   const [editData, setEditData] = useState({})
   const [newStatut, setNewStatut] = useState(false)
   const [customStatut, setCustomStatut] = useState('')
+  const [extraStatuts, setExtraStatuts] = useState([])
 
   const load = () => {
     setLoading(true)
@@ -46,8 +47,7 @@ export function Invites() {
   }
 
   const BASE_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
-  // Ajouter les statuts personnalisés trouvés dans les données
-  const ALL_STATUTS = [...new Set([...BASE_STATUTS, ...invites.map(i => i.statut).filter(Boolean)])]
+  const ALL_STATUTS = [...new Set([...BASE_STATUTS, ...invites.map(i => i.statut).filter(Boolean), ...extraStatuts])]
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
   const filtered = filter === 'tous' ? invites : invites.filter(i => i.statut === filter)
 
@@ -138,7 +138,7 @@ export function Invites() {
                             {newStatut ? (
                               <div style={{ display:'flex', gap:4 }}>
                                 <input value={customStatut} onChange={e=>setCustomStatut(e.target.value)} placeholder="Nouveau statut..." style={{...inputSt, flex:1}} autoFocus />
-                                <button onClick={e=>{e.stopPropagation(); if(customStatut.trim()){setEditData({...editData,statut:customStatut.trim()});setNewStatut(false);setCustomStatut('')}}} style={{ padding:'4px 8px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:6, fontSize:10, cursor:'pointer' }}>OK</button>
+                                <button onClick={e=>{e.stopPropagation(); if(customStatut.trim()){setEditData({...editData,statut:customStatut.trim()});setExtraStatuts(prev=>[...prev,customStatut.trim()]);setNewStatut(false);setCustomStatut('')}}} style={{ padding:'4px 8px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:6, fontSize:10, cursor:'pointer' }}>OK</button>
                                 <button onClick={e=>{e.stopPropagation();setNewStatut(false);setCustomStatut('')}} style={{ padding:'4px 8px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:10, cursor:'pointer' }}>✕</button>
                               </div>
                             ) : (
