@@ -219,6 +219,132 @@ export function Reporting() {
           style={{ background: kpis?.invitesConvertis > 3 ? '#D1FAE5' : kpis?.invitesConvertis > 0 ? '#FEF9C3' : '#FEE2E2' }} />
       </div>
       {!loading && <div style={{ marginBottom:16 }}><GroupeScoresChart scores={scores} /></div>}
+
+      {/* ─── SECTIONS VP (après le graphe, avant les tableaux) ─── */}
+      {!loading && <>
+          {/* Objectifs collectifs du mois */}
+          <div style={{ marginBottom:16 }}>
+            <SectionTitle>🎯 Objectifs collectifs — {moisLabel}</SectionTitle>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+              {[
+                { label:'Total TàT groupe', value:totalTatMois, obj:nbJeudis*totalMembres, color:'#C41E3A' },
+                { label:'Total Reco. groupe', value:totalRecoMois, obj:Math.ceil(nbJeudis*1.25*totalMembres), color:'#8B5CF6' },
+                { label:'TYFCB du mois', value:totalMpbMois, obj:50000, color:'#3B82F6', isMoney:true },
+              ].map(o => (
+                <div key={o.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1' }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>{o.label}</div>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8 }}>
+                    <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'Playfair Display, serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
+                    <span style={{ fontSize:12, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
+                  </div>
+                  <ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Taux de participation */}
+          <div style={{ marginBottom:16 }}>
+            <SectionTitle>📊 Taux de participation — {moisLabel}</SectionTitle>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+              {[
+                { label:'Ont fait ≥ 1 TàT', value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
+                { label:'Ont fait ≥ 1 Reco.', value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
+                { label:'100% présence', value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
+              ].map(p => {
+                const pct = p.total > 0 ? Math.round(p.value/p.total*100) : 0
+                const bg = pct >= 80 ? '#D1FAE5' : pct >= 50 ? '#FEF9C3' : '#FEE2E2'
+                return (
+                  <div key={p.label} style={{ background:bg, borderRadius:12, padding:'16px 18px', border:'1px solid rgba(0,0,0,0.06)' }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>{p.label}</div>
+                    <div style={{ fontSize:28, fontWeight:700, color:p.color, fontFamily:'Playfair Display, serif' }}>{pct}%</div>
+                    <div style={{ fontSize:12, color:'#6B7280' }}>{p.value}/{p.total} membres</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Top contributeurs vs Inactifs */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+            <TableWrap>
+              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🌟 Top contributeurs du mois</SectionTitle></div>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead><tr>{['Membre','TàT','Reco.','TYFCB'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
+                <tbody>{top5.map((m,i) => (
+                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#D1FAE5' }}>
+                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#065F46' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.tat}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.refs}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#065F46' }}>{Number(m.mpb).toLocaleString('de-DE')}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </TableWrap>
+            <TableWrap>
+              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>⚠️ Membres inactifs ce mois</SectionTitle></div>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead><tr>{['Membre','TàT','Reco.','Score'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
+                <tbody>{(bottom5.length > 0 ? bottom5 : [{id:null,tat:0,refs:0,score:null}]).map((m,i) => m.score ? (
+                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#FEE2E2' }}>
+                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#991B1B' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
+                    <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#991B1B' }}>{Number(m.score?.total_score||0)}</td>
+                  </tr>
+                ) : (
+                  <tr key={i}><td colSpan={4} style={{ padding:'16px', textAlign:'center', color:'#059669', fontSize:13 }}>Tous les membres sont actifs ce mois</td></tr>
+                ))}</tbody>
+              </table>
+            </TableWrap>
+          </div>
+
+          {/* Membres à risque */}
+          <div style={{ marginBottom:16 }}>
+            <SectionTitle>🚨 Membres à risque ({membresRisque.length})</SectionTitle>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {membresRisque.slice(0,15).map((s,i) => {
+                const sc = Number(s.total_score||0)
+                const h = hebdoMap[s.membre_id]
+                return (
+                  <div key={i} style={{ background:'#FEE2E2', borderRadius:8, padding:'8px 12px', border:'1px solid #FECACA' }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{s.membres?.prenom} {s.membres?.nom}</div>
+                    <div style={{ fontSize:10, color:'#DC2626', marginTop:2 }}>Score: {sc} · TàT: {h?.tat||0} · Abs: {h?.absences||0}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Évolution vs mois précédent */}
+          {hasPrev && (
+            <div style={{ marginBottom:16 }}>
+              <SectionTitle>📈 Évolution vs mois précédent</SectionTitle>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                {[
+                  { label:'TàT', current:totalTatMois, prev:prevTotalTat },
+                  { label:'Recommandations', current:totalRecoMois, prev:prevTotalReco },
+                ].map(e => {
+                  const diff = e.current - e.prev
+                  const pct = e.prev > 0 ? Math.round((diff/e.prev)*100) : 0
+                  return (
+                    <div key={e.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>{e.label}</div>
+                        <div style={{ fontSize:22, fontWeight:700, fontFamily:'Playfair Display, serif' }}>{e.current}</div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:18, fontWeight:700, color: diff >= 0 ? '#059669' : '#DC2626' }}>{diff >= 0 ? '↑' : '↓'} {Math.abs(diff)}</div>
+                        <div style={{ fontSize:11, color: diff >= 0 ? '#059669' : '#DC2626' }}>{pct >= 0 ? '+' : ''}{pct}%</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+      </>}
+
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <TableWrap>
@@ -266,134 +392,6 @@ export function Reporting() {
         </div>
       )}
 
-      {/* ─── NOUVELLES SECTIONS VP ─── */}
-      {!loading && (
-        <>
-          {/* Objectifs collectifs du mois */}
-          <div style={{ marginTop:24 }}>
-            <SectionTitle>🎯 Objectifs collectifs — {moisLabel}</SectionTitle>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:24 }}>
-              {[
-                { label:'Total TàT groupe', value:totalTatMois, obj:nbJeudis*totalMembres, color:'#C41E3A' },
-                { label:'Total Reco. groupe', value:totalRecoMois, obj:Math.ceil(nbJeudis*1.25*totalMembres), color:'#8B5CF6' },
-                { label:'TYFCB du mois', value:totalMpbMois, obj:50000, color:'#3B82F6', isMoney:true },
-              ].map(o => (
-                <div key={o.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1' }}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>{o.label}</div>
-                  <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8 }}>
-                    <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'Playfair Display, serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
-                    <span style={{ fontSize:12, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
-                  </div>
-                  <ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Taux de participation */}
-          <div style={{ marginTop:8 }}>
-            <SectionTitle>📊 Taux de participation — {moisLabel}</SectionTitle>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:24 }}>
-              {[
-                { label:'Ont fait ≥ 1 TàT', value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
-                { label:'Ont fait ≥ 1 Reco.', value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
-                { label:'100% présence', value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
-              ].map(p => {
-                const pct = p.total > 0 ? Math.round(p.value/p.total*100) : 0
-                const bg = pct >= 80 ? '#D1FAE5' : pct >= 50 ? '#FEF9C3' : '#FEE2E2'
-                return (
-                  <div key={p.label} style={{ background:bg, borderRadius:12, padding:'16px 18px', border:'1px solid rgba(0,0,0,0.06)' }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>{p.label}</div>
-                    <div style={{ fontSize:28, fontWeight:700, color:p.color, fontFamily:'Playfair Display, serif' }}>{pct}%</div>
-                    <div style={{ fontSize:12, color:'#6B7280' }}>{p.value}/{p.total} membres</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Top contributeurs vs Inactifs */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
-            <TableWrap>
-              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🌟 Top contributeurs du mois</SectionTitle></div>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead><tr>{['Membre','TàT','Reco.','TYFCB'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
-                <tbody>{top5.map((m,i) => (
-                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#D1FAE5' }}>
-                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#065F46' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
-                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.tat}</td>
-                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#065F46' }}>{m.refs}</td>
-                    <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#065F46' }}>{Number(m.mpb).toLocaleString('de-DE')}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </TableWrap>
-            <TableWrap>
-              <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>⚠️ Membres inactifs ce mois</SectionTitle></div>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead><tr>{['Membre','TàT','Reco.','Score'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
-                <tbody>{(bottom5.length > 0 ? bottom5 : [{id:null,tat:0,refs:0,score:null}]).map((m,i) => m.score ? (
-                  <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:'#FEE2E2' }}>
-                    <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#991B1B' }}>{m.score?.membres?.prenom} {m.score?.membres?.nom}</td>
-                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
-                    <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', color:'#991B1B' }}>0</td>
-                    <td style={{ padding:'8px 12px', fontWeight:600, textAlign:'center', color:'#991B1B' }}>{Number(m.score?.total_score||0)}</td>
-                  </tr>
-                ) : (
-                  <tr key={i}><td colSpan={4} style={{ padding:'16px', textAlign:'center', color:'#059669', fontSize:13 }}>Tous les membres sont actifs ce mois</td></tr>
-                ))}</tbody>
-              </table>
-            </TableWrap>
-          </div>
-
-          {/* Membres à risque */}
-          <div style={{ marginBottom:24 }}>
-            <SectionTitle>🚨 Membres à risque ({membresRisque.length})</SectionTitle>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-              {membresRisque.slice(0,15).map((s,i) => {
-                const sc = Number(s.total_score||0)
-                const h = hebdoMap[s.membre_id]
-                return (
-                  <div key={i} style={{ background:'#FEE2E2', borderRadius:8, padding:'8px 12px', border:'1px solid #FECACA' }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{s.membres?.prenom} {s.membres?.nom}</div>
-                    <div style={{ fontSize:10, color:'#DC2626', marginTop:2 }}>
-                      Score: {sc} · TàT: {h?.tat||0} · Abs: {h?.absences||0}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Évolution vs mois précédent */}
-          {hasPrev && (
-            <div style={{ marginBottom:24 }}>
-              <SectionTitle>📈 Évolution vs mois précédent</SectionTitle>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                {[
-                  { label:'TàT', current:totalTatMois, prev:prevTotalTat },
-                  { label:'Recommandations', current:totalRecoMois, prev:prevTotalReco },
-                ].map(e => {
-                  const diff = e.current - e.prev
-                  const pct = e.prev > 0 ? Math.round((diff/e.prev)*100) : 0
-                  return (
-                    <div key={e.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                      <div>
-                        <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>{e.label}</div>
-                        <div style={{ fontSize:22, fontWeight:700, fontFamily:'Playfair Display, serif' }}>{e.current}</div>
-                      </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:18, fontWeight:700, color: diff >= 0 ? '#059669' : '#DC2626' }}>{diff >= 0 ? '↑' : '↓'} {Math.abs(diff)}</div>
-                        <div style={{ fontSize:11, color: diff >= 0 ? '#059669' : '#DC2626' }}>{pct >= 0 ? '+' : ''}{pct}%</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </>
-      )}
     </div>
   )
 }
