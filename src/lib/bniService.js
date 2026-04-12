@@ -71,6 +71,40 @@ export async function fetchPalmsMK01() {
   return data || []
 }
 
+// ─── PALMS HEBDO ────────────────────────────────────────────────────────────
+export async function fetchMembresForMatch() {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) return []
+  const { data } = await supabase.from('membres').select('id, prenom, nom').eq('groupe_id', groupeId).eq('statut', 'actif')
+  return data || []
+}
+
+export async function insertPalmsHebdo(rows, dateReunion) {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) throw new Error('Groupe MK-01 introuvable')
+  const records = rows.map(r => ({ ...r, groupe_id: groupeId, date_reunion: dateReunion }))
+  const { data, error } = await supabase.from('palms_hebdo').upsert(records, { onConflict: 'membre_id,date_reunion' })
+  if (error) throw error
+  return data
+}
+
+export async function fetchPalmsHebdoMois(mois, annee) {
+  const groupeId = await getGroupeId('MK-01')
+  if (!groupeId) return []
+  const debut = `${annee}-${String(mois).padStart(2, '0')}-01`
+  const finDate = new Date(annee, mois, 0)
+  const fin = `${annee}-${String(mois).padStart(2, '0')}-${String(finDate.getDate()).padStart(2, '0')}`
+  const { data, error } = await supabase
+    .from('palms_hebdo')
+    .select('*, membres(prenom, nom)')
+    .eq('groupe_id', groupeId)
+    .gte('date_reunion', debut)
+    .lte('date_reunion', fin)
+    .order('date_reunion')
+  if (error) throw error
+  return data || []
+}
+
 // ─── OBJECTIFS ───────────────────────────────────────────────────────────────
 export async function fetchObjectifs(groupeCode = 'MK-01') {
   const groupeId = await getGroupeId(groupeCode)

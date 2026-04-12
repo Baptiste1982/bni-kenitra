@@ -5,10 +5,12 @@ import Dashboard from './components/Dashboard'
 import Membres from './components/Membres'
 import RealtimeAlerts from './components/RealtimeAlerts'
 import { Invites, Groupes, Reporting, AgentIA } from './components/modules'
+import SuiviHebdo from './components/SuiviHebdo'
 
 const NAV = [
   { id:'dashboard', label:'Tableau de bord', icon:'▦' },
   { id:'membres',   label:'Membres',          icon:'◈' },
+  { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
   { id:'invites',   label:'Invités',           icon:'◉' },
   { id:'groupes',   label:'Groupes',           icon:'⬟' },
   { id:'reporting', label:'Reporting',         icon:'◫' },
@@ -83,6 +85,7 @@ export default function App() {
   const MODULES = {
     dashboard: <Dashboard onNavigate={navigate} />,
     membres:   <Membres profil={profil} />,
+    hebdo:     <SuiviHebdo />,
     invites:   <Invites />,
     groupes:   <Groupes />,
     reporting: <Reporting />,
