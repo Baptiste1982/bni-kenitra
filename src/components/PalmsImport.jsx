@@ -76,10 +76,12 @@ export default function PalmsImport({ onImportDone }) {
       }
 
       if (rows.length === 0) {
-        setError('Aucune donnée trouvée dans le fichier.')
+        setError('Aucune donnée trouvée dans le fichier. Vérifiez le format.')
         setLoading(false)
         return
       }
+
+      console.log('[PALMS Import] Parsed:', rows.length, 'rows, meta:', meta)
 
       // Get groupe MK-01
       const { data: groupes } = await supabase.from('groupes').select('id,code').eq('code', 'MK-01').single()
@@ -109,14 +111,19 @@ export default function PalmsImport({ onImportDone }) {
         const nom = (row['Nom'] || '').trim()
         if (!prenom && !nom) continue
 
-        // Find membre
-        const membre = membres?.find(m => 
-          m.prenom.toLowerCase().includes(prenom.toLowerCase()) || 
-          prenom.toLowerCase().includes(m.prenom.toLowerCase()) ||
-          m.nom.toLowerCase().includes(nom.toLowerCase())
-        )
+        // Find membre — match exact nom + prenom souple
+        const pNorm = prenom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        const nNorm = nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        const membre = membres?.find(m => {
+          const mp = m.prenom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          const mn = m.nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          return mn === nNorm && (mp === pNorm || mp.includes(pNorm) || pNorm.includes(mp))
+        }) || membres?.find(m => {
+          const mn = m.nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          return mn === nNorm
+        })
 
-        if (!membre) { skipped++; continue }
+        if (!membre) { skipped++; console.log('[PALMS Import] Skipped:', prenom, nom); continue }
 
         const palmsData = {
           groupe_id: groupeId,
@@ -138,7 +145,8 @@ export default function PalmsImport({ onImportDone }) {
         }
 
         // Upsert
-        await supabase.from('palms_imports').upsert(palmsData, { onConflict: 'membre_id,periode_debut' })
+        const { error: upsertErr } = await supabase.from('palms_imports').upsert(palmsData, { onConflict: 'membre_id,periode_debut' })
+        if (upsertErr) { console.error('[PALMS Import] Upsert error:', prenom, nom, upsertErr); skipped++; continue }
         imported++
       }
 
