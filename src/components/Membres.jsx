@@ -11,6 +11,7 @@ export default function Membres({ profil }) {
   const [tlFilter, setTlFilter] = useState('tous')
   const [selected, setSelected] = useState(null)
   const [showImport, setShowImport] = useState(false)
+  const [showPalms, setShowPalms] = useState(false)
   const [previsions, setPrevisions] = useState({})
   const [palmsData, setPalmsData] = useState({})
 
@@ -131,9 +132,14 @@ export default function Membres({ profil }) {
         title="Membres"
         sub={`MK-01 Kénitra Atlantique · ${scores.length} membres scorés`}
         right={
-          <button onClick={() => setShowImport(!showImport)} style={{ padding:'9px 16px', background:showImport?'#1C1C2E':'#fff', color:showImport?'#fff':'#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-            {showImport ? '✕ Fermer import' : '📥 Importer PALMS'}
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => { setShowPalms(!showPalms); if (!showPalms) setShowImport(false) }} style={{ padding:'9px 16px', background:showPalms?'#1C1C2E':'#fff', color:showPalms?'#fff':'#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              {showPalms ? '✕ Fermer PALMS' : '📊 Voir PALMS'}
+            </button>
+            <button onClick={() => { setShowImport(!showImport); if (!showImport) setShowPalms(false) }} style={{ padding:'9px 16px', background:showImport?'#1C1C2E':'#fff', color:showImport?'#fff':'#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              {showImport ? '✕ Fermer import' : '📥 Importer PALMS'}
+            </button>
+          </div>
         }
       />
 
@@ -141,6 +147,50 @@ export default function Membres({ profil }) {
       {showImport && (
         <div style={{ marginBottom:20 }}>
           <PalmsImport onImportDone={() => { load(); setShowImport(false) }} />
+        </div>
+      )}
+
+      {/* PALMS Consultation */}
+      {showPalms && Object.keys(palmsData).length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <TableWrap>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div style={{ fontSize:13, fontWeight:600 }}>📊 Données PALMS importées</div>
+              {(() => { const first = Object.values(palmsData)[0]; return first?.periode_debut && first?.periode_fin ? (
+                <div style={{ fontSize:11, color:'#6B7280' }}>
+                  Période : {new Date(first.periode_debut).toLocaleDateString('fr-FR')} → {new Date(first.periode_fin).toLocaleDateString('fr-FR')}
+                </div>
+              ) : null })()}
+            </div>
+            <div style={{ overflowX:'auto' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead><tr>{['Membre','P','A','L','M','S','RDI','RDE','RRI','RRE','Inv.','TàT','MPB'].map(h => (
+                  <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h === 'Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+                ))}</tr></thead>
+                <tbody>
+                  {Object.values(palmsData).sort((a, b) => (b.tat || 0) - (a.tat || 0)).map((p, i) => (
+                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{p.membres?.prenom} {p.membres?.nom}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#059669', fontWeight:600 }}>{p.presences || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color: p.absences > 0 ? '#DC2626' : '#9CA3AF', fontWeight:600 }}>{p.absences || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.late || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.makeup || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.substitut || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{p.rdi || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{p.rde || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.rri || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.rre || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.invites || 0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.tat || 0)}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.mpb || 0).toLocaleString('fr-FR')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </TableWrap>
         </div>
       )}
 
