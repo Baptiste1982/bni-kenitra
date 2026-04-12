@@ -19,6 +19,7 @@ function matchMembre(prenom, nom, membres) {
 export default function SuiviHebdo() {
   const [rawText, setRawText] = useState('')
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
+  const [nbReunions, setNbReunions] = useState(1)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState(null)
   const [monthData, setMonthData] = useState([])
@@ -116,8 +117,8 @@ export default function SuiviHebdo() {
         imported++
       }
 
-      if (rows.length > 0) await insertPalmsHebdo(rows, dateReunion)
-      if (bniRow) await insertPalmsHebdo([bniRow], dateReunion)
+      if (rows.length > 0) await insertPalmsHebdo(rows, dateReunion, nbReunions)
+      if (bniRow) await insertPalmsHebdo([bniRow], dateReunion, nbReunions)
 
       setResult({ imported, skipped, bni: !!bniRow })
       setRawText('')
@@ -136,7 +137,14 @@ export default function SuiviHebdo() {
   const membresMap = {}
   const dates = [...new Set(memberRows.map(r => r.date_reunion))].sort()
   const lastDate = dates[dates.length - 1] || null
-  const nbSemaines = dates.length || 1
+  // Total réunions couvertes = somme des nb_reunions de chaque saisie
+  const totalReunionsSaisies = memberRows.length > 0
+    ? Math.max(...Object.values(memberRows.reduce((acc, r) => {
+        if (!acc[r.membre_id]) acc[r.membre_id] = 0
+        acc[r.membre_id] += r.nb_reunions || 1
+        return acc
+      }, {})))
+    : 0
 
   memberRows.forEach(r => {
     const key = r.membre_id
@@ -190,11 +198,18 @@ export default function SuiviHebdo() {
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
       <Card style={{ marginBottom: 24 }}>
-        <SectionTitle>Coller les données PALMS de la semaine</SectionTitle>
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <label style={{ fontSize: 12, color: '#6B7280' }}>Date de réunion :</label>
-          <input type="date" value={dateReunion} onChange={e => setDateReunion(e.target.value)}
-            style={{ padding: '6px 10px', border: '1px solid #E8E6E1', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }} />
+        <SectionTitle>Coller les données PALMS</SectionTitle>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <label style={{ fontSize: 12, color: '#6B7280' }}>Date :</label>
+            <input type="date" value={dateReunion} onChange={e => setDateReunion(e.target.value)}
+              style={{ padding: '6px 10px', border: '1px solid #E8E6E1', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <label style={{ fontSize: 12, color: '#6B7280' }}>Nb de réunions couvertes :</label>
+            <input type="number" min={1} max={5} value={nbReunions} onChange={e => setNbReunions(parseInt(e.target.value) || 1)}
+              style={{ width: 50, padding: '6px 10px', border: '1px solid #E8E6E1', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', textAlign: 'center' }} />
+          </div>
         </div>
         <textarea
           value={rawText}
@@ -217,7 +232,7 @@ export default function SuiviHebdo() {
       </Card>
 
       {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
-      <SectionTitle>Suivi du mois — {moisLabel} ({dates.length}/{nbJeudis} réunions saisies, {nbJeudis - dates.length} restante{nbJeudis - dates.length > 1 ? 's' : ''})</SectionTitle>
+      <SectionTitle>Suivi du mois — {moisLabel} ({totalReunionsSaisies}/{nbJeudis} réunions saisies, {Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''})</SectionTitle>
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>

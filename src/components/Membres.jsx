@@ -42,7 +42,6 @@ export default function Membres({ profil }) {
         const map = {}
         const dates = [...new Set(hebdoData.filter(r => r.membre_id).map(r => r.date_reunion))].sort()
         const lastDate = dates[dates.length - 1] || null
-        const nbSemaines = dates.length || 1
         hebdoData.filter(r => r.membre_id).forEach(r => {
           if (!map[r.membre_id]) map[r.membre_id] = {
             cumul: { tat: 0, refs: 0, invites: 0, mpb: 0, ueg: 0, presences: 0, total: 0 },
@@ -55,8 +54,8 @@ export default function Membres({ profil }) {
           m.cumul.invites += r.invites || 0
           m.cumul.mpb += Number(r.mpb) || 0
           m.cumul.ueg += r.ueg || 0
-          m.cumul.total++
-          if (r.palms === 'P') m.cumul.presences++
+          m.cumul.total += r.nb_reunions || 1
+          if (r.palms === 'P') m.cumul.presences += r.nb_reunions || 1
           if (r.date_reunion === lastDate) {
             m.derniere = { tat: r.tat || 0, refs, invites: r.invites || 0, mpb: Number(r.mpb) || 0, ueg: r.ueg || 0 }
           }
@@ -83,18 +82,21 @@ export default function Membres({ profil }) {
         }
 
         const prev = {}
+        let maxReunionsSaisies = 0
+        Object.values(map).forEach(v => { if (v.cumul.total > maxReunionsSaisies) maxReunionsSaisies = v.cumul.total })
+        const reunionsRestantes = Math.max(0, nbJeudis - maxReunionsSaisies)
+
         Object.entries(map).forEach(([id, m]) => {
-          const totalSem = nbSemaines + semainesRestantes
-          const prevTat = m.cumul.tat + (m.derniere.tat * semainesRestantes)
-          const prevRefs = m.cumul.refs + (m.derniere.refs * semainesRestantes)
-          const prevInv = m.cumul.invites + (m.derniere.invites * semainesRestantes)
-          const prevMpb = m.cumul.mpb + (m.derniere.mpb * semainesRestantes)
-          const prevUeg = m.cumul.ueg + (m.derniere.ueg * semainesRestantes)
-          // Taux par semaine
-          const rateTat = totalSem > 0 ? prevTat / totalSem : 0
-          const rateRefs = totalSem > 0 ? prevRefs / totalSem : 0
+          const prevTat = m.cumul.tat + (m.derniere.tat * reunionsRestantes)
+          const prevRefs = m.cumul.refs + (m.derniere.refs * reunionsRestantes)
+          const prevInv = m.cumul.invites + (m.derniere.invites * reunionsRestantes)
+          const prevMpb = m.cumul.mpb + (m.derniere.mpb * reunionsRestantes)
+          const prevUeg = m.cumul.ueg + (m.derniere.ueg * reunionsRestantes)
+          // Taux par semaine (sur le mois complet = nbJeudis)
+          const rateTat = nbJeudis > 0 ? prevTat / nbJeudis : 0
+          const rateRefs = nbJeudis > 0 ? prevRefs / nbJeudis : 0
           const ratePres = m.cumul.total > 0 ? m.cumul.presences / m.cumul.total : 1
-          const rateUeg = totalSem > 0 ? prevUeg / totalSem : 0
+          const rateUeg = nbJeudis > 0 ? prevUeg / nbJeudis : 0
           // Score sponsors du consolidé
           const consolidé = scoresData.find(s => s.membre_id === id)
           const sponsorScore = consolidé ? Number(consolidé.sponsor_score) || 0 : 0

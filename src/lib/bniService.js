@@ -102,10 +102,10 @@ export async function fetchMembresForMatch() {
   return data || []
 }
 
-export async function insertPalmsHebdo(rows, dateReunion) {
+export async function insertPalmsHebdo(rows, dateReunion, nbReunions = 1) {
   const groupeId = await getGroupeId('MK-01')
   if (!groupeId) throw new Error('Groupe MK-01 introuvable')
-  const records = rows.map(r => ({ ...r, groupe_id: groupeId, date_reunion: dateReunion }))
+  const records = rows.map(r => ({ ...r, groupe_id: groupeId, date_reunion: dateReunion, nb_reunions: nbReunions }))
   const { data, error } = await supabase.from('palms_hebdo').upsert(records, { onConflict: 'membre_id,date_reunion' })
   if (error) throw error
   return data
