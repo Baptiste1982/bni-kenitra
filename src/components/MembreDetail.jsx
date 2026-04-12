@@ -21,7 +21,7 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
     { label:'1-2-1s', rate: s.rate_121, score: s.score_121, max:20, format: v => `${Number(v).toFixed(2)}/sem` },
     { label:'Recommandations', rate: s.referrals_given_rate, score: s.referrals_given_score, max:25, format: v => `${Number(v).toFixed(2)}/sem` },
     { label:'Visiteurs', rate: s.visitors, score: s.visitor_score, max:25, format: v => `${v} en 6 mois` },
-    { label:'Sponsors', rate: s.sponsors, score: s.sponsor_score, max:5, format: v => `${v} en 6 mois` },
+    { label:'Parrainages', rate: s.sponsors, score: s.sponsor_score, max:5, format: v => `${v} en 6 mois` },
     { label:'TYFCB', rate: s.tyfcb, score: s.tyfcb_score, max:5, format: v => `${Number(v).toLocaleString('fr-FR')} MAD` },
     { label:'CEU', rate: s.ceu_rate, score: s.ceu_score, max:10, format: v => `${Number(v).toFixed(2)}/sem` },
   ]
@@ -42,7 +42,7 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
       'Visiteurs': { cibleMois: 1, unite: 'visiteur invité ce mois', importance: 'Inviter des visiteurs renforce le groupe et montre ton engagement. Chaque visiteur est un membre potentiel qui élargit ton réseau.' },
       'Présence': { cibleMois: 4, unite: 'réunions sur 4 ce mois', importance: 'La présence est la base de tout. Sans présence régulière, impossible de construire la confiance avec les autres membres ni de recevoir des références.' },
       'CEU': { cibleMois: 4, unite: 'CEU ce mois', importance: 'La formation continue te rend plus efficace en réseautage et montre ta volonté de progresser au sein du groupe.' },
-      'Sponsors': { cibleMois: 0, unite: '', importance: 'Sponsoriser un nouveau membre montre ton leadership et contribue directement à la croissance du groupe.' },
+      'Parrainages': { cibleMois: 0, unite: '', importance: 'Parrainer un nouveau membre montre ton leadership et contribue directement à la croissance du groupe.' },
     }
 
     // Construire le détail des KPI avec écarts mensuels

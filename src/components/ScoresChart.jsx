@@ -134,7 +134,7 @@ export function MembreRadarChart({ score }) {
     { label:'Refs', pct: Math.min(100, (Number(score.referrals_given_score)||0) / 25 * 100) },
     { label:'Visiteurs', pct: Math.min(100, (Number(score.visitor_score)||0) / 25 * 100) },
     { label:'TYFCB', pct: Math.min(100, (Number(score.tyfcb_score)||0) / 5 * 100) },
-    { label:'Sponsors', pct: Math.min(100, (Number(score.sponsor_score)||0) / 5 * 100) },
+    { label:'Parrainages', pct: Math.min(100, (Number(score.sponsor_score)||0) / 5 * 100) },
     { label:'CEU', pct: Math.min(100, (Number(score.ceu_score)||0) / 10 * 100) },
   ]
 
