@@ -15,6 +15,7 @@
   --gris: #9CA3AF;
   --font-display: 'Playfair Display', serif;
   --font-body: 'DM Sans', sans-serif;
+  --sidebar-width: 220px;
 }
 
 body {
@@ -24,19 +25,42 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-in {
-  animation: fadeIn 0.25s ease forwards;
-}
-
+.animate-in { animation: fadeIn 0.25s ease forwards; }
 button { cursor: pointer; font-family: var(--font-body); }
 input, textarea { font-family: var(--font-body); }
+
+/* ── Mobile overlay sidebar ──────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 40;
+}
+.sidebar-overlay.open { display: block; }
+
+/* ── Responsive grid helpers ─────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --sidebar-width: 0px; }
+  
+  .cards-4 { grid-template-columns: 1fr 1fr !important; }
+  .cards-2 { grid-template-columns: 1fr !important; }
+  .cards-3 { grid-template-columns: 1fr !important; }
+  .pipeline-grid { grid-template-columns: 1fr 1fr !important; }
+  
+  .hide-mobile { display: none !important; }
+  .page-pad { padding: 16px !important; }
+  
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 600px; }
+}
+
+@media (max-width: 480px) {
+  .cards-4 { grid-template-columns: 1fr !important; }
+  .pipeline-grid { grid-template-columns: 1fr !important; }
+}
