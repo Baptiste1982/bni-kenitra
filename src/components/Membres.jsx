@@ -288,7 +288,7 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', fontWeight:500 }}>{m.prenom} {m.nom}</td>
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
-                    <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
+                    {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
                     {(() => {
                       const att = s.attendance_rate ? Number(s.attendance_rate) : 0
                       const bg = presBg(att)
