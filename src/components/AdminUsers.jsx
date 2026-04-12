@@ -59,7 +59,9 @@ export default function AdminUsers() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [editAccess, setEditAccess] = useState(null) // user id being edited
+  const [editAccess, setEditAccess] = useState(null)
+  const [createdCredentials, setCreatedCredentials] = useState(null) // { prenom, nom, email, password, role }
+  const [copied, setCopied] = useState(false)
 
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '', role: 'directrice_consultante', groupe_id: '', titre: '', telephone: '' })
   const [formAccess, setFormAccess] = useState([...DEFAULT_ACCESS.directrice_consultante])
@@ -92,6 +94,8 @@ export default function AdminUsers() {
       if (!form.email || !form.password || !form.prenom || !form.nom) throw new Error('Prénom, nom, email et mot de passe sont requis')
       if (form.password.length < 6) throw new Error('Le mot de passe doit faire au moins 6 caractères')
       await createUser({ ...form, groupe_id: form.groupe_id || null, modules_access: formAccess })
+      setCreatedCredentials({ prenom: form.prenom, nom: form.nom, email: form.email, password: form.password, role: roleLabel(form.role) })
+      setCopied(false)
       setSuccess(`Compte créé pour ${form.prenom} ${form.nom}`)
       setForm({ prenom: '', nom: '', email: '', password: '', role: 'directrice_consultante', groupe_id: '', titre: '', telephone: '' })
       setFormAccess([...DEFAULT_ACCESS.directrice_consultante])
@@ -160,6 +164,43 @@ export default function AdminUsers() {
 
       {error && <div style={{ marginBottom: 16, padding: 12, background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: 8, fontSize: 13, color: '#DC2626' }}>{error}</div>}
       {success && <div style={{ marginBottom: 16, padding: 12, background: '#D1FAE5', border: '1px solid #A7F3D0', borderRadius: 8, fontSize: 13, color: '#065F46' }}>{success}</div>}
+
+      {/* Message identifiants à copier */}
+      {createdCredentials && (
+        <Card style={{ marginBottom: 24, borderLeft: '4px solid #C41E3A' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <SectionTitle>Identifiants du nouveau compte</SectionTitle>
+            <button onClick={() => setCreatedCredentials(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#9CA3AF' }}>✕</button>
+          </div>
+          <div style={{ background: '#F7F6F3', borderRadius: 8, padding: 14, fontFamily: 'monospace', fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', color: '#1C1C2E' }}>
+{`Bonjour ${createdCredentials.prenom},
+
+Votre compte BNI Kénitra a été créé.
+
+Application : https://project-sa2gw.vercel.app
+Email : ${createdCredentials.email}
+Mot de passe : ${createdCredentials.password}
+Rôle : ${createdCredentials.role}
+
+Merci de changer votre mot de passe après votre première connexion.
+
+Cordialement,
+Jean Baptiste CHIOTTI
+Directeur Exécutif BNI Kénitra`}
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+            <button onClick={() => {
+              const msg = `Bonjour ${createdCredentials.prenom},\n\nVotre compte BNI Kénitra a été créé.\n\nApplication : https://project-sa2gw.vercel.app\nEmail : ${createdCredentials.email}\nMot de passe : ${createdCredentials.password}\nRôle : ${createdCredentials.role}\n\nMerci de changer votre mot de passe après votre première connexion.\n\nCordialement,\nJean Baptiste CHIOTTI\nDirecteur Exécutif BNI Kénitra`
+              navigator.clipboard.writeText(msg)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 3000)
+            }}
+              style={{ padding: '8px 18px', background: copied ? '#059669' : '#1C1C2E', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'background 0.2s' }}>
+              {copied ? '✓ Copié !' : 'Copier le message'}
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* Formulaire création */}
       {showForm && (
