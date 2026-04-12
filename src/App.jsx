@@ -118,14 +118,9 @@ export default function App() {
   const Sidebar = () => (
     <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%' }}>
       {/* Logo BNI */}
-      <div style={{ padding:'20px 16px 18px', borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <BNILogo />
-          <div>
-            <div style={{ color:'#fff', fontWeight:600, fontSize:13, letterSpacing:'-0.01em' }}>BNI Kénitra</div>
-            <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10, letterSpacing:'0.07em', textTransform:'uppercase' }}>Dir. Exécutif</div>
-          </div>
-        </div>
+      <div style={{ padding:'16px', borderBottom:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', alignItems:'center' }}>
+        <img src="/logo-bni-kenitra.png" alt="BNI Kénitra" style={{ width:'80%', maxWidth:160, borderRadius:'50%', objectFit:'cover', boxShadow:'0 4px 16px rgba(196,30,58,0.3)', marginBottom:10 }} />
+        <div style={{ color:'#fff', fontWeight:700, fontSize:14, letterSpacing:'0.05em', textTransform:'uppercase' }}>BNI Kénitra</div>
       </div>
 
       {/* Alertes live — au-dessus du nav */}
