@@ -247,7 +247,7 @@ export default function Membres({ profil }) {
                       <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.rre || 0}</td>
                       <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.invites || 0}</td>
                       <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.tat || 0)}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.mpb || 0).toLocaleString('fr-FR')}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.mpb || 0).toLocaleString('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 })}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,7 +272,7 @@ export default function Membres({ profil }) {
       ) : (
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','1-2-1','Réf.','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []),'Renouvellement',''].map(h => (
+            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','1-2-1','Réf.','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []),'Renouvellement'].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
@@ -321,7 +321,7 @@ export default function Membres({ profil }) {
                     {(() => {
                       const tyfcb = Number(s.tyfcb || 0)
                       const bg = tyfcbBg(tyfcb)
-                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:bg.bg, color:bg.color, textAlign:'center' }}>{tyfcb.toLocaleString('fr-FR')+' MAD'}</td>
+                      return <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, background:bg.bg, color:bg.color, textAlign:'center' }}>{tyfcb.toLocaleString('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 })+' MAD'}</td>
                     })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
@@ -341,9 +341,6 @@ export default function Membres({ profil }) {
                     })()}
                     <td style={{ padding:'10px 14px', fontSize:12, color:isUrgent?'#DC2626':'inherit', fontWeight:isUrgent?700:400 }}>
                       {renouv ? renouv.toLocaleDateString('fr-FR') : '—'} {isUrgent ? '⚠️' : ''}
-                    </td>
-                    <td style={{ padding:'10px 14px' }}>
-                      <span style={{ fontSize:11, color:'#C41E3A', fontWeight:500 }}>Voir →</span>
                     </td>
                   </tr>
                 )
