@@ -226,7 +226,7 @@ CONSIGNES:
           {tab === 'email' && (
             <div>
               <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
-                {[['relance','✉️ Relance'],['renouvellement','🔄 Renouvellement'],['felicitations','🏆 Félicitations']].map(([id,label]) => (
+                {[['relance','📊 Axes d\'amélioration'],['renouvellement','🔄 Renouvellement'],['felicitations','🏆 Félicitations']].map(([id,label]) => (
                   <button key={id} onClick={() => { setEmailType(id); setEmailContent('') }} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E8E6E1', fontSize:12, background:emailType===id?'#C41E3A':'#fff', color:emailType===id?'#fff':'#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>{label}</button>
                 ))}
               </div>
