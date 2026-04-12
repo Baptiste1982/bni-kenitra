@@ -159,14 +159,14 @@ export default function Dashboard({ onNavigate, profil }) {
               <SectionTitle>Traffic Light</SectionTitle>
               <span style={{ fontSize:11, color:'#C41E3A', fontWeight:500 }}>Voir →</span>
             </div>
-            {[['vert', tl.vert, '#059669', '#D1FAE5'], ['orange', tl.orange, '#854D0E', '#FEF9C3'], ['rouge', tl.rouge, '#991B1B', '#FEE2E2'], ['gris', tl.gris, '#4B5563', '#F3F4F6']].map(([t, n, col, bg]) => (
-              <div key={t} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, padding:'6px 10px', borderRadius:8, background:bg }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:col }} />
-                <span style={{ fontSize:12, width:45, fontWeight:600, color:col }}>{t}</span>
-                <div style={{ flex:1, background:'rgba(255,255,255,0.5)', height:6, borderRadius:3 }}>
-                  <div style={{ width:`${(n || 0)/25*100}%`, height:6, borderRadius:3, background:col }} />
+            {[['vert', tl.vert, '#059669', '#D1FAE5'], ['orange', tl.orange, '#854D0E', '#FEF9C3'], ['rouge', tl.rouge, '#991B1B', '#FEE2E2'], ['gris', tl.gris, '#4B5563', '#E5E7EB']].map(([t, n, col, bg]) => (
+              <div key={t} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, padding:'8px 12px', borderRadius:8, background:bg }}>
+                <div style={{ width:10, height:10, borderRadius:'50%', background:({ vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' })[t], flexShrink:0 }} />
+                <span style={{ fontSize:12, width:50, fontWeight:700, color:col }}>{t}</span>
+                <div style={{ flex:1, background:'rgba(255,255,255,0.6)', height:8, borderRadius:4 }}>
+                  <div style={{ width:`${(n || 0)/25*100}%`, height:8, borderRadius:4, background:({ vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' })[t], transition:'width 0.6s ease' }} />
                 </div>
-                <span style={{ fontSize:14, fontWeight:700, width:24, textAlign:'right', color:col }}>{n || 0}</span>
+                <span style={{ fontSize:16, fontWeight:700, width:28, textAlign:'right', color:col }}>{n || 0}</span>
               </div>
             ))}
           </div>
