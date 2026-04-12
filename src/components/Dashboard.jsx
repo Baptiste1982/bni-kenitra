@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { fetchDashboardKPIs } from '../lib/bniService'
 import { TLBadge, SectionTitle, PageHeader, TableWrap } from './ui'
 
+const scoreBg = (score) => score >= 70 ? { bg:'#D1FAE5', color:'#065F46' } : score >= 50 ? { bg:'#FEF9C3', color:'#854D0E' } : score >= 30 ? { bg:'#FEE2E2', color:'#991B1B' } : { bg:'#F3F4F6', color:'#4B5563' }
+const tlBg = (tl) => ({ vert:{bg:'#D1FAE5',color:'#065F46'}, orange:{bg:'#FFEDD5',color:'#9A3412'}, rouge:{bg:'#FEE2E2',color:'#991B1B'}, gris:{bg:'#F3F4F6',color:'#4B5563'} }[tl] || {bg:'#F3F4F6',color:'#4B5563'})
+const tyfcbBg = (val) => val >= 300000 ? {bg:'#D1FAE5',color:'#065F46'} : val >= 50000 ? {bg:'#FEF9C3',color:'#854D0E'} : val >= 20000 ? {bg:'#FFEDD5',color:'#9A3412'} : val > 0 ? {bg:'#FEE2E2',color:'#991B1B'} : {bg:'#F3F4F6',color:'#4B5563'}
+
 export default function Dashboard({ onNavigate }) {
   const [kpis, setKpis] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -24,6 +28,7 @@ export default function Dashboard({ onNavigate }) {
 
   const tl = kpis?.tlCounts || { vert:0, orange:0, rouge:0, gris:0 }
   const topScores = (kpis?.scores || []).filter(s => s.rank && s.rank <= 5).sort((a,b) => a.rank - b.rank)
+  const topTyfcb = [...(kpis?.scores || [])].filter(s => Number(s.tyfcb) > 0).sort((a,b) => Number(b.tyfcb) - Number(a.tyfcb)).slice(0, 8)
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
@@ -119,31 +124,61 @@ export default function Dashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* Top 5 live */}
-      <TableWrap>
-        <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <SectionTitle>🏆 Top 5 classement membres</SectionTitle>
-          <button onClick={() => onNavigate('membres')} style={{ fontSize:11, color:'#C41E3A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Voir tous →</button>
-        </div>
-        <table style={{ width:'100%', borderCollapse:'collapse' }}>
-          <thead><tr>{['Rang','Membre','Société','Score','Traffic Light','TYFCB (MAD)'].map(h => (
-            <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
-          ))}</tr></thead>
-          <tbody>
-            {topScores.map(s => (
-              <tr key={s.rank} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                <td style={{ padding:'10px 14px' }}><div style={{ width:22, height:22, borderRadius:'50%', background:'#F3F2EF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:600, color:'#6B7280' }}>{s.rank}</div></td>
-                <td style={{ padding:'10px 14px', fontWeight:500 }}>{s.membres?.prenom} {s.membres?.nom}</td>
-                <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{s.membres?.societe || '—'}</td>
-                <td style={{ padding:'10px 14px', fontWeight:700 }}>{Number(s.total_score).toFixed(0)}</td>
-                <td style={{ padding:'10px 14px' }}><TLBadge tl={s.traffic_light} /></td>
-                <td style={{ padding:'10px 14px', fontWeight:600 }}>{s.tyfcb ? Number(s.tyfcb).toLocaleString('fr-FR') : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableWrap>
+      {/* Top classement + Top TYFCB */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <TableWrap>
+          <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <SectionTitle>🏆 Top classement</SectionTitle>
+            <button onClick={() => onNavigate('membres')} style={{ fontSize:11, color:'#C41E3A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Voir tous →</button>
+          </div>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead><tr>{['#','Membre','Score','TL'].map(h => (
+              <th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+            ))}</tr></thead>
+            <tbody>
+              {topScores.map(s => {
+                const sc = scoreBg(Number(s.total_score))
+                const tb = tlBg(s.traffic_light)
+                return (
+                  <tr key={s.rank} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                    <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{s.rank}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:500, fontSize:13 }}>{s.membres?.prenom} {s.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, fontSize:14, background:sc.bg, color:sc.color, textAlign:'center', width:60 }}>{Number(s.total_score).toFixed(0)}</td>
+                    <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><TLBadge tl={s.traffic_light} /></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </TableWrap>
+
+        <TableWrap>
+          <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <SectionTitle>💰 Top TYFCB</SectionTitle>
+            <button onClick={() => onNavigate('membres')} style={{ fontSize:11, color:'#C41E3A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Voir tous →</button>
+          </div>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead><tr>{['Membre','TYFCB (MAD)','TL'].map(h => (
+              <th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+            ))}</tr></thead>
+            <tbody>
+              {topTyfcb.map((s, i) => {
+                const tb = tlBg(s.traffic_light)
+                const tyb = tyfcbBg(Number(s.tyfcb))
+                return (
+                  <tr key={i} onClick={() => onNavigate('membres')} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                    <td style={{ padding:'8px 12px', fontWeight:500, fontSize:13 }}>{s.membres?.prenom} {s.membres?.nom}</td>
+                    <td style={{ padding:'8px 12px', fontWeight:700, fontSize:13, background:tyb.bg, color:tyb.color, textAlign:'center' }}>{Number(s.tyfcb).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><TLBadge tl={s.traffic_light} /></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </TableWrap>
+      </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
