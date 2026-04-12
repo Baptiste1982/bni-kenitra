@@ -299,7 +299,16 @@ export default function Membres({ profil }) {
                     <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
-                    <KpiCell value={s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '0%'} pts={Number(s.attendance_score||0)} max={10} bg={presBg(Number(s.attendance_rate||0))} />
+                    {(() => {
+                      // Présence du mois via PALMS consolidés d'avril
+                      const p = palmsData[s.membre_id]
+                      const pres = p ? Number(p.presences||0) : 0
+                      const abs = p ? Number(p.absences||0) : 0
+                      const total = pres + abs
+                      const rate = total > 0 ? pres / total : (s.attendance_rate ? Number(s.attendance_rate) : 0)
+                      const ptsPres = rate >= 0.95 ? 10 : rate >= 0.88 ? 5 : 0
+                      return <KpiCell value={total > 0 ? `${Math.round(rate*100)}%` : (s.attendance_rate ? `${Math.round(Number(s.attendance_rate)*100)}%` : '0%')} pts={ptsPres} max={10} bg={presBg(rate)} />
+                    })()}
                     {(() => {
                       const p = palmsData[s.membre_id]
                       const h = previsions[s.membre_id]
@@ -319,9 +328,12 @@ export default function Membres({ profil }) {
                       const rateRefs = totalJeudis > 0 ? totalRefs / totalJeudis : 0
                       const tatBgC = rateBg(rateTat)
                       const refsBgC = rateBg(rateRefs)
+                      // Recalculer les scores sur le taux du mois (barème BNI)
+                      const ptsTat = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
+                      const ptsRefs = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
                       return <>
-                        <KpiCell value={totalTat} pts={Number(s.score_121||0)} max={20} bg={tatBgC} />
-                        <KpiCell value={totalRefs} pts={Number(s.referrals_given_score||0)} max={25} bg={refsBgC} />
+                        <KpiCell value={totalTat} pts={ptsTat} max={20} bg={tatBgC} />
+                        <KpiCell value={totalRefs} pts={ptsRefs} max={25} bg={refsBgC} />
                       </>
                     })()}
                     {(() => { const vis = Number(s.visitors||0); const visBg = vis >= 5 ? tlBg('vert') : vis >= 3 ? tlBg('jaune') : vis >= 1 ? tlBg('orange') : tlBg('gris'); return <KpiCell value={vis} pts={Number(s.visitor_score||0)} max={25} bg={visBg} /> })()}
