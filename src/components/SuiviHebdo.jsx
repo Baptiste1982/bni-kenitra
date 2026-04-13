@@ -310,24 +310,21 @@ export default function SuiviHebdo() {
                     <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
                   ))}</tr></thead>
                   <tbody>
-                    {archiveData.filter(d=>d.membre_id).map((d, i) => {
-                      const rowBg = d.palms === 'A' ? '#FEE2E2' : (d.tat > 0 || (d.rdi||0)+(d.rde||0) > 0) ? '#D1FAE5' : '#F9FAFB'
-                      const nameCol = d.palms === 'A' ? '#991B1B' : (d.tat > 0 || (d.rdi||0)+(d.rde||0) > 0) ? '#065F46' : '#6B7280'
-                      return (
-                        <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:rowBg }}>
-                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:600, color:nameCol }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: d.palms==='P' ? '#059669' : '#DC2626' }}>{d.palms}</td>
+                    {archiveData.filter(d=>d.membre_id).map((d, i) => (
+                        <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.palms}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rdi||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rde||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rri||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rre||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.invites||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: d.tat > 0 ? '#065F46' : '#9CA3AF' }}>{d.tat||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: Number(d.mpb) > 0 ? '#065F46' : '#9CA3AF' }}>{Number(d.mpb||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.tat||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(d.mpb||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.ueg||0}</td>
                         </tr>
-                      )
-                    })}
+                    ))}
                   </tbody>
                 </table>
               </div>
