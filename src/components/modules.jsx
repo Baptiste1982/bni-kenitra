@@ -26,6 +26,7 @@ export function Invites({ profil }) {
   const [columnAccess, setColumnAccess] = useState({})
   const [showAccessConfig, setShowAccessConfig] = useState(false)
   const [collapsedMonths, setCollapsedMonths] = useState({})
+  const [showCommentaires, setShowCommentaires] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -514,13 +515,19 @@ export function Invites({ profil }) {
               <span style={{ color:'rgba(255,255,255,0.5)', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
             </div>
           </div>
-          {!isCollapsed && <TableWrap>
+          {!isCollapsed && <div>
+          <div style={{ display:'flex', justifyContent:'flex-end', padding:'6px 10px 0' }}>
+            {isColumnVisible('commentaires') && <button onClick={e=>{e.stopPropagation();setShowCommentaires(!showCommentaires)}} style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:6, border:'1px solid #E8E6E1', background:showCommentaires?'#1C1C2E':'#fff', color:showCommentaires?'#fff':'#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:4 }}>
+              💬 {showCommentaires ? 'Masquer' : 'Afficher'} commentaires
+            </button>}
+          </div>
+          <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead><tr>{[['Date',90],['Prénom',120],['Nom',120],['Profession',null],['Statut',150],
               ...(isColumnVisible('telephone') ? [['Téléphone',120]] : []),
               ...(isColumnVisible('email') ? [['Email',160]] : []),
               ['Invité par',130],['CA en charge',100],
-              ...(isColumnVisible('commentaires') ? [['Commentaires',null]] : []),
+              ...(isColumnVisible('commentaires') && showCommentaires ? [['Commentaires',null]] : []),
             ].map(([h,w]) => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width: w ? w : undefined }}>{h}</th>
             ))}</tr></thead>
@@ -543,7 +550,7 @@ export function Invites({ profil }) {
                     {isColumnVisible('email') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160 }}>{inv.email || '—'}</td>}
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.membre_ca_charge_nom || '—'}</td>
-                    {isColumnVisible('commentaires') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.7 }}>{inv.commentaires || '—'}</td>}
+                    {isColumnVisible('commentaires') && showCommentaires && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.7 }}>{inv.commentaires || '—'}</td>}
                   </tr>
                   {isEdit && (
                     <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#FFFBEB', boxShadow:'inset 0 0 0 2px #C9A84C' }}>
@@ -607,7 +614,8 @@ export function Invites({ profil }) {
               })}
             </tbody>
           </table>
-        </TableWrap>}
+        </TableWrap>
+        </div>}
         </div>
         )})
       })()}

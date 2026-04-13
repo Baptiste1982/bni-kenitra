@@ -23,6 +23,7 @@ export default function Membres({ profil }) {
   }, [showPalmsMenu])
   const [previsions, setPrevisions] = useState({})
   const [palmsData, setPalmsData] = useState({})
+  const [showSociete, setShowSociete] = useState(window.innerWidth > 768)
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -278,10 +279,15 @@ export default function Membres({ profil }) {
 
       {loading ? (
         <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement depuis Supabase...</div>
-      ) : (
+      ) : (<>
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:6 }}>
+          <button onClick={()=>setShowSociete(!showSociete)} style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:6, border:'1px solid #E8E6E1', background:showSociete?'#1C1C2E':'#fff', color:showSociete?'#fff':'#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:4 }}>
+            🏢 {showSociete ? 'Masquer' : 'Afficher'} société
+          </button>
+        </div>
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre','Société','Score','Traffic Light','Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []),'Renouvellement'].map(h => (
+            <thead><tr>{['#','Membre', ...(showSociete ? ['Société'] : []),'Score','Traffic Light','Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []),'Renouvellement'].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
@@ -296,7 +302,7 @@ export default function Membres({ profil }) {
                     onMouseLeave={e => e.currentTarget.style.background=rowBg}>
                     <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:nameColor(s.total_score) }}>{fullName(m.prenom, m.nom)}</td>
-                    <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>
+                    {showSociete && <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>}
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {(() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
                     {(() => {
@@ -372,7 +378,7 @@ export default function Membres({ profil }) {
           </table>
           <div style={{ padding:'10px 16px', color:'#9CA3AF', fontSize:12 }}>{filtered.length} membre{filtered.length!==1?'s':''} · Cliquez sur un membre pour voir le détail</div>
         </TableWrap>
-      )}
+      </>)}
 
       {/* Member detail modal */}
       {selected && (
