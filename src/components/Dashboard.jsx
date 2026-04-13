@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchDashboardKPIs, fetchPalmsHebdoMois, cloturerMois } from '../lib/bniService'
+import { fetchDashboardKPIs, cloturerMois } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { TLBadge, SectionTitle, PageHeader, TableWrap, fullName } from './ui'
 
@@ -26,16 +26,19 @@ export default function Dashboard({ onNavigate, profil }) {
   useEffect(() => {
     Promise.all([
       fetchDashboardKPIs(),
-      fetchPalmsHebdoMois(mois, annee)
-    ]).then(([data, hebdo]) => {
+      supabase.from('palms_imports').select('periode_debut, created_at').limit(1)
+    ]).then(([data, palmsRes]) => {
       setKpis(data)
-      // Compter réunions saisies
-      const memberRows = hebdo.filter(r => r.membre_id)
-      let maxR = 0
-      const perMember = {}
-      memberRows.forEach(r => { if(!perMember[r.membre_id]) perMember[r.membre_id]=0; perMember[r.membre_id]+= r.nb_reunions||1 })
-      Object.values(perMember).forEach(v => { if(v>maxR) maxR=v })
-      setReunionsSaisies(maxR)
+      // Compter les jeudis clôturés = jeudis entre periode_debut et date d'import
+      const pi = palmsRes?.data?.[0]
+      if (pi?.periode_debut && pi?.created_at) {
+        const importDate = new Date(pi.created_at).toISOString().split('T')[0]
+        let count = 0
+        const d = new Date(pi.periode_debut + 'T12:00:00')
+        const end = new Date(importDate + 'T12:00:00')
+        while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
+        setReunionsSaisies(count)
+      } else { setReunionsSaisies(0) }
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
