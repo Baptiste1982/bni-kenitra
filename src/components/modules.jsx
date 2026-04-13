@@ -154,6 +154,7 @@ export function Invites() {
         </>
       })()}
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (() => {
+        const total = invites.length || 1
         // Grouper par mois
         const byMonth = {}
         filtered.forEach(inv => {
