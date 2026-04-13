@@ -7,9 +7,11 @@ import RealtimeAlerts from './components/RealtimeAlerts'
 import { Invites, Groupes, Reporting, AgentIA } from './components/modules'
 import SuiviHebdo from './components/SuiviHebdo'
 import AdminUsers from './components/AdminUsers'
+import Alertes from './components/Alertes'
 
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
 const ALL_MODULES = [
+  { id:'alertes',   label:'Alertes',           icon:'🚨' },
   { id:'dashboard', label:'Tableau de bord', icon:'▦' },
   { id:'membres',   label:'Membres',          icon:'◈' },
   { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
@@ -116,6 +118,7 @@ export default function App() {
   if (!user) return <Login onLogin={setUser} />
 
   const MODULES = {
+    alertes:   <Alertes />,
     dashboard: <Dashboard onNavigate={navigate} profil={profil} />,
     membres:   <Membres profil={profil} />,
     hebdo:     <SuiviHebdo />,
@@ -141,7 +144,7 @@ export default function App() {
 
       {/* Alertes live — au-dessus du nav */}
       <div style={{ padding:'8px 10px' }}>
-        <button onClick={() => navigate('dashboard')} style={{ width:'100%', display:'flex', alignItems:'center', gap:8, background: alertCount > 0 ? 'rgba(196,30,58,0.15)' : 'rgba(5,150,105,0.12)', borderRadius:7, padding:'8px 11px', border:'none', cursor:'pointer' }}>
+        <button onClick={() => navigate('alertes')} style={{ width:'100%', display:'flex', alignItems:'center', gap:8, background: alertCount > 0 ? 'rgba(196,30,58,0.15)' : 'rgba(5,150,105,0.12)', borderRadius:7, padding:'8px 11px', border:'none', cursor:'pointer' }}>
           <div style={{ width:7, height:7, borderRadius:'50%', background: alertCount > 0 ? '#C41E3A' : '#059669', flexShrink:0, animation: alertCount > 0 ? 'pulse 2s ease-in-out infinite' : 'none' }} />
           <span style={{ color:'rgba(255,255,255,0.6)', fontSize:11 }}>
             {alertCount > 0 ? `${alertCount} alerte${alertCount > 1 ? 's' : ''}` : 'Aucune alerte'}
