@@ -56,6 +56,15 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
     inputRef.current?.focus()
   }
 
+  // Fermer au clic en dehors
+  const chatRef = useRef(null)
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClick = (e) => { if (chatRef.current && !chatRef.current.contains(e.target) && !e.target.closest('.chat-tab')) onClose() }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen, onClose])
+
   // Grouper par jour
   const groupByDay = {}
   messages.forEach(m => {
@@ -65,7 +74,7 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
   })
 
   return (
-    <div style={{ position:'fixed', bottom: isOpen ? 36 : -500, right:40, width:380, height:'60vh', background:'#fff', boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'bottom 0.3s ease', borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none' }}>
+    <div ref={chatRef} style={{ position:'fixed', bottom: isOpen ? 36 : -500, right:40, width:380, height:'60vh', background:'#fff', boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'bottom 0.3s ease', borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none' }}>
 
       {/* Poke notification */}
       {pokeNotif && (

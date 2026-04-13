@@ -276,7 +276,7 @@ export default function App() {
       <RealtimeAlerts onNavigate={navigate} />
 
       {/* Chat — onglet en bas */}
-      <div onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
+      <div className="chat-tab" onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
         style={{ position:'fixed', bottom:0, right:40, width:200, padding:'8px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', boxShadow:'0 -2px 8px rgba(0,0,0,0.1)', zIndex:201 }}>
         <span style={{ fontSize:14 }}>💬</span>
         <span style={{ color:'#fff', fontSize:12, fontWeight:600 }}>Chat Équipe</span>
