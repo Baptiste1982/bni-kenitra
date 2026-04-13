@@ -99,10 +99,20 @@ export function Invites() {
         right={
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
-            <button onClick={handleSync} disabled={syncing}
-              style={{ padding:'9px 16px', background: syncing ? '#9CA3AF' : '#1C1C2E', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor: syncing ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:6 }}>
-              {syncing ? 'Sync...' : '🔄 Sync Google Sheet'}
-            </button>
+            <div onClick={syncing ? undefined : handleSync}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor: syncing ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s', opacity: syncing ? 0.6 : 1 }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>{syncing ? 'Synchronisation...' : 'Google Sheets'}</div>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'Playfair Display, serif' }}>🔄 Sync</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
+              </div>
+            </div>
           </div>
         }
       />
