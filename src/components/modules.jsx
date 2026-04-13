@@ -900,46 +900,35 @@ export function Reporting() {
 
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
         <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: mob ? 8 : 16 }}>
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>💰 Top TYFCB générés</SectionTitle></div>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead><tr>{['Membre','TYFCB (MAD)','TL'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
-              <tbody>
-                {scores.filter(s=>Number(s.tyfcb)>0).sort((a,b)=>Number(b.tyfcb)-Number(a.tyfcb)).slice(0,8).map((s,i)=>{
-                  const tyb = Number(s.tyfcb) >= 300000 ? {bg:'#D1FAE5',c:'#065F46'} : Number(s.tyfcb) >= 50000 ? {bg:'#FEF9C3',c:'#854D0E'} : Number(s.tyfcb) >= 20000 ? {bg:'#FFEDD5',c:'#9A3412'} : {bg:'#FEE2E2',c:'#991B1B'}
-                  const rBg = {vert:'#D1FAE5',orange:'#FEF9C3',rouge:'#FEE2E2',gris:'#F9FAFB'}[s.traffic_light]||'#fff'
-                  const tb = s.traffic_light==='vert'?{bg:'#D1FAE5',c:'#065F46'}:s.traffic_light==='orange'?{bg:'#FEF9C3',c:'#854D0E'}:s.traffic_light==='rouge'?{bg:'#FEE2E2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#4B5563'}
-                  return (
-                    <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg }} onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: Number(s.total_score||0) >= 70 ? '#065F46' : Number(s.total_score||0) >= 50 ? '#854D0E' : Number(s.total_score||0) >= 30 ? '#991B1B' : '#6B7280' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
-                      <td style={{ padding:'8px 12px', fontWeight:700, fontSize:13, background:tyb.bg, color:tyb.c, textAlign:'center' }}>{Number(s.tyfcb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                      <td style={{ padding:'8px 12px', background:tb.bg, textAlign:'center', width:70 }}><span style={{ fontSize:11, fontWeight:500, color:tb.c }}>{s.traffic_light||'—'}</span></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </TableWrap>
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🏆 Classement complet</SectionTitle></div>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead><tr>{['#','Membre','Score'].map(h=><th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>)}</tr></thead>
-              <tbody>
-                {scores.filter(s=>s.rank).sort((a,b)=>a.rank-b.rank).map((s,i)=>{
-                  const sc = Number(s.total_score||0)
-                  const scBg = sc >= 70 ? {bg:'#D1FAE5',c:'#065F46'} : sc >= 50 ? {bg:'#FEF9C3',c:'#854D0E'} : sc >= 30 ? {bg:'#FEE2E2',c:'#991B1B'} : {bg:'#F3F4F6',c:'#4B5563'}
-                  const rBg2 = {vert:'#D1FAE5',orange:'#FEF9C3',rouge:'#FEE2E2',gris:'#F9FAFB'}[s.traffic_light]||'#fff'
-                  return (
-                    <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg2 }} onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-                      <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{s.rank}</td>
-                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color: sc >= 70 ? '#065F46' : sc >= 50 ? '#854D0E' : sc >= 30 ? '#991B1B' : '#6B7280' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
-                      <td style={{ padding:'8px 12px', fontWeight:700, fontSize:14, background:scBg.bg, color:scBg.c, textAlign:'center', width:60 }}>{sc}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </TableWrap>
+          <div style={{ background:'#fff', borderRadius: mob ? 10 : 12, border:'1px solid #E8E6E1', overflow:'hidden' }}>
+            <div style={{ padding: mob ? '10px 12px' : '14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>💰 Top TYFCB générés</SectionTitle></div>
+            {scores.filter(s=>Number(s.tyfcb)>0).sort((a,b)=>Number(b.tyfcb)-Number(a.tyfcb)).slice(0,8).map((s,i)=>{
+              const sc = Number(s.total_score||0)
+              const tyb = Number(s.tyfcb) >= 300000 ? {bg:'#D1FAE5',c:'#065F46'} : Number(s.tyfcb) >= 50000 ? {bg:'#FEF9C3',c:'#854D0E'} : Number(s.tyfcb) >= 20000 ? {bg:'#FFEDD5',c:'#9A3412'} : {bg:'#FEE2E2',c:'#991B1B'}
+              const rBg = {vert:'#D1FAE5',orange:'#FEF9C3',rouge:'#FEE2E2',gris:'#F9FAFB'}[s.traffic_light]||'#fff'
+              return (
+                <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: mob ? '6px 12px' : '8px 16px', borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg }}>
+                  <div style={{ fontWeight:600, fontSize: mob ? 11 : 13, color: sc >= 70 ? '#065F46' : sc >= 50 ? '#854D0E' : sc >= 30 ? '#991B1B' : '#6B7280', flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</div>
+                  <div style={{ fontWeight:700, fontSize: mob ? 11 : 13, color:tyb.c, background:tyb.bg, padding:'2px 8px', borderRadius:6, flexShrink:0, marginLeft:8 }}>{Number(s.tyfcb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ background:'#fff', borderRadius: mob ? 10 : 12, border:'1px solid #E8E6E1', overflow:'hidden' }}>
+            <div style={{ padding: mob ? '10px 12px' : '14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🏆 Classement complet</SectionTitle></div>
+            {scores.filter(s=>s.rank).sort((a,b)=>a.rank-b.rank).map((s,i)=>{
+              const sc = Number(s.total_score||0)
+              const scBg = sc >= 70 ? {bg:'#D1FAE5',c:'#065F46'} : sc >= 50 ? {bg:'#FEF9C3',c:'#854D0E'} : sc >= 30 ? {bg:'#FEE2E2',c:'#991B1B'} : {bg:'#F3F4F6',c:'#4B5563'}
+              const rBg2 = {vert:'#D1FAE5',orange:'#FEF9C3',rouge:'#FEE2E2',gris:'#F9FAFB'}[s.traffic_light]||'#fff'
+              return (
+                <div key={i} style={{ display:'flex', alignItems:'center', padding: mob ? '6px 12px' : '8px 16px', borderBottom:'1px solid rgba(0,0,0,0.05)', background:rBg2, gap:8 }}>
+                  <div style={{ color:'#9CA3AF', fontSize: mob ? 10 : 12, width: mob ? 20 : 28, flexShrink:0, textAlign:'center' }}>{s.rank}</div>
+                  <div style={{ fontWeight:600, fontSize: mob ? 11 : 13, color: sc >= 70 ? '#065F46' : sc >= 50 ? '#854D0E' : sc >= 30 ? '#991B1B' : '#6B7280', flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</div>
+                  <div style={{ fontWeight:700, fontSize: mob ? 12 : 14, color:scBg.c, background:scBg.bg, padding:'2px 8px', borderRadius:6, flexShrink:0 }}>{sc}</div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
