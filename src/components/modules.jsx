@@ -13,6 +13,10 @@ export function Invites({ profil }) {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [showVisitorImport, setShowVisitorImport] = useState(false)
+  const [showVisitorArchives, setShowVisitorArchives] = useState(false)
+  const [visitorArchives, setVisitorArchives] = useState([])
+  const [archiveDetail, setArchiveDetail] = useState(null)
+  const [archiveData, setArchiveData] = useState([])
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [newStatut, setNewStatut] = useState(false)
@@ -153,6 +157,18 @@ export function Invites({ profil }) {
         imported++
       }
 
+      // Extraire les dates depuis le fichier
+      const depuisMatch = text.match(/Depuis[\s:]*<\/Data>[\s\S]*?<Data[^>]*>(\d{4}-\d{2}-\d{2})/i)
+      const jusquaMatch = text.match(/Jusqu[\s\S]*?au[\s:]*<\/Data>[\s\S]*?<Data[^>]*>(\d{4}-\d{2}-\d{2})/i)
+      // Archiver l'import
+      const { data: { session } } = await supabase.auth.getSession()
+      await supabase.from('visitor_imports').insert({
+        groupe_id: groupeId,
+        date_debut: depuisMatch?.[1] || null,
+        date_fin: jusquaMatch?.[1] || null,
+        nb_invites: imported,
+        imported_by: session?.user?.id,
+      })
       setSyncMsg(`Import réussi — ${imported} invités importés`)
       setShowVisitorImport(false)
       load()
@@ -223,7 +239,26 @@ export function Invites({ profil }) {
         right={
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
-            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => setShowVisitorImport(!showVisitorImport)}
+            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => {
+              setShowVisitorArchives(!showVisitorArchives)
+              if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false)
+                supabase.from('visitor_imports').select('*').order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[]))
+              }
+            }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📂 Historique</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+              </div>
+            </div>}
+            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -285,6 +320,79 @@ export function Invites({ profil }) {
             <div style={{ fontSize:11, color:'#9CA3AF', marginTop:4 }}>ou cliquer pour sélectionner · Export BNI Connect</div>
           </div>
           {syncMsg && <div style={{ marginTop:10, fontSize:12, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669', fontWeight:500 }}>{syncMsg}</div>}
+        </Card>
+      )}
+
+      {/* Archives des imports visiteurs */}
+      {showVisitorArchives && (
+        <Card style={{ marginBottom:20 }}>
+          <SectionTitle>📂 Archives des imports visiteurs</SectionTitle>
+          {visitorArchives.length === 0 ? (
+            <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucun import archivé</div>
+          ) : (
+            <div>
+              {visitorArchives.map((a, i) => {
+                const isActive = archiveDetail === a.id
+                const debut = a.date_debut ? new Date(a.date_debut+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '?'
+                const fin = a.date_fin ? new Date(a.date_fin+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '?'
+                const importDate = new Date(a.imported_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+                return (
+                  <div key={a.id} style={{ marginBottom:8 }}>
+                    <div onClick={async () => {
+                      if (isActive) { setArchiveDetail(null); setArchiveData([]); return }
+                      setArchiveDetail(a.id)
+                      // Charger les invités de cette période
+                      const { data } = await supabase.from('invites').select('*')
+                        .eq('groupe_id', a.groupe_id)
+                        .gte('date_visite', a.date_debut)
+                        .lte('date_visite', a.date_fin)
+                        .order('date_visite')
+                      setArchiveData(data || [])
+                    }}
+                      style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, cursor:'pointer' }}
+                      onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
+                      <div style={{ width:10, height:10, borderRadius:'50%', background:'#8B5CF6', flexShrink:0 }} />
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>{debut} → {fin}</div>
+                        <div style={{ fontSize:10, color:'#9CA3AF' }}>Importé le {importDate} · {a.nb_invites} invité{a.nb_invites>1?'s':''}</div>
+                      </div>
+                      <span style={{ fontSize:10, color:'#9CA3AF' }}>{isActive ? '▲' : '▼'}</span>
+                    </div>
+                    {isActive && archiveData.length > 0 && (
+                      <div style={{ marginTop:6, background:'#fff', borderRadius:'0 0 8px 8px', border:'1px solid #E8E6E1', borderTop:'none', overflowX:'auto' }}>
+                        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                          <thead><tr>{['Date','Prénom','Nom','Société','Profession',
+                            ...(isColumnVisible('telephone') ? ['Tél.'] : []),
+                            ...(isColumnVisible('email') ? ['Email'] : []),
+                            'Invité par','Type'].map(h => (
+                            <th key={h} style={{ background:'#F9F8F6', padding:'6px 10px', textAlign:'left', fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+                          ))}</tr></thead>
+                          <tbody>
+                            {archiveData.map((inv, j) => {
+                              const st = getStatutStyle(inv.statut)
+                              return (
+                                <tr key={j} style={{ borderBottom:'1px solid #F3F2EF', background:st.bg }}>
+                                  <td style={{ padding:'6px 10px', fontSize:11, color:st.color }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
+                                  <td style={{ padding:'6px 10px', fontSize:11, fontWeight:600, color:st.color }}>{cap(inv.prenom)}</td>
+                                  <td style={{ padding:'6px 10px', fontSize:11, fontWeight:600, color:st.color }}>{cap(inv.nom)}</td>
+                                  <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.societe || '—'}</td>
+                                  <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.profession || '—'}</td>
+                                  {isColumnVisible('telephone') && <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.telephone || '—'}</td>}
+                                  {isColumnVisible('email') && <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.email || '—'}</td>}
+                                  <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.invite_par_nom || '—'}</td>
+                                  <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.type_visite || '—'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </Card>
       )}
 
