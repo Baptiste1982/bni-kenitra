@@ -18,6 +18,7 @@ export function Invites() {
   const [customStatut, setCustomStatut] = useState('')
   const [extraStatuts, setExtraStatuts] = useState([])
   const [statutColors, setStatutColors] = useState({})
+  const [collapsedMonths, setCollapsedMonths] = useState({})
 
   const load = () => {
     setLoading(true)
@@ -164,13 +165,20 @@ export function Invites() {
         })
         const months = Object.entries(byMonth).sort((a,b) => b[1].sortKey.localeCompare(a[1].sortKey))
 
-        return months.map(([month, { invites: monthInvites }]) => (
+        return months.map(([month, { invites: monthInvites }]) => {
+        const isCollapsed = collapsedMonths[month]
+        return (
         <div key={month} style={{ marginBottom:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-            <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize', fontFamily:'Playfair Display, serif' }}>{month}</div>
-            <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''}</div>
+          <div onClick={() => setCollapsedMonths(prev => ({...prev, [month]: !prev[month]}))}
+            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 18px', background:'#1C1C2E', borderRadius: isCollapsed ? 10 : '10px 10px 0 0', cursor:'pointer', userSelect:'none' }}
+            onMouseEnter={e=>e.currentTarget.style.background='#2D2D42'} onMouseLeave={e=>e.currentTarget.style.background='#1C1C2E'}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize', letterSpacing:'0.02em' }}>{month}</span>
+              <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''}</span>
+            </div>
+            <span style={{ color:'rgba(255,255,255,0.5)', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>▼</span>
           </div>
-        <TableWrap>
+          {!isCollapsed && <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead><tr>{[['Date',90],['Prénom',130],['Nom',130],['Profession',null],['Statut',170],['Invité par',150],['CA en charge',120]].map(([h,w]) => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width: w ? w : undefined }}>{h}</th>
@@ -255,9 +263,9 @@ export function Invites() {
               })}
             </tbody>
           </table>
-        </TableWrap>
+        </TableWrap>}
         </div>
-        ))
+        )})
       })()}
     </div>
   )
