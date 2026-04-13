@@ -64,6 +64,7 @@ export default function AdminUsers() {
   const [copied, setCopied] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
   const [logs, setLogs] = useState([])
+  const [expandedKpi, setExpandedKpi] = useState(null)
   const [resetPwd, setResetPwd] = useState(null)
   const [newPassword, setNewPassword] = useState('')
   const [actionMenu, setActionMenu] = useState(null) // user id for dropdown
@@ -250,43 +251,71 @@ export default function AdminUsers() {
               return formatDuration(diffMin)
             }
 
-            // Grouper par jour
+            const roleAbr = r => ({ super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[r] || '?')
+            const roleCol = r => ({ super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[r] || '#6B7280')
+
+            // Grouper par jour puis par user
             const byDay = {}
             logs.forEach(l => {
               const day = new Date(l.connected_at).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
-              if (!byDay[day]) byDay[day] = []
-              byDay[day].push(l)
+              if (!byDay[day]) byDay[day] = {}
+              const uid = l.user_id
+              if (!byDay[day][uid]) byDay[day][uid] = { prenom:l.prenom, nom:l.nom, role:l.role, events:[] }
+              byDay[day][uid].events.push(l)
             })
+
             return Object.entries(byDay).length === 0 ? (
               <div style={{ padding:20, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucune connexion enregistrée</div>
-            ) : Object.entries(byDay).map(([day, entries]) => {
-              const nbLogins = entries.filter(e => e.action === 'login').length
+            ) : Object.entries(byDay).map(([day, users]) => {
+              const allEvents = Object.values(users).flatMap(u => u.events)
+              const nbLogins = allEvents.filter(e => e.action === 'login').length
+              const nbUsers = Object.keys(users).length
               return (
                 <div key={day} style={{ marginBottom:16 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
                     <div style={{ fontSize:12, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{day}</div>
-                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#D1FAE5', color:'#065F46' }}>{nbLogins} connexion{nbLogins > 1 ? 's' : ''}</div>
-                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{entries.length} événement{entries.length > 1 ? 's' : ''}</div>
+                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#D1FAE5', color:'#065F46' }}>{nbUsers} utilisateur{nbUsers>1?'s':''}</div>
+                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{nbLogins} session{nbLogins>1?'s':''}</div>
                   </div>
-                  <div style={{ borderLeft:'2px solid #E8E6E1', marginLeft:6, paddingLeft:16 }}>
-                    {entries.map((l, i) => {
-                      const time = new Date(l.connected_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
-                      const isLogin = l.action === 'login'
-                      const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[l.role] || '?'
-                      const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[l.role] || '#6B7280'
-                      const duration = isLogin ? getDuration(l, logs) : null
-                      return (
-                        <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, position:'relative' }}>
-                          <div style={{ position:'absolute', left:-22, width:10, height:10, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
-                          <div style={{ fontSize:11, fontWeight:600, color:'#9CA3AF', width:60, flexShrink:0 }}>{time}</div>
-                          <div style={{ width:22, height:22, borderRadius:'50%', background:roleCol+'33', border:`1.5px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
-                          <div style={{ fontSize:12, fontWeight:500, color:'#1C1C2E', flex:1 }}>{l.prenom} {l.nom}</div>
-                          <span style={{ fontSize:10, fontWeight:600, padding:'2px 6px', borderRadius:6, background: isLogin ? '#D1FAE5' : '#FEE2E2', color: isLogin ? '#065F46' : '#991B1B' }}>{isLogin ? 'Connexion' : 'Déconnexion'}</span>
-                          {duration && <span style={{ fontSize:10, fontWeight:500, padding:'2px 8px', borderRadius:6, background:'#EDE9FE', color:'#5B21B6' }}>⏱ {duration}</span>}
+                  {Object.entries(users).map(([uid, u]) => {
+                    const logins = u.events.filter(e => e.action === 'login')
+                    const firstLogin = logins.length > 0 ? new Date(logins[logins.length-1].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
+                    const lastLogin = logins.length > 0 ? new Date(logins[0].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
+                    const rc = roleCol(u.role)
+                    const isExpanded = expandedKpi === `log-${day}-${uid}`
+                    return (
+                      <div key={uid} style={{ marginBottom:6 }}>
+                        <div onClick={() => setExpandedKpi(isExpanded ? null : `log-${day}-${uid}`)}
+                          style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, background: isExpanded ? '#F7F6F3' : '#fff', border:'1px solid #E8E6E1', cursor:'pointer' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e=>{ if(!isExpanded) e.currentTarget.style.background='#fff' }}>
+                          <div style={{ width:24, height:24, borderRadius:'50%', background:rc+'33', border:`1.5px solid ${rc}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:rc, flexShrink:0 }}>{roleAbr(u.role)}</div>
+                          <div style={{ flex:1 }}>
+                            <span style={{ fontSize:12, fontWeight:600, color:'#1C1C2E' }}>{u.prenom} {u.nom}</span>
+                          </div>
+                          <span style={{ fontSize:10, color:'#9CA3AF' }}>{logins.length > 1 ? `${firstLogin} — ${lastLogin}` : firstLogin}</span>
+                          <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#D1FAE5', color:'#065F46' }}>{logins.length} session{logins.length>1?'s':''}</span>
+                          <span style={{ fontSize:10, color:'#9CA3AF' }}>{isExpanded ? '▲' : '▼'}</span>
                         </div>
-                      )
-                    })}
-                  </div>
+                        {isExpanded && (
+                          <div style={{ marginLeft:20, borderLeft:'2px solid #E8E6E1', paddingLeft:14, marginTop:4 }}>
+                            {u.events.map((l, i) => {
+                              const time = new Date(l.connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
+                              const isLogin = l.action === 'login'
+                              const duration = isLogin ? getDuration(l, logs) : null
+                              return (
+                                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, position:'relative' }}>
+                                  <div style={{ position:'absolute', left:-20, width:8, height:8, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
+                                  <span style={{ fontSize:10, color:'#9CA3AF', width:55, flexShrink:0 }}>{time}</span>
+                                  <span style={{ fontSize:10, fontWeight:600, padding:'1px 5px', borderRadius:4, background: isLogin ? '#D1FAE5' : '#FEE2E2', color: isLogin ? '#065F46' : '#991B1B' }}>{isLogin ? 'Connexion' : 'Déconnexion'}</span>
+                                  {duration && <span style={{ fontSize:9, fontWeight:500, padding:'1px 6px', borderRadius:4, background:'#EDE9FE', color:'#5B21B6' }}>⏱ {duration}</span>}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )
             })
