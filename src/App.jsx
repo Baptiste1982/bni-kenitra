@@ -278,7 +278,7 @@ export default function App() {
 
       {/* Chat — onglet en haut */}
       <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
-        style={{ position:'fixed', top:10, right:16, padding:'4px 12px', background:'rgba(28,28,46,0.65)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:20, display:'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
+        style={{ position:'fixed', top:12, right: window.innerWidth <= 768 ? 12 : 260, padding:'4px 12px', background:'rgba(28,28,46,0.65)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:20, display:'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
         onMouseEnter={e=>e.currentTarget.style.background='rgba(28,28,46,0.85)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(28,28,46,0.65)'}>
         <span style={{ fontSize:12 }}>💬</span>
         <span style={{ color:'#fff', fontSize:10, fontWeight:600 }}>Chat</span>
