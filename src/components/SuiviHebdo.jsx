@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois } from '../lib/bniService'
+import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, Card, Spinner, fullName } from './ui'
 
 const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre', 'Inv.': 'invites', 'TàT': 'tat', 'MPB': 'mpb', 'UEG': 'ueg' }
@@ -21,6 +22,8 @@ export default function SuiviHebdo() {
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
   const [nbReunions, setNbReunions] = useState(1)
   const [showImport, setShowImport] = useState(false)
+  const [showArchives, setShowArchives] = useState(false)
+  const [archives, setArchives] = useState([])
   const [search, setSearch] = useState('')
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState(null)
@@ -200,14 +203,28 @@ export default function SuiviHebdo() {
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
       <PageHeader title="Suivi Hebdomadaire" sub={`Données PALMS intermédiaires — ${moisLabel}`}
         right={
-          <div style={{ position:'relative' }}>
-            <div onClick={() => setShowImport(!showImport)}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s' }}
+          <div style={{ display:'flex', gap:8 }}>
+            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ flex:1 }}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📂 Historique</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+              </div>
+            </div>
+            <div onClick={() => { setShowImport(!showImport); if(!showImport) setShowArchives(false) }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
                 <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernière saisie</div>
-                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>
                   {dates.length > 0 ? new Date(dates[dates.length-1]+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '—'}
                 </div>
               </div>
@@ -220,6 +237,55 @@ export default function SuiviHebdo() {
           </div>
         }
       />
+
+      {/* ─── ARCHIVES ────────────────────────────────────────────────────── */}
+      {showArchives && (
+        <Card style={{ marginBottom: 24 }}>
+          <SectionTitle>📂 Archives des saisies PALMS</SectionTitle>
+          {(() => {
+            // Grouper par mois
+            const byMonth = {}
+            archives.forEach(a => {
+              const d = new Date(a.date_reunion + 'T12:00:00')
+              const key = d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
+              const sortKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+              if (!byMonth[key]) byMonth[key] = { sortKey, dates: new Set() }
+              byMonth[key].dates.add(a.date_reunion)
+            })
+            const months = Object.entries(byMonth).sort((a,b) => b[1].sortKey.localeCompare(a[1].sortKey))
+
+            return months.length === 0 ? (
+              <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucune archive</div>
+            ) : months.map(([month, { dates: mDates }]) => {
+              const sortedDates = [...mDates].sort()
+              return (
+                <div key={month} style={{ marginBottom:16 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{month}</div>
+                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#EDE9FE', color:'#5B21B6' }}>{sortedDates.length} semaine{sortedDates.length > 1 ? 's' : ''}</div>
+                  </div>
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                    {sortedDates.map(d => {
+                      const date = new Date(d + 'T12:00:00')
+                      return (
+                        <div key={d} style={{ padding:'8px 14px', borderRadius:8, background:'#F7F6F3', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', gap:8 }}>
+                          <div style={{ width:8, height:8, borderRadius:'50%', background:'#8B5CF6' }} />
+                          <div>
+                            <div style={{ fontSize:12, fontWeight:600, color:'#1C1C2E' }}>
+                              {date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })}
+                            </div>
+                            <div style={{ fontSize:9, color:'#9CA3AF' }}>Réunion</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })
+          })()}
+        </Card>
+      )}
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
       {showImport && <Card style={{ marginBottom: 24 }}>
