@@ -21,6 +21,7 @@ export default function SuiviHebdo() {
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
   const [nbReunions, setNbReunions] = useState(1)
   const [showImport, setShowImport] = useState(false)
+  const [search, setSearch] = useState('')
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState(null)
   const [monthData, setMonthData] = useState([])
@@ -187,7 +188,9 @@ export default function SuiviHebdo() {
   const manque = (cumul, objectif) => Math.max(0, objectif - cumul)
   const manqueColor = (val) => val === 0 ? '#059669' : val <= 2 ? '#D97706' : '#DC2626'
 
-  const sorted = Object.values(membresMap).sort((a, b) => b.cumul.tat + b.cumul.refs - (a.cumul.tat + a.cumul.refs))
+  const sorted = Object.values(membresMap)
+    .filter(m => !search || `${m.prenom} ${m.nom}`.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => b.cumul.tat + b.cumul.refs - (a.cumul.tat + a.cumul.refs))
 
   const th = { padding: '8px 10px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', whiteSpace: 'nowrap' }
   const td = { padding: '8px 10px', fontSize: 12, textAlign: 'center', borderBottom: '1px solid #F3F2EF' }
@@ -265,6 +268,10 @@ export default function SuiviHebdo() {
           </div>
         </div>
         <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
+      </div>
+      <div style={{ padding:'8px 14px', background:'#fff', borderBottom:'1px solid #E8E6E1' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un membre..."
+          style={{ width:'100%', padding:'8px 12px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none', boxSizing:'border-box' }} />
       </div>
 
       {loading ? (
