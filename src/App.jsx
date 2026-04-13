@@ -187,8 +187,8 @@ export default function App() {
           return (
             <div key={u.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
               <div style={{ position:'relative' }}>
-                <div style={{ width:26, height:26, borderRadius:'50%', background:roleCol+'33', border:`2px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:roleCol }}>{roleAbr}</div>
-                <div style={{ position:'absolute', bottom:-1, right:-1, width:8, height:8, borderRadius:'50%', background:statusColor, border:'2px solid #1C1C2E' }} />
+                <div style={{ width:32, height:32, borderRadius:'50%', background:roleCol+'33', border:`2px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:roleCol }}>{roleAbr}</div>
+                <div style={{ position:'absolute', bottom:0, right:0, width:10, height:10, borderRadius:'50%', background:statusColor, border:'2px solid #1C1C2E' }} />
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ color:'#fff', fontSize:10, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.prenom} {u.nom}</div>
@@ -205,8 +205,8 @@ export default function App() {
             const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[profil?.role] || '?'
             const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[profil?.role] || '#6B7280'
             return <div style={{ position:'relative' }}>
-              <div style={{ width:32, height:32, borderRadius:'50%', background:roleCol+'33', border:`2px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
-              <div style={{ position:'absolute', bottom:-1, right:-1, width:9, height:9, borderRadius:'50%', background:'#059669', border:'2px solid #1C1C2E' }} />
+              <div style={{ width:36, height:36, borderRadius:'50%', background:roleCol+'33', border:`2px solid ${roleCol}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:roleCol, flexShrink:0 }}>{roleAbr}</div>
+              <div style={{ position:'absolute', bottom:0, right:0, width:11, height:11, borderRadius:'50%', background:'#059669', border:'2px solid #1C1C2E' }} />
             </div>
           })()}
           <div>
