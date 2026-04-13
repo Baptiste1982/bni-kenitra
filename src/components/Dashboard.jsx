@@ -116,7 +116,7 @@ export default function Dashboard({ onNavigate, profil }) {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+      <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: window.innerWidth <= 768 ? 10 : 16, marginBottom:24 }}>
         {[
           { label:'Membres actifs', value: kpis?.membresActifs ?? '—', sub:'Objectif : 30 membres', nav:'membres', prog: kpis ? kpis.membresActifs/30*100 : 0, bg: kpis?.membresActifs >= 25 ? '#D1FAE5' : kpis?.membresActifs >= 20 ? '#FEF9C3' : '#FEE2E2', topBg: kpis?.membresActifs >= 25 ? '#A7F3D0' : kpis?.membresActifs >= 20 ? '#FDE68A' : '#FECACA', valueColor: kpis?.membresActifs >= 25 ? '#065F46' : kpis?.membresActifs >= 20 ? '#854D0E' : '#991B1B', accent:'#C41E3A' },
           { label:'Alertes actives', value: kpis?.alertesCount ?? '—', sub:'Cliquez pour voir le détail', nav:'invites', bg: kpis?.alertesCount === 0 ? '#D1FAE5' : kpis?.alertesCount <= 2 ? '#FEF9C3' : '#FEE2E2', topBg: kpis?.alertesCount === 0 ? '#A7F3D0' : kpis?.alertesCount <= 2 ? '#FDE68A' : '#FECACA', valueColor: kpis?.alertesCount === 0 ? '#065F46' : '#991B1B', accent:'#F59E0B' },
@@ -125,12 +125,12 @@ export default function Dashboard({ onNavigate, profil }) {
         ].map(c => (
           <div key={c.label} onClick={() => onNavigate(c.nav)} onMouseEnter={hover} onMouseLeave={unhover}
             style={{ background:c.bg, borderRadius:12, border:'1px solid rgba(0,0,0,0.06)', overflow:'hidden', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}>
-            <div style={{ background:c.topBg, padding:'10px 20px' }}>
-              <div style={{ fontSize:11, fontWeight:600, color:c.valueColor, textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{c.label}</div>
+            <div style={{ background:c.topBg, padding: window.innerWidth <= 768 ? '6px 12px' : '10px 20px' }}>
+              <div style={{ fontSize: window.innerWidth <= 768 ? 9 : 11, fontWeight:600, color:c.valueColor, textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{c.label}</div>
             </div>
-            <div style={{ padding:'14px 20px 18px' }}>
-              <div style={{ fontSize:28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.valueColor }}>{c.value}</div>
-              <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{c.sub}</div>
+            <div style={{ padding: window.innerWidth <= 768 ? '8px 12px 12px' : '14px 20px 18px' }}>
+              <div style={{ fontSize: window.innerWidth <= 768 ? 18 : 28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.valueColor }}>{c.value}</div>
+              <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, color:'#6B7280', marginTop:4 }}>{c.sub}</div>
               {c.prog !== undefined && <div style={{ height:4, background:'rgba(255,255,255,0.5)', borderRadius:2, marginTop:10 }}><div style={{ height:4, width:`${Math.min(100,c.prog)}%`, background:c.valueColor, borderRadius:2, opacity:0.5 }} /></div>}
               <div style={{ fontSize:11, color:c.valueColor, marginTop:6, fontWeight:500, opacity:0.7 }}>Voir le détail →</div>
             </div>
