@@ -706,66 +706,112 @@ export function Reporting() {
     </div>
   )
 
+  const mob = window.innerWidth <= 768
+
   return (
-    <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
+    <div style={{ padding: mob ? '16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Reporting" sub={`MK-01 Kénitra Atlantique · ${moisLabel}`} />
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-        <StatCard label="TYFCB total" value={kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…'} sub="6 mois glissants · entre membres"
-          topBg={kpis?.tyfcb >= 300000 ? '#A7F3D0' : kpis?.tyfcb >= 50000 ? '#FDE68A' : '#FECACA'}
-          valueColor={kpis?.tyfcb >= 300000 ? '#065F46' : kpis?.tyfcb >= 50000 ? '#854D0E' : '#991B1B'}
-          style={{ background: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2' }} />
-        <StatCard label="Recommandations données" value={loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0)} sub="6 mois glissants · score total"
-          topBg="#FDE68A" valueColor="#854D0E" style={{ background:'#FEF9C3' }} />
-        <StatCard label="Taux de présence" value={kpis ? `${kpis.pRate}%` : '…'} sub="6 mois glissants · moyenne groupe"
-          topBg={kpis?.pRate >= 95 ? '#A7F3D0' : kpis?.pRate >= 88 ? '#FDE68A' : '#FECACA'}
-          valueColor={kpis?.pRate >= 95 ? '#065F46' : kpis?.pRate >= 88 ? '#854D0E' : '#991B1B'}
-          style={{ background: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2' }} />
-        <StatCard label="Conversion invités" value={kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…'} sub={`${kpis?.invitesConvertis || 0} sur ${kpis?.invitesTotal || 0} invités`}
-          topBg={kpis?.invitesConvertis > 3 ? '#A7F3D0' : kpis?.invitesConvertis > 0 ? '#FDE68A' : '#FECACA'}
-          valueColor={kpis?.invitesConvertis > 3 ? '#065F46' : kpis?.invitesConvertis > 0 ? '#854D0E' : '#991B1B'}
-          style={{ background: kpis?.invitesConvertis > 3 ? '#D1FAE5' : kpis?.invitesConvertis > 0 ? '#FEF9C3' : '#FEE2E2' }} />
+      <div style={{ display:'grid', gridTemplateColumns: mob ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: mob ? 8 : 16, marginBottom: mob ? 16 : 24 }}>
+        {[
+          { label:'TYFCB total', value: kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…', sub:'6 mois glissants',
+            topBg: kpis?.tyfcb >= 300000 ? '#A7F3D0' : kpis?.tyfcb >= 50000 ? '#FDE68A' : '#FECACA',
+            valueColor: kpis?.tyfcb >= 300000 ? '#065F46' : kpis?.tyfcb >= 50000 ? '#854D0E' : '#991B1B',
+            bg: kpis?.tyfcb >= 300000 ? '#D1FAE5' : kpis?.tyfcb >= 50000 ? '#FEF9C3' : '#FEE2E2' },
+          { label:'Recommandations', value: loading ? '…' : scores.reduce((s,r)=>s+(Number(r.referrals_given_score)||0),0), sub:'Score total',
+            topBg:'#FDE68A', valueColor:'#854D0E', bg:'#FEF9C3' },
+          { label:'Taux de présence', value: kpis ? `${kpis.pRate}%` : '…', sub:'Moyenne groupe',
+            topBg: kpis?.pRate >= 95 ? '#A7F3D0' : kpis?.pRate >= 88 ? '#FDE68A' : '#FECACA',
+            valueColor: kpis?.pRate >= 95 ? '#065F46' : kpis?.pRate >= 88 ? '#854D0E' : '#991B1B',
+            bg: kpis?.pRate >= 95 ? '#D1FAE5' : kpis?.pRate >= 88 ? '#FEF9C3' : '#FEE2E2' },
+          { label:'Conversion invités', value: kpis && kpis.invitesTotal > 0 ? `${Math.round(kpis.invitesConvertis/kpis.invitesTotal*100)}%` : '…', sub:`${kpis?.invitesConvertis||0}/${kpis?.invitesTotal||0} invités`,
+            topBg: kpis?.invitesConvertis > 3 ? '#A7F3D0' : kpis?.invitesConvertis > 0 ? '#FDE68A' : '#FECACA',
+            valueColor: kpis?.invitesConvertis > 3 ? '#065F46' : kpis?.invitesConvertis > 0 ? '#854D0E' : '#991B1B',
+            bg: kpis?.invitesConvertis > 3 ? '#D1FAE5' : kpis?.invitesConvertis > 0 ? '#FEF9C3' : '#FEE2E2' },
+        ].map(c => (
+          <div key={c.label} style={{ background:c.bg, borderRadius: mob ? 10 : 12, border:'1px solid rgba(0,0,0,0.06)', overflow:'hidden' }}>
+            <div style={{ background:c.topBg, padding: mob ? '6px 12px' : '10px 18px' }}>
+              <div style={{ fontSize: mob ? 9 : 11, fontWeight:600, color:c.valueColor, textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{c.label}</div>
+            </div>
+            <div style={{ padding: mob ? '8px 12px 10px' : '14px 18px 16px' }}>
+              <div style={{ fontSize: mob ? 16 : 28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.valueColor }}>{c.value}</div>
+              <div style={{ fontSize: mob ? 9 : 12, color:'#6B7280', marginTop:2 }}>{c.sub}</div>
+            </div>
+          </div>
+        ))}
       </div>
-      {!loading && <div style={{ marginBottom:16 }}><GroupeScoresChart scores={scores} /></div>}
+
+      {/* Score groupe — distribution (toujours visible sur mobile) */}
+      {!loading && <div style={{ marginBottom:16 }}>
+        {mob ? (
+          <div style={{ background:'#fff', borderRadius:10, padding:'14px 16px', border:'1px solid #E8E6E1', marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>Distribution des scores</div>
+            <div style={{ display:'flex', gap:6 }}>
+              {[
+                { label:'Vert', tl:'vert', bg:'#D1FAE5', color:'#065F46', count: scores.filter(s=>s.traffic_light==='vert').length },
+                { label:'Orange', tl:'orange', bg:'#FEF9C3', color:'#854D0E', count: scores.filter(s=>s.traffic_light==='orange').length },
+                { label:'Rouge', tl:'rouge', bg:'#FEE2E2', color:'#991B1B', count: scores.filter(s=>s.traffic_light==='rouge').length },
+                { label:'Gris', tl:'gris', bg:'#F3F4F6', color:'#4B5563', count: scores.filter(s=>s.traffic_light==='gris'||!s.traffic_light).length },
+              ].map(t => (
+                <div key={t.tl} style={{ flex:1, background:t.bg, borderRadius:8, padding:'8px 6px', textAlign:'center' }}>
+                  <div style={{ fontSize:18, fontWeight:700, color:t.color, fontFamily:'DM Sans, sans-serif' }}>{t.count}</div>
+                  <div style={{ fontSize:8, fontWeight:600, color:t.color, textTransform:'uppercase', opacity:0.7 }}>{t.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : <GroupeScoresChart scores={scores} />}
+      </div>}
 
       {/* ─── SECTIONS VP (après le graphe, avant les tableaux) ─── */}
       {!loading && <>
           {/* Objectifs collectifs du mois */}
-          <div style={{ marginBottom:16 }}>
+          <div style={{ marginBottom: mob ? 12 : 16 }}>
             <SectionTitle>🎯 Objectifs collectifs — {moisLabel}</SectionTitle>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+            <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr 1fr', gap: mob ? 8 : 16 }}>
               {[
                 { label:'Total TàT groupe', value:totalTatMois, obj:nbJeudis*totalMembres, color:'#C41E3A' },
                 { label:'Total Reco. groupe', value:totalRecoMois, obj:Math.ceil(nbJeudis*1.25*totalMembres), color:'#8B5CF6' },
                 { label:'TYFCB du mois', value:totalMpbMois, obj:50000, color:'#3B82F6', isMoney:true },
               ].map(o => (
-                <div key={o.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1' }}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>{o.label}</div>
-                  <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8 }}>
-                    <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'DM Sans, sans-serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
-                    <span style={{ fontSize:12, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
-                  </div>
-                  <ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} />
+                <div key={o.label} style={{ background:'#fff', borderRadius: mob ? 10 : 12, padding: mob ? '10px 14px' : '16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', gap: mob ? 10 : 0, flexDirection: mob ? 'row' : 'column' }}>
+                  {mob ? (<>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>{o.label}</div>
+                      <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+                        <span style={{ fontSize:18, fontWeight:700, color:o.color, fontFamily:'DM Sans, sans-serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
+                        <span style={{ fontSize:10, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
+                      </div>
+                    </div>
+                    <div style={{ width:60 }}><ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} /></div>
+                  </>) : (<>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8, alignSelf:'flex-start' }}>{o.label}</div>
+                    <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8, alignSelf:'flex-start' }}>
+                      <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'DM Sans, sans-serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
+                      <span style={{ fontSize:12, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
+                    </div>
+                    <div style={{ width:'100%' }}><ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} /></div>
+                  </>)}
                 </div>
               ))}
             </div>
           </div>
 
           {/* Taux de participation */}
-          <div style={{ marginBottom:16 }}>
+          <div style={{ marginBottom: mob ? 12 : 16 }}>
             <SectionTitle>📊 Taux de participation — {moisLabel}</SectionTitle>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+            <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr 1fr 1fr' : '1fr 1fr 1fr', gap: mob ? 8 : 16 }}>
               {[
-                { label:`≥ 1 TàT ce mois`, value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
-                { label:`≥ 1 Reco. ce mois`, value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
-                { label:`100% présence ce mois`, value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
+                { label:`≥ 1 TàT`, value:membresAvecTat, total:totalMembres, color:'#C41E3A' },
+                { label:`≥ 1 Reco.`, value:membresAvecReco, total:totalMembres, color:'#8B5CF6' },
+                { label:`100% prés.`, value:Object.values(hebdoMap).filter(m=>m.absences===0&&m.presences>0).length, total:totalMembres, color:'#059669' },
               ].map(p => {
                 const pct = p.total > 0 ? Math.round(p.value/p.total*100) : 0
                 const bg = pct >= 80 ? '#D1FAE5' : pct >= 50 ? '#FEF9C3' : '#FEE2E2'
                 return (
-                  <div key={p.label} style={{ background:bg, borderRadius:12, padding:'16px 18px', border:'1px solid rgba(0,0,0,0.06)' }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>{p.label}</div>
-                    <div style={{ fontSize:28, fontWeight:700, color:p.color, fontFamily:'DM Sans, sans-serif' }}>{pct}%</div>
-                    <div style={{ fontSize:12, color:'#6B7280' }}>{p.value}/{p.total} membres</div>
+                  <div key={p.label} style={{ background:bg, borderRadius: mob ? 10 : 12, padding: mob ? '10px 10px' : '16px 18px', border:'1px solid rgba(0,0,0,0.06)', textAlign: mob ? 'center' : 'left' }}>
+                    <div style={{ fontSize: mob ? 8 : 11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom: mob ? 2 : 4 }}>{p.label}</div>
+                    <div style={{ fontSize: mob ? 20 : 28, fontWeight:700, color:p.color, fontFamily:'DM Sans, sans-serif' }}>{pct}%</div>
+                    <div style={{ fontSize: mob ? 9 : 12, color:'#6B7280' }}>{p.value}/{p.total}</div>
                   </div>
                 )
               })}
@@ -773,7 +819,7 @@ export function Reporting() {
           </div>
 
           {/* Top contributeurs vs Inactifs */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: mob ? 8 : 16, marginBottom: mob ? 12 : 16 }}>
             <TableWrap>
               <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>🌟 Top contributeurs du mois</SectionTitle></div>
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -827,22 +873,22 @@ export function Reporting() {
           {hasPrev && (
             <div style={{ marginBottom:16 }}>
               <SectionTitle>📈 Évolution vs mois précédent</SectionTitle>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+              <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr 1fr' : '1fr 1fr', gap: mob ? 8 : 16 }}>
                 {[
                   { label:'TàT', current:totalTatMois, prev:prevTotalTat },
-                  { label:'Recommandations', current:totalRecoMois, prev:prevTotalReco },
+                  { label:'Reco.', current:totalRecoMois, prev:prevTotalReco },
                 ].map(e => {
                   const diff = e.current - e.prev
                   const pct = e.prev > 0 ? Math.round((diff/e.prev)*100) : 0
                   return (
-                    <div key={e.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div key={e.label} style={{ background:'#fff', borderRadius: mob ? 10 : 12, padding: mob ? '10px 12px' : '16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                       <div>
-                        <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>{e.label}</div>
-                        <div style={{ fontSize:22, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{e.current}</div>
+                        <div style={{ fontSize: mob ? 9 : 11, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>{e.label}</div>
+                        <div style={{ fontSize: mob ? 18 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{e.current}</div>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:18, fontWeight:700, color: diff >= 0 ? '#059669' : '#DC2626' }}>{diff >= 0 ? '↑' : '↓'} {Math.abs(diff)}</div>
-                        <div style={{ fontSize:11, color: diff >= 0 ? '#059669' : '#DC2626' }}>{pct >= 0 ? '+' : ''}{pct}%</div>
+                        <div style={{ fontSize: mob ? 14 : 18, fontWeight:700, color: diff >= 0 ? '#059669' : '#DC2626' }}>{diff >= 0 ? '↑' : '↓'} {Math.abs(diff)}</div>
+                        <div style={{ fontSize: mob ? 9 : 11, color: diff >= 0 ? '#059669' : '#DC2626' }}>{pct >= 0 ? '+' : ''}{pct}%</div>
                       </div>
                     </div>
                   )
@@ -853,7 +899,7 @@ export function Reporting() {
       </>}
 
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: mob ? 8 : 16 }}>
           <TableWrap>
             <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}><SectionTitle>💰 Top TYFCB générés</SectionTitle></div>
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
