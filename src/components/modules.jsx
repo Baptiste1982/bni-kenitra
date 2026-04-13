@@ -12,6 +12,7 @@ export function Invites({ profil }) {
   const [filter, setFilter] = useState('tous')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [showVisitorImport, setShowVisitorImport] = useState(false)
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [newStatut, setNewStatut] = useState(false)
@@ -60,6 +61,102 @@ export function Invites({ profil }) {
   const saveStatutColor = async (statut, couleur) => {
     await supabase.from('statut_colors').upsert({ statut, couleur }, { onConflict: 'statut' })
     setStatutColors(prev => ({ ...prev, [statut]: couleur }))
+  }
+
+  const processVisitorFile = async (file) => {
+    setSyncMsg('Import en cours...')
+    try {
+      const text = await file.text()
+      // Parser le XLS SpreadsheetML
+      const rowChunks = text.split(/<Row[^>]*>/i).slice(1)
+      let headers = [], headerFound = false, imported = 0, skipped = 0
+
+      // Trouver les headers (ligne contenant "Prénom" ou "First")
+      const rows = []
+      rowChunks.forEach(chunk => {
+        const cellMatches = [...chunk.matchAll(/<Cell([^>]*)>[\s\S]*?<Data[^>]*>([\s\S]*?)<\/Data>/g)]
+        if (!cellMatches.length) return
+        const vals = []
+        cellMatches.forEach(m => {
+          const idxMatch = m[1].match(/ss:Index="(\d+)"/)
+          if (idxMatch) { while (vals.length < parseInt(idxMatch[1]) - 1) vals.push('') }
+          vals.push(m[2].trim())
+        })
+        if (!headerFound) {
+          if (vals.some(v => v.includes('Prénom') && v.includes('Recherché')) || (vals.includes('Prénom Recherché') && vals.includes('Nom Recherché'))) {
+            // C'est la ligne avant les vrais headers, skip
+          } else if (vals.length >= 10 && (vals.includes('Prénom Recherché') || vals.some(v => v === 'Société'))) {
+            headers = vals
+            headerFound = true
+          }
+          return
+        }
+        if (vals.length >= 3 && vals[0]) rows.push(vals)
+      })
+
+      if (!headerFound || rows.length === 0) {
+        setSyncMsg('Erreur : headers non trouvés dans le fichier')
+        return
+      }
+
+      // Mapper les colonnes
+      const colIdx = (name) => headers.findIndex(h => h && h.toLowerCase().includes(name.toLowerCase()))
+      const iPrenom = colIdx('prénom')
+      const iNom = colIdx('nom')
+      const iSociete = colIdx('société') >= 0 ? colIdx('société') : colIdx('societe')
+      const iProfession = colIdx('profession')
+      const iEmail = colIdx('email')
+      const iTel = colIdx('téléphone') >= 0 ? colIdx('téléphone') : colIdx('telephone')
+      const iAdresse = colIdx('adresse ligne 1') >= 0 ? colIdx('adresse ligne 1') : colIdx('adresse')
+      const iVille = colIdx('ville')
+      const iDate = colIdx('date de visite') >= 0 ? colIdx('date de visite') : colIdx('date')
+      const iInvitedBy = colIdx('invited by') >= 0 ? colIdx('invited by') : colIdx('invité par')
+      const iType = colIdx('type')
+
+      const groupeId = (await supabase.from('groupes').select('id').eq('code','MK-01').single()).data?.id
+
+      for (const r of rows) {
+        const prenom = (r[iPrenom] || '').trim()
+        const nom = (r[iNom] || '').trim()
+        if (!prenom && !nom) continue
+
+        let dateVisite = null
+        const dateStr = r[iDate] || ''
+        if (dateStr.includes('T')) dateVisite = dateStr.split('T')[0]
+        else if (dateStr.includes('/')) { const parts = dateStr.split('/'); dateVisite = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}` }
+
+        const inviteData = {
+          groupe_id: groupeId,
+          prenom, nom,
+          societe: r[iSociete] || null,
+          profession: r[iProfession] || null,
+          email: iEmail >= 0 ? (r[iEmail] || null) : null,
+          telephone: iTel >= 0 ? (r[iTel] || null) : null,
+          adresse: iAdresse >= 0 ? (r[iAdresse] || null) : null,
+          ville: iVille >= 0 ? (r[iVille] || null) : null,
+          invite_par_nom: iInvitedBy >= 0 ? (r[iInvitedBy] || null) : null,
+          type_visite: iType >= 0 ? (r[iType] || null) : null,
+          date_visite: dateVisite,
+        }
+
+        // Upsert par prenom + nom + date
+        const pNorm = prenom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        const nNorm = nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        const { data: existing } = await supabase.from('invites').select('id')
+          .eq('groupe_id', groupeId).ilike('prenom', prenom).ilike('nom', nom).limit(1)
+
+        if (existing?.length) {
+          await supabase.from('invites').update(inviteData).eq('id', existing[0].id)
+        } else {
+          await supabase.from('invites').insert(inviteData)
+        }
+        imported++
+      }
+
+      setSyncMsg(`Import réussi — ${imported} invités importés`)
+      setShowVisitorImport(false)
+      load()
+    } catch (e) { setSyncMsg('Erreur : ' + e.message) }
   }
 
   const handleSync = async () => {
@@ -126,6 +223,20 @@ export function Invites({ profil }) {
         right={
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
+            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => setShowVisitorImport(!showVisitorImport)}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Invités</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📥 Import XLS</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+              </div>
+            </div>}
             {canConfigAccess && <div onClick={() => setShowAccessConfig(!showAccessConfig)}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
@@ -140,7 +251,7 @@ export function Invites({ profil }) {
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
               </div>
             </div>}
-            <div onClick={syncing ? undefined : handleSync}
+            {profil?.role === 'super_admin' && <div onClick={syncing ? undefined : handleSync}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor: syncing ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s', opacity: syncing ? 0.6 : 1 }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -153,10 +264,30 @@ export function Invites({ profil }) {
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
               </div>
-            </div>
+            </div>}
           </div>
         }
       />
+      {/* Import XLS visiteurs */}
+      {showVisitorImport && (
+        <Card style={{ marginBottom:20 }}>
+          <SectionTitle>📥 Importer un rapport visiteurs (XLS)</SectionTitle>
+          <div style={{ border:'2px dashed #E8E6E1', borderRadius:10, padding:'24px 20px', textAlign:'center', cursor:'pointer', background:'#FAFAF8' }}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor='#C41E3A'; e.currentTarget.style.background='#FEF2F2' }}
+            onDragLeave={e => { e.currentTarget.style.borderColor='#E8E6E1'; e.currentTarget.style.background='#FAFAF8' }}
+            onDrop={e => {
+              e.preventDefault(); e.currentTarget.style.borderColor='#E8E6E1'; e.currentTarget.style.background='#FAFAF8'
+              const file = e.dataTransfer.files[0]; if (file) processVisitorFile(file)
+            }}
+            onClick={() => { const input = document.createElement('input'); input.type='file'; input.accept='.xls,.xlsx'; input.onchange=e => { if(e.target.files[0]) processVisitorFile(e.target.files[0]) }; input.click() }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📂</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'#1C1C2E' }}>Glisser le fichier visiteurs ici</div>
+            <div style={{ fontSize:11, color:'#9CA3AF', marginTop:4 }}>ou cliquer pour sélectionner · Export BNI Connect</div>
+          </div>
+          {syncMsg && <div style={{ marginTop:10, fontSize:12, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669', fontWeight:500 }}>{syncMsg}</div>}
+        </Card>
+      )}
+
       {/* Panneau config accès données */}
       {showAccessConfig && (
         <Card style={{ marginBottom:20 }}>
