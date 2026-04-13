@@ -80,6 +80,7 @@ export function Invites() {
   const BASE_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
   const ALL_STATUTS = [...new Set([...BASE_STATUTS, ...invites.map(i => i.statut).filter(Boolean), ...extraStatuts])]
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
+  const total = invites.length || 1
   const couleurKeys = Object.keys(COULEURS)
   const filtered = filter === 'tous' ? invites
     : couleurKeys.includes(filter) ? invites.filter(i => (statutColors[i.statut] || 'gris') === filter)
@@ -107,7 +108,6 @@ export function Invites() {
       />
       {/* Cards par catégorie de couleur */}
       {(() => {
-        const total = invites.length || 1
         const byCouleur = { vert:[], bleu:[], jaune:[], orange:[], rouge:[], gris:[] }
         pipeline.forEach(p => { const c = statutColors[p.statut] || 'gris'; if(byCouleur[c]) byCouleur[c].push(p); else byCouleur.gris.push(p) })
         const cards = [
@@ -154,7 +154,6 @@ export function Invites() {
         </>
       })()}
       {loading ? <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement...</div> : (() => {
-        const total = invites.length || 1
         // Grouper par mois
         const byMonth = {}
         filtered.forEach(inv => {
