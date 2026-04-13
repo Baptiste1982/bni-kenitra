@@ -27,6 +27,8 @@ export function Invites({ profil }) {
   const [showAccessConfig, setShowAccessConfig] = useState(false)
   const [collapsedMonths, setCollapsedMonths] = useState({})
   const [showCommentaires, setShowCommentaires] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const isMobile = window.innerWidth <= 768
 
   const load = () => {
     setLoading(true)
@@ -238,69 +240,28 @@ export function Invites({ profil }) {
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Pipeline Invités" sub={`MK-01 · ${invites.length} invités depuis déc 2025`}
         right={
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <div style={{ display:'flex', gap: isMobile ? 6 : 8, alignItems:'center', flexWrap:'wrap' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
-            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => {
-              setShowVisitorArchives(!showVisitorArchives)
-              if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false)
-                supabase.from('visitor_imports').select('*').order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[]))
-              }
-            }}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📂 Historique</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-              </div>
-            </div>}
-            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Invités</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📥 Import XLS</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-              </div>
-            </div>}
-            {canConfigAccess && <div onClick={() => setShowAccessConfig(!showAccessConfig)}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Données</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>🔒 Accès</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-              </div>
-            </div>}
-            {profil?.role === 'super_admin' && <div onClick={syncing ? undefined : handleSync}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor: syncing ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s', opacity: syncing ? 0.6 : 1 }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>{syncing ? 'Synchronisation...' : 'Google Sheets'}</div>
-                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔄 Sync</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-              </div>
-            </div>}
+            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
+              <button onClick={() => { setShowVisitorArchives(!showVisitorArchives); if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false); supabase.from('visitor_imports').select('*').order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[])) } }}
+                style={{ background: showVisitorArchives ? '#1C1C2E' : '#fff', color: showVisitorArchives ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor:'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
+                📂 Archives
+              </button>}
+            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
+              <button onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
+                style={{ background: showVisitorImport ? '#1C1C2E' : '#fff', color: showVisitorImport ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor:'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
+                📥 Import
+              </button>}
+            {canConfigAccess &&
+              <button onClick={() => setShowAccessConfig(!showAccessConfig)}
+                style={{ background: showAccessConfig ? '#1C1C2E' : '#fff', color: showAccessConfig ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor:'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
+                🔒 Accès
+              </button>}
+            {profil?.role === 'super_admin' &&
+              <button onClick={syncing ? undefined : handleSync}
+                style={{ background: syncing ? '#E8E6E1' : '#fff', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor: syncing ? 'not-allowed' : 'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif', opacity: syncing ? 0.6 : 1 }}>
+                🔄 {syncing ? '...' : 'Sync'}
+              </button>}
           </div>
         }
       />
@@ -453,30 +414,29 @@ export function Invites({ profil }) {
         }).filter(c => c.n > 0)
 
         return <>
-          <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(cards.length, 6)},1fr)`, gap:12, marginBottom:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : `repeat(${Math.min(cards.length, 6)},1fr)`, gap: isMobile ? 8 : 12, marginBottom:16 }}>
             {cards.map(c => (
               <div key={c.couleur} onClick={() => {
-                const statNames = c.statuts.map(s=>s.statut)
                 if (filter === c.couleur) setFilter('tous')
                 else setFilter(c.couleur)
               }}
-                style={{ background:c.style.bg, borderRadius:12, padding:'14px 16px', border:`1px solid ${c.style.badge}`, cursor:'pointer', transition:'transform 0.1s' }}
+                style={{ background:c.style.bg, borderRadius:10, padding: isMobile ? '10px 12px' : '14px 16px', border:`1px solid ${c.style.badge}`, cursor:'pointer', transition:'transform 0.1s' }}
                 onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:c.style.color, marginBottom:4 }}>{c.label}</div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                  <span style={{ fontSize:26, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.style.color }}>{c.n}</span>
-                  <span style={{ fontSize:12, fontWeight:600, color:c.style.color, opacity:0.6 }}>{c.pct}%</span>
+                <div style={{ fontSize: isMobile ? 9 : 10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:c.style.color, marginBottom: isMobile ? 2 : 4 }}>{c.label}</div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+                  <span style={{ fontSize: isMobile ? 18 : 26, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.style.color }}>{c.n}</span>
+                  <span style={{ fontSize: isMobile ? 10 : 12, fontWeight:600, color:c.style.color, opacity:0.6 }}>{c.pct}%</span>
                 </div>
-                <div style={{ fontSize:9, color:'#1C1C2E', opacity:0.5, marginTop:2 }}>{c.desc}</div>
+                {!isMobile && <div style={{ fontSize:9, color:'#1C1C2E', opacity:0.5, marginTop:2 }}>{c.desc}</div>}
               </div>
             ))}
           </div>
-          <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
-            <button onClick={() => setFilter('tous')} style={{ padding:'5px 12px', borderRadius:16, border: filter==='tous'?'2px solid #1C1C2E':'1px solid #E8E6E1', fontSize:11, fontWeight:filter==='tous'?700:400, background:filter==='tous'?'#1C1C2E':'#fff', color:filter==='tous'?'#fff':'#6B7280', cursor:'pointer' }}>Tous ({invites.length})</button>
-            {pipeline.map(p => {
+          <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
+            <button onClick={() => { setFilter('tous'); setShowFilters(!showFilters) }} style={{ padding:'5px 12px', borderRadius:16, border: filter==='tous'?'2px solid #1C1C2E':'1px solid #E8E6E1', fontSize:11, fontWeight:filter==='tous'?700:400, background:filter==='tous'?'#1C1C2E':'#fff', color:filter==='tous'?'#fff':'#6B7280', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>Tous ({invites.length}) <span style={{ fontSize:9, opacity:0.6 }}>{showFilters ? '▲' : '▼'}</span></button>
+            {(showFilters || filter !== 'tous') && pipeline.map(p => {
               const st = getStatutStyle(p.statut)
               const isActive = filter === p.statut
-              return <button key={p.statut} onClick={() => setFilter(isActive ? 'tous' : p.statut)} style={{ padding:'5px 10px', borderRadius:16, border:isActive?`2px solid ${st.color}`:'1px solid #E8E6E1', fontSize:10, fontWeight:isActive?600:400, background:isActive?st.bg:'#fff', color:isActive?st.color:'#9CA3AF', cursor:'pointer' }}>{p.statut} ({p.n})</button>
+              return <button key={p.statut} onClick={() => { setFilter(isActive ? 'tous' : p.statut); if(!isActive) setShowFilters(false) }} style={{ padding:'5px 10px', borderRadius:16, border:isActive?`2px solid ${st.color}`:'1px solid #E8E6E1', fontSize:10, fontWeight:isActive?600:400, background:isActive?st.bg:'#fff', color:isActive?st.color:'#9CA3AF', cursor:'pointer' }}>{p.statut} ({p.n})</button>
             })}
           </div>
         </>
