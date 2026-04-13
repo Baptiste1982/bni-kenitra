@@ -24,6 +24,8 @@ export default function SuiviHebdo() {
   const [showImport, setShowImport] = useState(false)
   const [showArchives, setShowArchives] = useState(false)
   const [archives, setArchives] = useState([])
+  const [archiveDetail, setArchiveDetail] = useState(null)
+  const [archiveData, setArchiveData] = useState([])
   const [search, setSearch] = useState('')
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState(null)
@@ -267,14 +269,22 @@ export default function SuiviHebdo() {
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                     {sortedDates.map(d => {
                       const date = new Date(d + 'T12:00:00')
+                      const isActive = archiveDetail === d
                       return (
-                        <div key={d} style={{ padding:'8px 14px', borderRadius:8, background:'#F7F6F3', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', gap:8 }}>
+                        <div key={d} onClick={async () => {
+                          if (isActive) { setArchiveDetail(null); setArchiveData([]); return }
+                          setArchiveDetail(d)
+                          const { data } = await supabase.from('palms_hebdo').select('*, membres(prenom, nom)').eq('date_reunion', d).order('tat', { ascending:false })
+                          setArchiveData(data || [])
+                        }}
+                          style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
+                          onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
                           <div style={{ width:8, height:8, borderRadius:'50%', background:'#8B5CF6' }} />
                           <div>
-                            <div style={{ fontSize:12, fontWeight:600, color:'#1C1C2E' }}>
+                            <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>
                               {date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })}
                             </div>
-                            <div style={{ fontSize:9, color:'#9CA3AF' }}>Réunion</div>
+                            <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#9CA3AF' }}>{isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}</div>
                           </div>
                         </div>
                       )
@@ -284,6 +294,45 @@ export default function SuiviHebdo() {
               )
             })
           })()}
+
+          {/* Détail d'une archive */}
+          {archiveDetail && archiveData.length > 0 && (
+            <div style={{ marginTop:16 }}>
+              <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>
+                  Réunion du {new Date(archiveDetail+'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+                </span>
+                <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{archiveData.filter(d=>d.membre_id).length} membres</span>
+              </div>
+              <div style={{ overflowX:'auto', background:'#fff', borderRadius:'0 0 10px 10px', border:'1px solid #E8E6E1', borderTop:'none' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead><tr>{['Membre','P/A','RDI','RDE','RRI','RRE','Inv.','TàT','MPB','CEU'].map(h => (
+                    <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+                  ))}</tr></thead>
+                  <tbody>
+                    {archiveData.filter(d=>d.membre_id).map((d, i) => {
+                      const rowBg = d.palms === 'A' ? '#FEE2E2' : (d.tat > 0 || (d.rdi||0)+(d.rde||0) > 0) ? '#D1FAE5' : '#F9FAFB'
+                      const nameCol = d.palms === 'A' ? '#991B1B' : (d.tat > 0 || (d.rdi||0)+(d.rde||0) > 0) ? '#065F46' : '#6B7280'
+                      return (
+                        <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background:rowBg }}>
+                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:600, color:nameCol }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: d.palms==='P' ? '#059669' : '#DC2626' }}>{d.palms}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rdi||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rde||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rri||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rre||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.invites||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: d.tat > 0 ? '#065F46' : '#9CA3AF' }}>{d.tat||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: Number(d.mpb) > 0 ? '#065F46' : '#9CA3AF' }}>{Number(d.mpb||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.ueg||0}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
