@@ -25,29 +25,97 @@ export default function Alertes() {
         .gte('date_visite', troisMois)
         .order('date_visite')
 
-      // Combiner
+      // Charger les scores pour alertes performance
+      const { data: scoresData } = await supabase.from('scores_bni')
+        .select('*, membres(prenom, nom, date_renouvellement)')
+        .eq('groupe_id', (await supabase.from('groupes').select('id').eq('code', 'MK-01').single()).data?.id)
+
+      // Charger les invités en stand-by
+      const deuxSemaines = new Date(Date.now() - 14*24*60*60*1000).toISOString().split('T')[0]
+      const { data: standbyData } = await supabase.from('invites')
+        .select('id, prenom, nom, statut, date_visite, profession, societe')
+        .in('statut', ['En stand-by', 'A temporiser'])
+        .lte('date_visite', deuxSemaines)
+
+      // Charger les données hebdo du mois pour détecter les inactifs
+      const now = new Date()
+      const moisDebut = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
+      const { data: hebdoData } = await supabase.from('palms_hebdo')
+        .select('membre_id, tat').gte('date_reunion', moisDebut)
+
+      const hebdoTat = {}
+      ;(hebdoData || []).forEach(h => { hebdoTat[h.membre_id] = (hebdoTat[h.membre_id]||0) + (h.tat||0) })
+
+      // Combiner toutes les sources d'alertes
       const fromAlertes = (alertesData || []).map(a => ({
         ...a,
         source: 'alertes',
         categorie: a.type_alerte === 'renouvellement' ? 'membres' : 'invites',
         displayName: a.membres ? fullName(a.membres.prenom, a.membres.nom) : a.titre,
+        priorite: a.niveau === 'danger' ? 1 : 2,
       }))
 
       const fromRecontact = (recontactData || []).map(r => ({
-        id: 'recontact-' + r.id,
-        inviteId: r.id,
-        source: 'invites',
-        categorie: 'recontact',
-        niveau: 'relance',
+        id: 'recontact-' + r.id, inviteId: r.id, source: 'invites', categorie: 'recontact', niveau: 'relance',
         titre: `Recontacter ${fullName(r.prenom, r.nom)}`,
         message: `${r.profession || r.societe || 'Invité'} — visite le ${r.date_visite ? new Date(r.date_visite + 'T12:00:00').toLocaleDateString('fr-FR') : '?'}`,
-        displayName: fullName(r.prenom, r.nom),
-        lue: false,
-        created_at: r.date_visite,
-        date_echeance: null,
+        displayName: fullName(r.prenom, r.nom), lue: false, created_at: r.date_visite, date_echeance: null, priorite: 3,
       }))
 
-      setAlertes([...fromAlertes, ...fromRecontact])
+      // Alertes performance : membres score < 20
+      const fromScoreFaible = (scoresData || []).filter(s => Number(s.total_score||0) < 20 && s.membres).map(s => ({
+        id: 'score-' + s.id, source: 'auto', categorie: 'performance', niveau: 'info',
+        titre: `Score faible — ${fullName(s.membres.prenom, s.membres.nom)}`,
+        message: `Score ${Number(s.total_score).toFixed(0)}/100 (gris). Accompagnement nécessaire.`,
+        displayName: fullName(s.membres.prenom, s.membres.nom), lue: false, created_at: null, date_echeance: null, priorite: 5,
+      }))
+
+      // Alertes présence : < 88%
+      const fromPresence = (scoresData || []).filter(s => Number(s.attendance_rate||0) < 0.88 && Number(s.attendance_rate||0) > 0 && s.membres).map(s => ({
+        id: 'pres-' + s.id, source: 'auto', categorie: 'performance', niveau: 'info',
+        titre: `Présence faible — ${fullName(s.membres.prenom, s.membres.nom)}`,
+        message: `Taux de présence ${Math.round(Number(s.attendance_rate)*100)}% (< 88%). Risque de perte de points.`,
+        displayName: fullName(s.membres.prenom, s.membres.nom), lue: false, created_at: null, date_echeance: null, priorite: 5,
+      }))
+
+      // Alertes renouvellement à venir (6 prochains mois)
+      const sixMois = new Date(Date.now() + 180*24*60*60*1000)
+      const fromRenouvellement = (scoresData || []).filter(s => {
+        if (!s.membres?.date_renouvellement) return false
+        const d = new Date(s.membres.date_renouvellement)
+        return d > new Date() && d <= sixMois
+      }).map(s => {
+        const d = new Date(s.membres.date_renouvellement)
+        const jours = Math.round((d - new Date()) / (1000*60*60*24))
+        return {
+          id: 'renouv-' + s.id, source: 'auto', categorie: 'membres', niveau: jours < 90 ? 'danger' : 'info',
+          titre: `Renouvellement ${fullName(s.membres.prenom, s.membres.nom)}`,
+          message: `Renouvellement le ${d.toLocaleDateString('fr-FR')} (dans ${jours} jours).${jours < 90 ? ' Planifier l\'appel maintenant.' : ''}`,
+          displayName: fullName(s.membres.prenom, s.membres.nom), lue: false, created_at: null,
+          date_echeance: s.membres.date_renouvellement, priorite: jours < 90 ? 2 : 4,
+        }
+      })
+
+      // Invités en stand-by depuis > 2 semaines
+      const fromStandby = (standbyData || []).map(r => ({
+        id: 'standby-' + r.id, inviteId: r.id, source: 'invites', categorie: 'invites', niveau: 'info',
+        titre: `En attente — ${fullName(r.prenom, r.nom)}`,
+        message: `${r.statut} depuis le ${r.date_visite ? new Date(r.date_visite+'T12:00:00').toLocaleDateString('fr-FR') : '?'}. Relancer ou clore.`,
+        displayName: fullName(r.prenom, r.nom), lue: false, created_at: r.date_visite, date_echeance: null, priorite: 4,
+      }))
+
+      // Membres sans TàT ce mois
+      const fromInactifs = (scoresData || []).filter(s => s.membres && !hebdoTat[s.membre_id]).map(s => ({
+        id: 'inactif-' + s.id, source: 'auto', categorie: 'performance', niveau: 'info',
+        titre: `Aucun TàT ce mois — ${fullName(s.membres.prenom, s.membres.nom)}`,
+        message: `Pas de tête-à-tête enregistré ce mois. Score 1-2-1 = 0/20.`,
+        displayName: fullName(s.membres.prenom, s.membres.nom), lue: false, created_at: null, date_echeance: null, priorite: 5,
+      }))
+
+      // Tout combiner et trier par priorité
+      const all = [...fromAlertes, ...fromRecontact, ...fromRenouvellement, ...fromStandby, ...fromScoreFaible, ...fromPresence, ...fromInactifs]
+        .sort((a, b) => (a.priorite||5) - (b.priorite||5))
+      setAlertes(all)
     } catch (e) { console.error(e) }
     setLoading(false)
   }
@@ -81,24 +149,26 @@ export default function Alertes() {
     membres: actives.filter(a => a.categorie === 'membres').length,
     invites: actives.filter(a => a.categorie === 'invites').length,
     recontact: actives.filter(a => a.categorie === 'recontact').length,
+    performance: actives.filter(a => a.categorie === 'performance').length,
   }
 
   const niveauStyle = (niveau) => {
     if (niveau === 'danger') return { bg:'#FEE2E2', border:'#FECACA', dot:'#DC2626', color:'#991B1B', label:'Urgent' }
     if (niveau === 'relance') return { bg:'#DBEAFE', border:'#BFDBFE', dot:'#3B82F6', color:'#1E40AF', label:'Relance' }
+    if (niveau === 'info') return { bg:'#F3F4F6', border:'#E5E7EB', dot:'#6B7280', color:'#4B5563', label:'Info' }
     return { bg:'#FEF9C3', border:'#FDE68A', dot:'#D97706', color:'#854D0E', label:'Attention' }
   }
 
-  const catIcon = { membres:'👤', invites:'◉', recontact:'📞' }
-  const catLabel = { membres:'Membres', invites:'Invités', recontact:'À recontacter' }
-  const catColor = { membres:'#DC2626', invites:'#D97706', recontact:'#3B82F6' }
+  const catIcon = { membres:'👤', invites:'◉', recontact:'📞', performance:'📊' }
+  const catLabel = { membres:'Membres', invites:'Invités', recontact:'À recontacter', performance:'Performance' }
+  const catColor = { membres:'#DC2626', invites:'#D97706', recontact:'#3B82F6', performance:'#6B7280' }
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Centre d'alertes" sub={`${actives.length} alerte${actives.length > 1 ? 's' : ''} active${actives.length > 1 ? 's' : ''}`} />
 
       {/* Stats cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, marginBottom:20 }}>
         <div onClick={() => { setFilter('actives'); setCatFilter('tous') }}
           style={{ background:'#1C1C2E', borderRadius:12, padding:'14px 18px', cursor:'pointer' }}
           onMouseEnter={e=>e.currentTarget.style.opacity='0.9'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
@@ -124,7 +194,7 @@ export default function Alertes() {
           </button>
         ))}
         <div style={{ width:1, background:'#E8E6E1', margin:'0 4px' }} />
-        {[['tous','Tous'],['membres','👤 Membres'],['invites','◉ Invités'],['recontact','📞 Recontact']].map(([key, label]) => (
+        {[['tous','Tous'],['membres','👤 Membres'],['invites','◉ Invités'],['recontact','📞 Recontact'],['performance','📊 Performance']].map(([key, label]) => (
           <button key={key} onClick={() => setCatFilter(key)}
             style={{ padding:'6px 14px', borderRadius:20, border: catFilter===key ? `2px solid ${catColor[key]||'#1C1C2E'}` : '1px solid #E8E6E1', fontSize:11, fontWeight: catFilter===key ? 600 : 400, background: catFilter===key ? '#F7F6F3' : '#fff', color: catFilter===key ? '#1C1C2E' : '#9CA3AF', cursor:'pointer' }}>
             {label}
