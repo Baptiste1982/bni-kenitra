@@ -211,9 +211,9 @@ export default function AdminUsers() {
                 <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📋 Journal</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#D97706' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#D97706' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#D97706' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
             <div onClick={() => { setShowForm(!showForm); if (!showForm) setShowLogs(false) }}
@@ -555,7 +555,7 @@ Directeur Exécutif BNI Kénitra`}
                                 setSuccess(`Mot de passe réinitialisé pour ${u.prenom} ${u.nom}`)
                                 setResetPwd(null); setNewPassword('')
                               } catch(e) { setError(e.message) }
-                            }} style={{ padding:'6px 14px', background:'#D97706', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Valider</button>
+                            }} style={{ padding:'6px 14px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Valider</button>
                             <button onClick={() => { setResetPwd(null); setNewPassword('') }} style={{ padding:'6px 14px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>Annuler</button>
                           </div>
                         </td>

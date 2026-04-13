@@ -106,9 +106,9 @@ export default function Dashboard({ onNavigate, profil }) {
                 <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>📋 Clôturer</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C9A84C' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C9A84C' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C9A84C' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
           )}

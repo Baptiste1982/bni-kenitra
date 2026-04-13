@@ -253,9 +253,9 @@ export function Invites({ profil }) {
                 <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📂 Historique</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>}
             {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) && <div onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
@@ -281,9 +281,9 @@ export function Invites({ profil }) {
                 <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>🔒 Accès</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>}
             {profil?.role === 'super_admin' && <div onClick={syncing ? undefined : handleSync}
@@ -295,9 +295,9 @@ export function Invites({ profil }) {
                 <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔄 Sync</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>}
           </div>
@@ -351,7 +351,7 @@ export function Invites({ profil }) {
                     }}
                       style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, cursor:'pointer' }}
                       onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                      <div style={{ width:10, height:10, borderRadius:'50%', background:'#8B5CF6', flexShrink:0 }} />
+                      <div style={{ width:10, height:10, borderRadius:'50%', background:'#C41E3A', flexShrink:0 }} />
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>{debut} → {fin}</div>
                         <div style={{ fontSize:10, color:'#9CA3AF' }}>Importé le {importDate} · {a.nb_invites} invité{a.nb_invites>1?'s':''}</div>

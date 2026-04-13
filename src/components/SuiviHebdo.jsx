@@ -215,9 +215,9 @@ export default function SuiviHebdo() {
                 <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📂 Historique</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
             <div onClick={() => { setShowImport(!showImport); if(!showImport) setShowArchives(false) }}
@@ -279,7 +279,7 @@ export default function SuiviHebdo() {
                         }}
                           style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
                           onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                          <div style={{ width:8, height:8, borderRadius:'50%', background:'#8B5CF6' }} />
+                          <div style={{ width:8, height:8, borderRadius:'50%', background:'#C41E3A' }} />
                           <div>
                             <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>
                               {date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })}
