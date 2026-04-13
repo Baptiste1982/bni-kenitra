@@ -297,14 +297,22 @@ export default function AdminUsers() {
                     <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#D1FAE5', color:'#065F46' }}>{nbUsers} utilisateur{nbUsers>1?'s':''}</div>
                     <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{nbLogins} session{nbLogins>1?'s':''}</div>
                   </div>
-                  {Object.entries(users).map(([uid, u]) => {
+                  {Object.entries(users).map(([uid, u], idx, arr) => {
                     const logins = u.events.filter(e => e.action === 'login')
                     const firstLogin = logins.length > 0 ? new Date(logins[logins.length-1].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
                     const lastLogin = logins.length > 0 ? new Date(logins[0].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
                     const rc = roleCol(u.role)
                     const isExpanded = expandedKpi === `log-${day}-${uid}`
                     return (
-                      <div key={uid} style={{ marginBottom:6 }}>
+                      <React.Fragment key={uid}>
+                        {idx > 0 && (
+                          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'4px 0' }}>
+                            <span style={{ width:3, height:3, borderRadius:'50%', background:'#D4D4D8' }} />
+                            <span style={{ width:3, height:3, borderRadius:'50%', background:'#D4D4D8' }} />
+                            <span style={{ width:3, height:3, borderRadius:'50%', background:'#D4D4D8' }} />
+                          </div>
+                        )}
+                      <div style={{ marginBottom:6 }}>
                         <div onClick={() => setExpandedKpi(isExpanded ? null : `log-${day}-${uid}`)}
                           style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, background: isExpanded ? '#F7F6F3' : '#fff', border:'1px solid #E8E6E1', cursor:'pointer' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e=>{ if(!isExpanded) e.currentTarget.style.background='#fff' }}>
@@ -334,6 +342,7 @@ export default function AdminUsers() {
                           </div>
                         )}
                       </div>
+                      </React.Fragment>
                     )
                   })}
                 </div>
