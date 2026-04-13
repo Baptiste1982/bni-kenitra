@@ -277,7 +277,12 @@ export function Invites({ profil }) {
           </div>
           {!isCollapsed && <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{[['Date',90],['Prénom',130],['Nom',130],['Profession',null],['Statut',170],['Invité par',150],['CA en charge',120]].map(([h,w]) => (
+            <thead><tr>{[['Date',90],['Prénom',120],['Nom',120],['Profession',null],['Statut',150],
+              ...(isColumnVisible('telephone') ? [['Téléphone',120]] : []),
+              ...(isColumnVisible('email') ? [['Email',160]] : []),
+              ['Invité par',130],['CA en charge',100],
+              ...(isColumnVisible('commentaires') ? [['Commentaires',null]] : []),
+            ].map(([h,w]) => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width: w ? w : undefined }}>{h}</th>
             ))}</tr></thead>
             <tbody>
@@ -295,12 +300,15 @@ export function Invites({ profil }) {
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.nom)}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.profession || '—'}</td>
                     <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:12, background:statStyle.badge, color:statStyle.color }}>{inv.statut || '—'}</span></td>
+                    {isColumnVisible('telephone') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8 }}>{inv.telephone || '—'}</td>}
+                    {isColumnVisible('email') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160 }}>{inv.email || '—'}</td>}
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.membre_ca_charge_nom || '—'}</td>
+                    {isColumnVisible('commentaires') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.7 }}>{inv.commentaires || '—'}</td>}
                   </tr>
                   {isEdit && (
                     <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#FFFBEB', boxShadow:'inset 0 0 0 2px #C9A84C' }}>
-                      <td colSpan={7} style={{ padding:'12px 14px' }}>
+                      <td colSpan={20} style={{ padding:'12px 14px' }}>
                         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:10 }}>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Prénom</label><input value={editData.prenom||''} onChange={e=>setEditData({...editData,prenom:e.target.value})} style={inputSt}/></div>
                           <div style={{ position:'relative' }}>
