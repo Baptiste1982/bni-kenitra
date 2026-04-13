@@ -75,19 +75,21 @@ export default function App() {
   // Update last_seen + load online users
   useEffect(() => {
     if (!user) return
-    // Mettre à jour last_seen
-    supabase.from('profils').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {})
-    // Charger les profils pour le statut en ligne
-    supabase.from('profils').select('id, prenom, nom, role, last_seen, actif').eq('actif', true)
-      .then(({ data }) => { if (data) setOnlineUsers(data) })
-    // Rafraîchir last_seen toutes les 2 minutes
-    const interval = setInterval(() => {
+    const updatePresence = () => {
       supabase.from('profils').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {})
       supabase.from('profils').select('id, prenom, nom, role, last_seen, actif').eq('actif', true)
         .then(({ data }) => { if (data) setOnlineUsers(data) })
-    }, 120000)
-    return () => clearInterval(interval)
+    }
+    // Mettre à jour immédiatement
+    updatePresence()
+    // Rafraîchir toutes les 30 secondes
+    const interval = setInterval(updatePresence, 30000)
+    // Aussi mettre à jour quand la page redevient visible (retour de veille/onglet)
+    const handleVisibility = () => { if (document.visibilityState === 'visible') updatePresence() }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility) }
   }, [user])
+
 
   // Live alert count via Realtime (alertes + recontacts)
   const updateAlertCount = async () => {
