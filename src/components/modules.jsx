@@ -853,20 +853,34 @@ export function Reporting() {
           </div>
 
           {/* Membres à risque */}
-          <div style={{ marginBottom:16 }}>
+          <div style={{ marginBottom: mob ? 12 : 16 }}>
             <SectionTitle>🚨 Membres à risque ({membresRisque.length})</SectionTitle>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-              {membresRisque.slice(0,15).map((s,i) => {
-                const sc = Number(s.total_score||0)
-                const h = hebdoMap[s.membre_id]
-                return (
-                  <div key={i} style={{ background:'#FEE2E2', borderRadius:8, padding:'8px 12px', border:'1px solid #FECACA' }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</div>
-                    <div style={{ fontSize:10, color:'#DC2626', marginTop:2 }}>Score: {sc} · TàT: {h?.tat||0} · Abs: {h?.absences||0}</div>
-                  </div>
-                )
-              })}
-            </div>
+            {membresRisque.length === 0 ? (
+              <div style={{ background:'#D1FAE5', borderRadius:10, padding:'14px 16px', textAlign:'center', fontSize:13, color:'#065F46', fontWeight:500 }}>Aucun membre à risque ce mois ✓</div>
+            ) : (
+              <div style={{ background:'#fff', borderRadius: mob ? 10 : 12, border:'1px solid #FECACA', overflow:'hidden' }}>
+                {membresRisque.slice(0,15).map((s,i) => {
+                  const sc = Number(s.total_score||0)
+                  const h = hebdoMap[s.membre_id]
+                  const severity = sc < 20 ? '#DC2626' : sc < 30 ? '#F59E0B' : '#6B7280'
+                  return (
+                    <div key={i} style={{ display:'flex', alignItems:'center', padding: mob ? '8px 12px' : '10px 16px', borderBottom: i < membresRisque.length-1 ? '1px solid #FEE2E2' : 'none', gap: mob ? 8 : 12 }}>
+                      <div style={{ width: mob ? 28 : 34, height: mob ? 28 : 34, borderRadius:'50%', background:'#FEE2E2', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <span style={{ fontSize: mob ? 11 : 13, fontWeight:700, color:severity }}>{sc}</span>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize: mob ? 12 : 13, fontWeight:600, color:'#991B1B', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fullName(s.membres?.prenom, s.membres?.nom)}</div>
+                        <div style={{ display:'flex', gap: mob ? 6 : 10, marginTop:2 }}>
+                          <span style={{ fontSize: mob ? 9 : 10, color:'#DC2626', fontWeight:500 }}>TàT {h?.tat||0}</span>
+                          <span style={{ fontSize: mob ? 9 : 10, color:'#DC2626', fontWeight:500 }}>Reco {h?.refs||0}</span>
+                          <span style={{ fontSize: mob ? 9 : 10, color: (h?.absences||0) > 0 ? '#DC2626' : '#6B7280', fontWeight:500 }}>{h?.absences||0} abs.</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Évolution vs mois précédent */}
