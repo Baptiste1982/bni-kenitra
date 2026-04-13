@@ -197,10 +197,24 @@ export default function SuiviHebdo() {
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
       <PageHeader title="Suivi Hebdomadaire" sub={`Données PALMS intermédiaires — ${moisLabel}`}
         right={
-          <button onClick={() => setShowImport(!showImport)}
-            style={{ padding:'9px 16px', background: showImport ? '#1C1C2E' : '#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-            {showImport ? '✕ Fermer' : '📥 Importer PALMS'}
-          </button>
+          <div style={{ position:'relative' }}>
+            <div onClick={() => setShowImport(!showImport)}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernière saisie</div>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'Playfair Display, serif' }}>
+                  {dates.length > 0 ? new Date(dates[dates.length-1]+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '—'}
+                </div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+              </div>
+            </div>
+          </div>
         }
       />
 
