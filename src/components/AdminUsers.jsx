@@ -65,6 +65,8 @@ export default function AdminUsers() {
   const [showLogs, setShowLogs] = useState(false)
   const [logs, setLogs] = useState([])
   const [expandedKpi, setExpandedKpi] = useState(null)
+  const [expandedDay, setExpandedDay] = useState(null)
+  const todayStr = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
   const [resetPwd, setResetPwd] = useState(null)
   const [newPassword, setNewPassword] = useState('')
   const [actionMenu, setActionMenu] = useState(null) // user id for dropdown
@@ -286,18 +288,31 @@ export default function AdminUsers() {
 
             return Object.entries(byDay).length === 0 ? (
               <div style={{ padding:20, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucune connexion enregistrée</div>
-            ) : Object.entries(byDay).map(([day, users]) => {
+            ) : Object.entries(byDay).map(([day, users], dayIdx) => {
               const allEvents = Object.values(users).flatMap(u => u.events)
               const nbLogins = allEvents.filter(e => e.action === 'login').length
               const nbUsers = Object.keys(users).length
+              const isToday = day === todayStr
+              const isDayOpen = expandedDay === day || (expandedDay === null && isToday)
               return (
-                <div key={day} style={{ marginBottom:16 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{day}</div>
-                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#D1FAE5', color:'#065F46' }}>{nbUsers} utilisateur{nbUsers>1?'s':''}</div>
-                    <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#F3F4F6', color:'#6B7280' }}>{nbLogins} session{nbLogins>1?'s':''}</div>
+                <div key={day} style={{ marginBottom:12 }}>
+                  <div onClick={() => setExpandedDay(isDayOpen && !isToday ? null : isDayOpen ? '__none__' : day)}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:'#1C1C2E', borderRadius: isDayOpen ? '10px 10px 0 0' : 10, cursor:'pointer', userSelect:'none' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#2D2D42'} onMouseLeave={e=>e.currentTarget.style.background='#1C1C2E'}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <span style={{ color:'#fff', fontSize:13, fontWeight:700, textTransform:'capitalize' }}>{day}</span>
+                      <span style={{ fontSize:9, fontWeight:600, padding:'2px 7px', borderRadius:8, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{nbUsers} utilisateur{nbUsers>1?'s':''} · {nbLogins} session{nbLogins>1?'s':''}</span>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      {Object.values(users).map((u,i) => {
+                        const rc2 = roleCol(u.role)
+                        return <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:rc2+'33', border:`1.5px solid ${rc2}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:700, color:rc2 }}>{roleAbr(u.role)}</div>
+                      })}
+                      <span style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginLeft:4, transition:'transform 0.2s', transform: isDayOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                    </div>
                   </div>
-                  {Object.entries(users).map(([uid, u], idx, arr) => {
+                  {isDayOpen && <div style={{ background:'#fff', border:'1px solid #E8E6E1', borderTop:'none', borderRadius:'0 0 10px 10px', padding:'12px 14px' }}>
+                  {Object.entries(users).map(([uid, u], idx) => {
                     const logins = u.events.filter(e => e.action === 'login')
                     const firstLogin = logins.length > 0 ? new Date(logins[logins.length-1].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
                     const lastLogin = logins.length > 0 ? new Date(logins[0].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
@@ -306,13 +321,13 @@ export default function AdminUsers() {
                     return (
                       <React.Fragment key={uid}>
                         {idx > 0 && (
-                          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'4px 0' }}>
+                          <div style={{ display:'flex', justifyContent:'center', gap:3, padding:'6px 0' }}>
                             <span style={{ width:3, height:3, borderRadius:'50%', background:'#D4D4D8' }} />
                             <span style={{ width:3, height:3, borderRadius:'50%', background:'#D4D4D8' }} />
                             <span style={{ width:3, height:3, borderRadius:'50%', background:'#D4D4D8' }} />
                           </div>
                         )}
-                      <div style={{ marginBottom:6 }}>
+                      <div style={{ marginBottom:4 }}>
                         <div onClick={() => setExpandedKpi(isExpanded ? null : `log-${day}-${uid}`)}
                           style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, background: isExpanded ? '#F7F6F3' : '#fff', border:'1px solid #E8E6E1', cursor:'pointer' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e=>{ if(!isExpanded) e.currentTarget.style.background='#fff' }}>
@@ -345,6 +360,7 @@ export default function AdminUsers() {
                       </React.Fragment>
                     )
                   })}
+                  </div>}
                 </div>
               )
             })
