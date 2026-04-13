@@ -138,7 +138,7 @@ export function Invites() {
                   <span style={{ fontSize:26, fontWeight:700, fontFamily:'Playfair Display, serif', color:c.style.color }}>{c.n}</span>
                   <span style={{ fontSize:12, fontWeight:600, color:c.style.color, opacity:0.6 }}>{c.pct}%</span>
                 </div>
-                <div style={{ fontSize:9, color:c.style.color, opacity:0.5, marginTop:2 }}>{c.desc}</div>
+                <div style={{ fontSize:9, color:'#1C1C2E', opacity:0.5, marginTop:2 }}>{c.desc}</div>
               </div>
             ))}
           </div>
