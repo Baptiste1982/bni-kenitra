@@ -116,6 +116,22 @@ export default function App() {
     setUser(null)
   }
 
+  // Logger la déconnexion quand la page est fermée ou mise en veille
+  useEffect(() => {
+    if (!user || !profil) return
+    const logDisconnect = () => {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/connection_logs`
+      const payload = JSON.stringify({ user_id: user.id, email: profil.email, prenom: profil.prenom, nom: profil.nom, role: profil.role, action: 'logout' })
+      fetch(url, {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY, 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        body: payload,
+      }).catch(() => {})
+    }
+    window.addEventListener('beforeunload', logDisconnect)
+    return () => window.removeEventListener('beforeunload', logDisconnect)
+  }, [user, profil])
+
   const navigate = (id) => { setActive(id); setSidebarOpen(false) }
 
   if (loading) return (
