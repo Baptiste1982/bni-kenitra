@@ -97,20 +97,12 @@ export default function Dashboard({ onNavigate, profil }) {
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           {clotureMsg && <span style={{ fontSize:11, color: clotureMsg.startsWith('Erreur') ? '#FECACA' : '#A7F3D0' }}>{clotureMsg}</span>}
           {canCloture && (
-            <div onClick={cloturing ? undefined : handleCloture}
-              style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:10, padding:'8px 14px', cursor: cloturing ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:10, opacity: cloturing ? 0.5 : 1, transition:'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.18)'}
-              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
-              <div>
-                <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.06em' }}>{cloturing ? 'En cours...' : 'Clôture'}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>📋 Clôturer</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-              </div>
-            </div>
+            <button onClick={cloturing ? undefined : handleCloture}
+              style={{ background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'5px 12px', cursor: cloturing ? 'not-allowed' : 'pointer', opacity: cloturing ? 0.5 : 1, transition:'background 0.15s', fontSize:11, fontWeight:600, color:'#fff', fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.22)'}
+              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}>
+              📋 {cloturing ? 'En cours...' : 'Clôturer'}
+            </button>
           )}
         </div>
       </div>
