@@ -200,14 +200,34 @@ export default function AdminUsers() {
         sub={`${users.length} compte${users.length > 1 ? 's' : ''} · Rôles et accès aux modules`}
         right={
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => { setShowLogs(!showLogs); if (!showLogs) setShowForm(false) }}
-              style={{ padding:'9px 16px', background: showLogs ? '#1C1C2E' : '#fff', color: showLogs ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-              {showLogs ? '✕ Fermer' : '📋 Journal'}
-            </button>
-            <button onClick={() => { setShowForm(!showForm); if (!showForm) setShowLogs(false) }}
-              style={{ padding:'9px 16px', background: showForm ? '#1C1C2E' : '#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-              {showForm ? '✕ Annuler' : '+ Nouveau compte'}
-            </button>
+            <div onClick={() => { setShowLogs(!showLogs); if (!showLogs) setShowForm(false) }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Activité</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📋 Journal</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#D97706' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#D97706' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#D97706' }} />
+              </div>
+            </div>
+            <div onClick={() => { setShowForm(!showForm); if (!showForm) setShowLogs(false) }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Comptes</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#C41E3A' }}>+ Nouveau</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+              </div>
+            </div>
           </div>
         }
       />
