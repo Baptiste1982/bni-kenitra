@@ -216,31 +216,28 @@ export default function AdminUsers() {
         <Card style={{ marginBottom:24 }}>
           <SectionTitle>📋 Journal de connexion</SectionTitle>
           {(() => {
-            // Calculer les durées de session (login → logout du même user)
-            const sessions = {}
-            // Parcourir les logs du plus ancien au plus récent pour matcher login/logout
-            const sorted = [...logs].reverse()
-            sorted.forEach(l => {
-              if (l.action === 'login') {
-                if (!sessions[l.user_id]) sessions[l.user_id] = []
-                sessions[l.user_id].push({ login: new Date(l.connected_at), logout: null })
-              } else if (l.action === 'logout' && sessions[l.user_id]?.length) {
-                const last = sessions[l.user_id].find(s => !s.logout)
-                if (last) last.logout = new Date(l.connected_at)
-              }
-            })
-            // Map pour retrouver la durée d'un login
-            const getDuration = (userId, connectedAt) => {
-              const userSessions = sessions[userId] || []
-              const session = userSessions.find(s => s.login.getTime() === new Date(connectedAt).getTime())
-              if (!session) return null
-              const end = session.logout || new Date()
-              const diffMin = Math.round((end - session.login) / 60000)
+            const formatDuration = (diffMin) => {
               if (diffMin < 1) return '< 1 min'
               if (diffMin < 60) return `${diffMin} min`
               const h = Math.floor(diffMin / 60)
               const m = diffMin % 60
               return `${h}h${m > 0 ? m.toString().padStart(2,'0') : ''}`
+            }
+            // Calculer la durée de session (login → prochain logout ou login du même user)
+            const getDuration = (userId, connectedAt, index) => {
+              const loginTime = new Date(connectedAt)
+              // Chercher le prochain événement du même user dans les logs (logs sont triés desc)
+              const olderLogs = logs.slice(index + 1)
+              const nextSameUser = logs.slice(0, index).find(l => l.user_id === userId)
+              if (nextSameUser) {
+                const diffMin = Math.round((new Date(nextSameUser.connected_at) - loginTime) / 60000)
+                if (Math.abs(diffMin) > 1440) return null
+                return formatDuration(Math.abs(diffMin))
+              }
+              // Pas de prochain événement — session peut-être en cours
+              const diffMin = Math.round((new Date() - loginTime) / 60000)
+              if (diffMin > 1440) return null
+              return formatDuration(diffMin)
             }
 
             // Grouper par jour
@@ -267,7 +264,7 @@ export default function AdminUsers() {
                       const isLogin = l.action === 'login'
                       const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[l.role] || '?'
                       const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[l.role] || '#6B7280'
-                      const duration = isLogin ? getDuration(l.user_id, l.connected_at) : null
+                      const duration = isLogin ? getDuration(l.user_id, l.connected_at, entries.indexOf(l)) : null
                       return (
                         <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, position:'relative' }}>
                           <div style={{ position:'absolute', left:-22, width:10, height:10, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />

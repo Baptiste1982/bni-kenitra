@@ -45,6 +45,7 @@ export default function App() {
       }
       setLoading(false)
     })
+    let initialLoad = true
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
@@ -52,13 +53,14 @@ export default function App() {
           .then(({ data }) => {
             if (data) {
               setProfil(data)
-              // Logger la connexion
-              if (event === 'SIGNED_IN') {
+              // Logger seulement les vraies connexions (pas les refreshs)
+              if (event === 'SIGNED_IN' && !initialLoad) {
                 supabase.from('connection_logs').insert({ user_id: session.user.id, email: data.email, prenom: data.prenom, nom: data.nom, role: data.role, action: 'login' }).then(() => {})
               }
+              initialLoad = false
             }
           })
-      } else { setProfil(null) }
+      } else { setProfil(null); initialLoad = false }
     })
     return () => subscription.unsubscribe()
   }, [])
