@@ -240,13 +240,13 @@ export default function AdminUsers() {
               if (nextLogin) {
                 // Pas de logout mais un login suivant = session terminée sans logout
                 const diffMin = Math.round((new Date(nextLogin.connected_at) - loginTime) / 60000)
-                if (diffMin > 1440) return null
+                if (diffMin > 180) return null // > 3h = entrée/sortie, pas une vraie session continue
                 return formatDuration(diffMin)
               }
-              // Dernière session — vérifier si c'est la session en cours (< 5 min)
+              // Dernière session — vérifier si c'est la session en cours
               const diffMin = Math.round((new Date() - loginTime) / 60000)
               if (diffMin < 5) return '🟢 En cours'
-              if (diffMin > 1440) return null
+              if (diffMin > 180) return null // > 3h = considéré comme session terminée
               return formatDuration(diffMin)
             }
 
