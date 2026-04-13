@@ -278,7 +278,7 @@ export default function App() {
 
       {/* Chat — onglet en bas */}
       <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
-        style={{ position:'fixed', bottom:0, right:40, width:200, padding:'8px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', boxShadow:'0 -2px 8px rgba(0,0,0,0.1)', zIndex:201 }}>
+        style={{ position:'fixed', bottom:0, right:40, width:200, padding:'8px 16px', background:'rgba(28,28,46,0.75)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', boxShadow:'0 -2px 8px rgba(0,0,0,0.1)', zIndex:201 }}>
         <span style={{ fontSize:14 }}>💬</span>
         <span style={{ color:'#fff', fontSize:12, fontWeight:600 }}>Chat Équipe</span>
         {unreadChat > 0 && <div style={{ width:18, height:18, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:9, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
