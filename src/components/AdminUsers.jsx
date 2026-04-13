@@ -321,10 +321,10 @@ export default function AdminUsers() {
                     return (
                       <React.Fragment key={uid}>
                         {idx > 0 && (
-                          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'6px 0' }}>
-                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#D4D4D8' }} />
-                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#D4D4D8' }} />
-                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#D4D4D8' }} />
+                          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:3, padding:'4px 0', marginLeft:23 }}>
+                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
+                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
+                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
                           </div>
                         )}
                       <div style={{ marginBottom:4 }}>
