@@ -44,8 +44,8 @@ export default function Login({ onLogin }) {
       <div style={{ position:'relative', width:'100%', maxWidth:400, padding:32 }}>
         {/* Logo */}
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <div style={{ width:64, height:64, borderRadius:'50%', background:'#C41E3A', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', fontSize:28, fontFamily:'Playfair Display, serif', fontWeight:700, color:'#fff' }}>B</div>
-          <div style={{ fontFamily:'Playfair Display, serif', fontSize:22, fontWeight:700, color:'#fff' }}>BNI Kénitra</div>
+          <div style={{ width:64, height:64, borderRadius:'50%', background:'#C41E3A', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', fontSize:28, fontFamily:'DM Sans, sans-serif', fontWeight:700, color:'#fff' }}>B</div>
+          <div style={{ fontFamily:'DM Sans, sans-serif', fontSize:22, fontWeight:700, color:'#fff' }}>BNI Kénitra</div>
           <div style={{ color:'rgba(255,255,255,0.4)', fontSize:13, marginTop:4 }}>Espace Directeur Exécutif</div>
         </div>
 

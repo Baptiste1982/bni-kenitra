@@ -207,7 +207,7 @@ export default function SuiviHebdo() {
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernière saisie</div>
-                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'Playfair Display, serif' }}>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>
                   {dates.length > 0 ? new Date(dates[dates.length-1]+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '—'}
                 </div>
               </div>

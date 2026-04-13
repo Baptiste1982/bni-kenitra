@@ -154,7 +154,7 @@ CONSIGNES:
             <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>{m.societe} · {m.secteur_activite}</div>
           </div>
           <div style={{ textAlign:'right', marginRight:8 }}>
-            <div style={{ fontSize:26, fontWeight:700, fontFamily:'Playfair Display, serif', color:tlColor }}>{totalScore}</div>
+            <div style={{ fontSize:26, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:tlColor }}>{totalScore}</div>
             <TLBadge tl={s.traffic_light} />
           </div>
           <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'rgba(255,255,255,0.7)', width:30, height:30, borderRadius:'50%', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>

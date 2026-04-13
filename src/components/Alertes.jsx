@@ -173,14 +173,14 @@ export default function Alertes() {
           style={{ background:'#1C1C2E', borderRadius:12, padding:'14px 18px', cursor:'pointer' }}
           onMouseEnter={e=>e.currentTarget.style.opacity='0.9'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
           <div style={{ fontSize:10, fontWeight:600, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Actives</div>
-          <div style={{ fontSize:28, fontWeight:700, color:'#fff', fontFamily:'Playfair Display, serif' }}>{actives.length}</div>
+          <div style={{ fontSize:28, fontWeight:700, color:'#fff', fontFamily:'DM Sans, sans-serif' }}>{actives.length}</div>
         </div>
         {Object.entries(catStats).map(([cat, n]) => (
           <div key={cat} onClick={() => { setFilter('actives'); setCatFilter(cat) }}
             style={{ background: n > 0 ? (cat === 'membres' ? '#FEE2E2' : cat === 'recontact' ? '#DBEAFE' : '#FEF9C3') : '#F9FAFB', borderRadius:12, padding:'14px 18px', cursor:'pointer', border:`1px solid ${n > 0 ? 'rgba(0,0,0,0.06)' : '#E8E6E1'}` }}
             onMouseEnter={e=>e.currentTarget.style.opacity='0.9'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
             <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>{catIcon[cat]} {catLabel[cat]}</div>
-            <div style={{ fontSize:28, fontWeight:700, color: catColor[cat], fontFamily:'Playfair Display, serif' }}>{n}</div>
+            <div style={{ fontSize:28, fontWeight:700, color: catColor[cat], fontFamily:'DM Sans, sans-serif' }}>{n}</div>
           </div>
         ))}
       </div>

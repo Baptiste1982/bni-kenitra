@@ -105,7 +105,7 @@ export function Invites() {
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>{syncing ? 'Synchronisation...' : 'Google Sheets'}</div>
-                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'Playfair Display, serif' }}>🔄 Sync</div>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔄 Sync</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
@@ -146,7 +146,7 @@ export function Invites() {
                 onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
                 <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:c.style.color, marginBottom:4 }}>{c.label}</div>
                 <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                  <span style={{ fontSize:26, fontWeight:700, fontFamily:'Playfair Display, serif', color:c.style.color }}>{c.n}</span>
+                  <span style={{ fontSize:26, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.style.color }}>{c.n}</span>
                   <span style={{ fontSize:12, fontWeight:600, color:c.style.color, opacity:0.6 }}>{c.pct}%</span>
                 </div>
                 <div style={{ fontSize:9, color:'#1C1C2E', opacity:0.5, marginTop:2 }}>{c.desc}</div>
@@ -303,7 +303,7 @@ export function Groupes() {
       <div style={{ background:'#fff', borderRadius:14, padding:24, border:'1px solid #E8E6E1', borderLeft:'4px solid #C41E3A', marginBottom:16 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
-            <div style={{ fontFamily:'Playfair Display, serif', fontSize:28, fontWeight:700, color:'#C41E3A' }}>MK-01</div>
+            <div style={{ fontFamily:'DM Sans, sans-serif', fontSize:28, fontWeight:700, color:'#C41E3A' }}>MK-01</div>
             <div style={{ fontSize:18, fontWeight:600, marginTop:2 }}>Kénitra Atlantique</div>
             <div style={{ fontSize:13, color:'#6B7280', marginTop:4 }}>Lancé le 12 décembre 2025 · Région Kénitra</div>
           </div>
@@ -312,7 +312,7 @@ export function Groupes() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, marginTop:20 }}>
           {[[kpis?.membresActifs ?? '…','Membres actifs'],['83%','Objectif rempli'],[kpis?.invitesTotal ?? '…','Invités reçus'],[kpis?.invitesConvertis ?? '…','Convertis'],[(tyfcb/1000).toFixed(0)+'K MAD','TYFCB généré']].map(([v,l]) => (
             <div key={l} style={{ background:'#F7F6F3', borderRadius:8, padding:12 }}>
-              <div style={{ fontSize:18, fontWeight:700, fontFamily:'Playfair Display, serif' }}>{v}</div>
+              <div style={{ fontSize:18, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{v}</div>
               <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{l}</div>
             </div>
           ))}
@@ -329,7 +329,7 @@ export function Groupes() {
       <div style={{ background:'#fff', borderRadius:14, padding:24, border:'1px solid #E8E6E1', borderLeft:'4px solid #9CA3AF', opacity:0.85, marginBottom:16 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
-            <div style={{ fontFamily:'Playfair Display, serif', fontSize:28, fontWeight:700, color:'#9CA3AF' }}>MK-02</div>
+            <div style={{ fontFamily:'DM Sans, sans-serif', fontSize:28, fontWeight:700, color:'#9CA3AF' }}>MK-02</div>
             <div style={{ fontSize:18, fontWeight:600, marginTop:2 }}>Kénitra Impulse</div>
             <div style={{ fontSize:13, color:'#6B7280', marginTop:4 }}>En cours de constitution · 2 postulants</div>
           </div>
@@ -338,7 +338,7 @@ export function Groupes() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginTop:20 }}>
           {[['2','Postulants'],['Achraf Nour','Fitness / Bien-être'],['Ilyasse Essafi','Dentiste']].map(([v,l]) => (
             <div key={l} style={{ background:'#F7F6F3', borderRadius:8, padding:12 }}>
-              <div style={{ fontSize:15, fontWeight:700, fontFamily:'Playfair Display, serif' }}>{v}</div>
+              <div style={{ fontSize:15, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{v}</div>
               <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{l}</div>
             </div>
           ))}
@@ -448,7 +448,7 @@ export function Reporting() {
                 <div key={o.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1' }}>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>{o.label}</div>
                   <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8 }}>
-                    <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'Playfair Display, serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
+                    <span style={{ fontSize:24, fontWeight:700, color:o.color, fontFamily:'DM Sans, sans-serif' }}>{o.isMoney ? Number(o.value).toLocaleString('de-DE') : o.value}</span>
                     <span style={{ fontSize:12, color:'#9CA3AF' }}>/ {o.isMoney ? Number(o.obj).toLocaleString('de-DE') : o.obj}</span>
                   </div>
                   <ProgressBar value={o.value} max={o.obj} color={o.value >= o.obj ? '#059669' : o.value >= o.obj*0.5 ? '#D97706' : '#DC2626'} />
@@ -471,7 +471,7 @@ export function Reporting() {
                 return (
                   <div key={p.label} style={{ background:bg, borderRadius:12, padding:'16px 18px', border:'1px solid rgba(0,0,0,0.06)' }}>
                     <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>{p.label}</div>
-                    <div style={{ fontSize:28, fontWeight:700, color:p.color, fontFamily:'Playfair Display, serif' }}>{pct}%</div>
+                    <div style={{ fontSize:28, fontWeight:700, color:p.color, fontFamily:'DM Sans, sans-serif' }}>{pct}%</div>
                     <div style={{ fontSize:12, color:'#6B7280' }}>{p.value}/{p.total} membres</div>
                   </div>
                 )
@@ -545,7 +545,7 @@ export function Reporting() {
                     <div key={e.label} style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                       <div>
                         <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>{e.label}</div>
-                        <div style={{ fontSize:22, fontWeight:700, fontFamily:'Playfair Display, serif' }}>{e.current}</div>
+                        <div style={{ fontSize:22, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{e.current}</div>
                       </div>
                       <div style={{ textAlign:'right' }}>
                         <div style={{ fontSize:18, fontWeight:700, color: diff >= 0 ? '#059669' : '#DC2626' }}>{diff >= 0 ? '↑' : '↓'} {Math.abs(diff)}</div>

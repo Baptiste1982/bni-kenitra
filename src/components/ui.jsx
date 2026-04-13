@@ -32,7 +32,7 @@ export const StatCard = ({ label, value, sub, accent, topBg, valueColor, style={
         <div style={{ fontSize:11, fontWeight:600, color:valueColor || '#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{label}</div>
       </div>
       <div style={{ padding:'14px 20px 18px' }}>
-        <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:valueColor || '#1C1C2E' }}>{value}</div>
+        <div style={{ fontSize:28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:valueColor || '#1C1C2E' }}>{value}</div>
         {sub && <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{sub}</div>}
         {children}
       </div>
@@ -40,7 +40,7 @@ export const StatCard = ({ label, value, sub, accent, topBg, valueColor, style={
   ) : (
     <Card accent={accent} style={style}>
       <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{label}</div>
-      <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:valueColor || '#1C1C2E' }}>{value}</div>
+      <div style={{ fontSize:28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:valueColor || '#1C1C2E' }}>{value}</div>
       {sub && <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{sub}</div>}
       {children}
     </Card>
@@ -54,7 +54,7 @@ export const SectionTitle = ({ children }) => (
 export const PageHeader = ({ title, sub, right }) => (
   <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24 }}>
     <div>
-      <h1 style={{ fontFamily:'Playfair Display, serif', fontSize:24, fontWeight:700, color:'#1C1C2E' }}>{title}</h1>
+      <h1 style={{ fontFamily:'DM Sans, sans-serif', fontSize:24, fontWeight:700, color:'#1C1C2E' }}>{title}</h1>
       {sub && <p style={{ color:'#6B7280', fontSize:13, marginTop:3 }}>{sub}</p>}
     </div>
     {right}

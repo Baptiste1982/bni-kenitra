@@ -83,7 +83,7 @@ export default function Dashboard({ onNavigate, profil }) {
       {/* Mois en cours */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ fontSize:22, fontWeight:700, fontFamily:'Playfair Display, serif', textTransform:'capitalize' }}>{moisLabel}</div>
+          <div style={{ fontSize:22, fontWeight:700, fontFamily:'DM Sans, sans-serif', textTransform:'capitalize' }}>{moisLabel}</div>
           <div style={{ fontSize:12, opacity:0.6 }}>{reunionsSaisies}/{nbJeudis} réunions saisies</div>
           <div style={{ display:'flex', gap:3 }}>
             {Array.from({length:nbJeudis}).map((_,i) => (
@@ -126,7 +126,7 @@ export default function Dashboard({ onNavigate, profil }) {
               <div style={{ fontSize:11, fontWeight:600, color:c.valueColor, textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{c.label}</div>
             </div>
             <div style={{ padding:'14px 20px 18px' }}>
-              <div style={{ fontSize:28, fontWeight:700, fontFamily:'Playfair Display, serif', color:c.valueColor }}>{c.value}</div>
+              <div style={{ fontSize:28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.valueColor }}>{c.value}</div>
               <div style={{ fontSize:12, color:'#6B7280', marginTop:4 }}>{c.sub}</div>
               {c.prog !== undefined && <div style={{ height:4, background:'rgba(255,255,255,0.5)', borderRadius:2, marginTop:10 }}><div style={{ height:4, width:`${Math.min(100,c.prog)}%`, background:c.valueColor, borderRadius:2, opacity:0.5 }} /></div>}
               <div style={{ fontSize:11, color:c.valueColor, marginTop:6, fontWeight:500, opacity:0.7 }}>Voir le détail →</div>

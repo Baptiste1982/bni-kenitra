@@ -170,7 +170,7 @@ export default function Membres({ profil }) {
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernier import PALMS</div>
-                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'Playfair Display, serif' }}>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>
                   {(() => {
                     const first = Object.values(palmsData)[0]
                     if (!first?.created_at) return '—'
