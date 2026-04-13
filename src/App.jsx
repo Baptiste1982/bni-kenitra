@@ -53,9 +53,16 @@ export default function App() {
           .then(({ data }) => {
             if (data) {
               setProfil(data)
-              // Logger seulement les vraies connexions (pas les refreshs)
+              // Logger seulement les vraies connexions (pas les refreshs ni les doublons < 5min)
               if (event === 'SIGNED_IN' && !initialLoad) {
-                supabase.from('connection_logs').insert({ user_id: session.user.id, email: data.email, prenom: data.prenom, nom: data.nom, role: data.role, action: 'login' }).then(() => {})
+                supabase.from('connection_logs').select('connected_at').eq('user_id', session.user.id).eq('action', 'login').order('connected_at', {ascending:false}).limit(1)
+                  .then(({ data: lastLog }) => {
+                    const lastTime = lastLog?.[0]?.connected_at ? new Date(lastLog[0].connected_at) : null
+                    const diffMin = lastTime ? (new Date() - lastTime) / 60000 : 999
+                    if (diffMin > 5) {
+                      supabase.from('connection_logs').insert({ user_id: session.user.id, email: data.email, prenom: data.prenom, nom: data.nom, role: data.role, action: 'login' }).then(() => {})
+                    }
+                  })
               }
               initialLoad = false
             }
