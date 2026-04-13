@@ -268,7 +268,7 @@ export default function App() {
           )}
         </div>
 
-        <main key={active} style={{ flex:1, overflowY:'auto', background:'#F7F6F3', display:'flex', flexDirection:'column' }}>
+        <main key={active} style={{ flex:1, overflowY:'auto', overflowX:'hidden', background:'#F7F6F3', display:'flex', flexDirection:'column' }}>
           {MODULES[active]}
         </main>
       </div>

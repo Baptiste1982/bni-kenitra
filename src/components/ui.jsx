@@ -68,7 +68,7 @@ export const ProgressBar = ({ value, max, color='#C41E3A', style={} }) => (
 )
 
 export const TableWrap = ({ children }) => (
-  <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden' }}>{children}</div>
+  <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflowX:'auto', WebkitOverflowScrolling:'touch' }}>{children}</div>
 )
 
 export const Spinner = ({ size=20, color='#C41E3A' }) => (
