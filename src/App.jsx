@@ -132,7 +132,7 @@ export default function App() {
     dashboard: <Dashboard onNavigate={navigate} profil={profil} />,
     membres:   <Membres profil={profil} />,
     hebdo:     <SuiviHebdo />,
-    invites:   <Invites />,
+    invites:   <Invites profil={profil} />,
     groupes:   <Groupes />,
     reporting: <Reporting />,
     agent:     <AgentIA />,

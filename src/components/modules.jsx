@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, StatCard, fullName, cap } from './ui'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
-export function Invites() {
+export function Invites({ profil }) {
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('tous')
@@ -18,18 +18,25 @@ export function Invites() {
   const [customStatut, setCustomStatut] = useState('')
   const [extraStatuts, setExtraStatuts] = useState([])
   const [statutColors, setStatutColors] = useState({})
+  const [columnAccess, setColumnAccess] = useState({})
+  const [showAccessConfig, setShowAccessConfig] = useState(false)
   const [collapsedMonths, setCollapsedMonths] = useState({})
 
   const load = () => {
     setLoading(true)
     Promise.all([
       fetchInvites(),
-      supabase.from('statut_colors').select('statut, couleur')
-    ]).then(([invData, colorsRes]) => {
+      supabase.from('statut_colors').select('statut, couleur'),
+      supabase.from('invite_column_access').select('role, column_key, visible'),
+    ]).then(([invData, colorsRes, accessRes]) => {
       setInvites(invData || [])
       const cMap = {}
       ;(colorsRes?.data || []).forEach(c => { cMap[c.statut] = c.couleur })
       setStatutColors(cMap)
+      // Accès colonnes par rôle
+      const aMap = {}
+      ;(accessRes?.data || []).forEach(a => { if (!aMap[a.role]) aMap[a.role] = {}; aMap[a.role][a.column_key] = a.visible })
+      setColumnAccess(aMap)
       setLoading(false)
     }).catch(() => setLoading(false))
   }
@@ -77,7 +84,27 @@ export function Invites() {
     } catch(e) { setSyncMsg('Erreur : ' + e.message) }
   }
 
-  const BASE_STATUTS = ['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
+  const SENSITIVE_COLUMNS = [
+    { key:'email', label:'Email' },
+    { key:'telephone', label:'Téléphone' },
+    { key:'adresse', label:'Adresse' },
+    { key:'commentaires', label:'Commentaires' },
+  ]
+  const ALL_ROLES = ['super_admin','directeur_executif','directrice_consultante','president','vice_president','secretaire_tresorier','lecture']
+  const ROLE_LABELS = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }
+  const isColumnVisible = (col) => {
+    const role = profil?.role || 'lecture'
+    return columnAccess[role]?.[col] !== false
+  }
+  const canConfigAccess = ['super_admin','directrice_consultante'].includes(profil?.role)
+  const toggleColumnAccess = async (role, col) => {
+    const current = columnAccess[role]?.[col] !== false
+    const newVal = !current
+    await supabase.from('invite_column_access').upsert({ role, column_key: col, visible: newVal }, { onConflict: 'role,column_key' })
+    setColumnAccess(prev => ({ ...prev, [role]: { ...(prev[role]||{}), [col]: newVal } }))
+  }
+
+  const BASE_STATUTS =['Validé par CM','Fiche envoyée au postulant','En cours traitement par CM','En stand-by','A temporiser','A recontacter','Collaborateur d\'un membre BNI','Devenu Membre','Membre BNI','Pas intéressé pour le moment','Pas de budget pour le moment','Injoignable','absente','Doublon — orienté groupe 2']
   const ALL_STATUTS = [...new Set([...BASE_STATUTS, ...invites.map(i => i.statut).filter(Boolean), ...extraStatuts])]
   const STATUTS = ['tous','Validé par CM','Fiche envoyée','En stand-by','A recontacter','Devenu Membre','Membre BNI','Collaborateur d\'un membre BNI','Pas intéressé pour le moment','Injoignable']
   const total = invites.length || 1
@@ -99,6 +126,20 @@ export function Invites() {
         right={
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
+            {canConfigAccess && <div onClick={() => setShowAccessConfig(!showAccessConfig)}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Données</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>🔒 Accès</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#8B5CF6' }} />
+              </div>
+            </div>}
             <div onClick={syncing ? undefined : handleSync}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor: syncing ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s', opacity: syncing ? 0.6 : 1 }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
@@ -116,6 +157,43 @@ export function Invites() {
           </div>
         }
       />
+      {/* Panneau config accès données */}
+      {showAccessConfig && (
+        <Card style={{ marginBottom:20 }}>
+          <SectionTitle>🔒 Accès aux données sensibles par rôle</SectionTitle>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <thead><tr>
+                <th style={{ padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Donnée</th>
+                {ALL_ROLES.map(r => (
+                  <th key={r} style={{ padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:700, color:'#6B7280', borderBottom:'1px solid #E8E6E1' }}>{ROLE_LABELS[r]}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {SENSITIVE_COLUMNS.map(col => (
+                  <tr key={col.key} style={{ borderBottom:'1px solid #F3F2EF' }}>
+                    <td style={{ padding:'10px 12px', fontSize:12, fontWeight:500 }}>{col.label}</td>
+                    {ALL_ROLES.map(r => {
+                      const visible = columnAccess[r]?.[col.key] !== false
+                      return (
+                        <td key={r} style={{ padding:'8px 8px', textAlign:'center' }}>
+                          <div onClick={() => toggleColumnAccess(r, col.key)}
+                            style={{ width:28, height:28, borderRadius:6, background: visible ? '#D1FAE5' : '#FEE2E2', border:`1px solid ${visible ? '#A7F3D0' : '#FECACA'}`, display:'inline-flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:12, transition:'transform 0.1s' }}
+                            onMouseEnter={e=>e.currentTarget.style.transform='scale(1.1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+                            {visible ? '✓' : '✕'}
+                          </div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop:10, fontSize:10, color:'#9CA3AF' }}>Cliquez sur une case pour activer/désactiver l'accès. Les modifications sont appliquées immédiatement.</div>
+        </Card>
+      )}
+
       {/* Cards par catégorie de couleur */}
       {(() => {
         const byCouleur = { vert:[], bleu:[], jaune:[], orange:[], rouge:[], gris:[] }
