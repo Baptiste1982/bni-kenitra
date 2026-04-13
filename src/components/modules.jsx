@@ -3,7 +3,7 @@ import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois,
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, StatCard, fullName, cap } from './ui'
+import { PageHeader, SectionTitle, TableWrap, StatCard, Card, fullName, cap } from './ui'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
 export function Invites({ profil }) {
