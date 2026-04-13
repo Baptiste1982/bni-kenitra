@@ -260,12 +260,20 @@ export default function App() {
           <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:'2px 4px' }}>☰</button>
           <img src="/logo-bni-kenitra.png" alt="BNI" style={{ width:32, height:32, borderRadius:'50%', objectFit:'cover' }} />
           <div style={{ color:'#fff', fontWeight:600, fontSize:14 }}>BNI Kénitra</div>
-          {alertCount > 0 && (
-            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6 }}>
-              <div style={{ width:7, height:7, borderRadius:'50%', background:'#C41E3A', animation:'pulse 2s ease-in-out infinite' }} />
-              <span style={{ color:'rgba(255,255,255,0.6)', fontSize:11 }}>{alertCount} alerte{alertCount>1?'s':''}</span>
+          <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10 }}>
+            <div onClick={e => { e.stopPropagation(); setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
+              style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', background:'rgba(255,255,255,0.1)', borderRadius:12, cursor:'pointer' }}>
+              <span style={{ fontSize:11 }}>💬</span>
+              <span style={{ color:'rgba(255,255,255,0.7)', fontSize:10, fontWeight:600 }}>Chat</span>
+              {unreadChat > 0 && <div style={{ width:14, height:14, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
             </div>
-          )}
+            {alertCount > 0 && (
+              <div onClick={e => { e.stopPropagation(); navigate('alertes') }} style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer' }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#C41E3A', animation:'pulse 2s ease-in-out infinite' }} />
+                <span style={{ color:'rgba(255,255,255,0.6)', fontSize:11 }}>{alertCount} alerte{alertCount>1?'s':''}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <main key={active} style={{ flex:1, overflowY:'auto', overflowX:'hidden', background:'#F7F6F3', display:'flex', flexDirection:'column' }}>
@@ -278,7 +286,7 @@ export default function App() {
 
       {/* Chat — onglet en haut */}
       <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
-        style={{ position:'fixed', top: window.innerWidth <= 768 ? 56 : 12, right: window.innerWidth <= 768 ? 12 : 260, padding:'4px 12px', background:'rgba(28,28,46,0.65)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:20, display:'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
+        style={{ position:'fixed', top:12, right:260, padding:'4px 12px', background:'rgba(28,28,46,0.65)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:20, display: window.innerWidth <= 768 ? 'none' : 'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
         onMouseEnter={e=>e.currentTarget.style.background='rgba(28,28,46,0.85)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(28,28,46,0.65)'}>
         <span style={{ fontSize:12 }}>💬</span>
         <span style={{ color:'#fff', fontSize:10, fontWeight:600 }}>Chat</span>
