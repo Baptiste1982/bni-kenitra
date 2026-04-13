@@ -72,23 +72,42 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Update last_seen + load online users
+  // Realtime Presence — activité live
   useEffect(() => {
-    if (!user) return
-    const updatePresence = () => {
+    if (!user || !profil) return
+
+    // Mettre à jour last_seen en base
+    supabase.from('profils').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {})
+
+    // Charger tous les profils pour l'affichage initial
+    supabase.from('profils').select('id, prenom, nom, role, last_seen, actif').eq('actif', true)
+      .then(({ data }) => { if (data) setOnlineUsers(data.map(u => ({ ...u, isLive: false }))) })
+
+    // Rejoindre le channel Presence
+    const channel = supabase.channel('online-users', { config: { presence: { key: user.id } } })
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState()
+      // Mettre à jour les statuts en ligne en temps réel
+      setOnlineUsers(prev => prev.map(u => ({
+        ...u,
+        isLive: !!state[u.id]?.length
+      })))
+    })
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ user_id: user.id, prenom: profil.prenom, nom: profil.nom, role: profil.role })
+      }
+    })
+
+    // Mettre à jour last_seen toutes les 60s en base (backup)
+    const interval = setInterval(() => {
       supabase.from('profils').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {})
-      supabase.from('profils').select('id, prenom, nom, role, last_seen, actif').eq('actif', true)
-        .then(({ data }) => { if (data) setOnlineUsers(data) })
-    }
-    // Mettre à jour immédiatement
-    updatePresence()
-    // Rafraîchir toutes les 30 secondes
-    const interval = setInterval(updatePresence, 30000)
-    // Aussi mettre à jour quand la page redevient visible (retour de veille/onglet)
-    const handleVisibility = () => { if (document.visibilityState === 'visible') updatePresence() }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility) }
-  }, [user])
+    }, 60000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(interval) }
+  }, [user, profil])
 
 
   // Live alert count via Realtime (alertes + recontacts)
@@ -180,10 +199,7 @@ export default function App() {
       <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Équipe</div>
         {onlineUsers.map(u => {
-          const now = new Date()
-          const lastSeen = u.last_seen ? new Date(u.last_seen) : null
-          const diffMin = lastSeen ? (now - lastSeen) / 60000 : 999
-          const statusColor = diffMin < 5 ? '#059669' : diffMin < 30 ? '#D97706' : '#6B7280'
+          const statusColor = u.isLive ? '#059669' : '#6B7280'
           const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[u.role] || '?'
           const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[u.role] || '#6B7280'
           return (
