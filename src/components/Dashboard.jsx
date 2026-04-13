@@ -84,18 +84,18 @@ export default function Dashboard({ onNavigate, profil }) {
       />
 
       {/* Mois en cours */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ fontSize:22, fontWeight:700, fontFamily:'DM Sans, sans-serif', textTransform:'capitalize' }}>{moisLabel}</div>
-          <div style={{ fontSize:12, opacity:0.6 }}>{reunionsSaisies}/{nbJeudis} réunions saisies</div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: window.innerWidth <= 768 ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap:12, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', alignItems:'center', gap: window.innerWidth <= 768 ? 8 : 16, flex:1, minWidth:0 }}>
+          <div style={{ fontSize: window.innerWidth <= 768 ? 16 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif', textTransform:'capitalize', whiteSpace:'nowrap' }}>{moisLabel}</div>
+          <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, opacity:0.6, whiteSpace:'nowrap' }}>{reunionsSaisies}/{nbJeudis}</div>
           <div style={{ display:'flex', gap:3 }}>
             {Array.from({length:nbJeudis}).map((_,i) => (
-              <div key={i} style={{ width:10, height:10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+              <div key={i} style={{ width: window.innerWidth <= 768 ? 8 : 10, height: window.innerWidth <= 768 ? 8 : 10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
             ))}
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          {clotureMsg && <span style={{ fontSize:11, color: clotureMsg.startsWith('Erreur') ? '#FECACA' : '#A7F3D0' }}>{clotureMsg}</span>}
+        {(canCloture || clotureMsg) && <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+          {clotureMsg && <span style={{ fontSize:10, color: clotureMsg.startsWith('Erreur') ? '#FECACA' : '#A7F3D0' }}>{clotureMsg}</span>}
           {canCloture && (
             <div onClick={cloturing ? undefined : handleCloture}
               style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:8, padding:'5px 10px', cursor: cloturing ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:6, opacity: cloturing ? 0.5 : 1, transition:'background 0.15s' }}
@@ -112,7 +112,7 @@ export default function Dashboard({ onNavigate, profil }) {
               </div>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Stat cards */}
