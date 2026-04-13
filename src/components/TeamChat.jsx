@@ -76,7 +76,7 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
   })
 
   return (
-    <div ref={chatRef} style={{ position:'fixed', bottom: isOpen ? 36 : -500, right:40, width:380, height:'60vh', background:'#fff', boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'bottom 0.3s ease', borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none' }}>
+    <div ref={chatRef} style={{ position:'fixed', bottom: isOpen ? 36 : '-100vh', right:40, width:380, height:'60vh', visibility: isOpen ? 'visible' : 'hidden', background:'#fff', boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'bottom 0.3s ease', borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none' }}>
 
       {/* Poke notification */}
       {pokeNotif && (
