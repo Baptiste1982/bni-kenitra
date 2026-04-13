@@ -65,24 +65,7 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
   })
 
   return (
-    <div style={{ position:'fixed', top:0, right: isOpen ? 0 : -360, width:360, height:'100vh', background:'#fff', boxShadow: isOpen ? '-4px 0 24px rgba(0,0,0,0.12)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'right 0.3s ease', borderLeft:'1px solid #E8E6E1' }}>
-
-      {/* Onglet replié sur le bord */}
-      <div onClick={isOpen ? onClose : undefined}
-        style={{ position:'absolute', left:-36, top:'50%', transform:'translateY(-50%)', width:36, height:80, background:'#1C1C2E', borderRadius:'10px 0 0 10px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'-2px 0 8px rgba(0,0,0,0.1)' }}>
-        <span style={{ fontSize:16, transform: isOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition:'transform 0.3s' }}>💬</span>
-        <span style={{ color:'#fff', fontSize:8, marginTop:2 }}>{isOpen ? '→' : '←'}</span>
-      </div>
-
-      {/* Header */}
-      <div style={{ background:'#1C1C2E', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <span style={{ fontSize:16 }}>💬</span>
-          <span style={{ color:'#fff', fontSize:14, fontWeight:700 }}>Chat Équipe</span>
-          <span style={{ fontSize:9, padding:'2px 6px', borderRadius:8, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.6)' }}>{messages.length}</span>
-        </div>
-        <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', width:26, height:26, borderRadius:'50%', cursor:'pointer', fontSize:12 }}>✕</button>
-      </div>
+    <div style={{ position:'fixed', bottom: isOpen ? 36 : -500, right:40, width:380, height:'60vh', background:'#fff', boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'bottom 0.3s ease', borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none' }}>
 
       {/* Poke notification */}
       {pokeNotif && (

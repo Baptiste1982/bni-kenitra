@@ -275,12 +275,13 @@ export default function App() {
       {/* Realtime alerts toast */}
       <RealtimeAlerts onNavigate={navigate} />
 
-      {/* Chat latéral */}
-      <div onClick={() => { if(!chatOpen) { setChatOpen(true); setUnreadChat(0) } }}
-        style={{ position:'fixed', right:0, top:'50%', transform:'translateY(-50%)', width: chatOpen ? 0 : 36, height:80, background:'#1C1C2E', borderRadius:'10px 0 0 10px', display: chatOpen ? 'none' : 'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'-2px 0 8px rgba(0,0,0,0.1)', zIndex:199 }}>
-        <span style={{ fontSize:16 }}>💬</span>
-        <span style={{ color:'#fff', fontSize:8, marginTop:2 }}>←</span>
-        {unreadChat > 0 && <div style={{ position:'absolute', top:-6, left:-6, width:20, height:20, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
+      {/* Chat — onglet en bas */}
+      <div onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
+        style={{ position:'fixed', bottom:0, right:40, width:200, padding:'8px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', boxShadow:'0 -2px 8px rgba(0,0,0,0.1)', zIndex:201 }}>
+        <span style={{ fontSize:14 }}>💬</span>
+        <span style={{ color:'#fff', fontSize:12, fontWeight:600 }}>Chat Équipe</span>
+        {unreadChat > 0 && <div style={{ width:18, height:18, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:9, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
+        <span style={{ color:'rgba(255,255,255,0.5)', fontSize:10, marginLeft:'auto' }}>{chatOpen ? '▼' : '▲'}</span>
       </div>
       <TeamChat profil={{...profil, id: user?.id}} isOpen={chatOpen} onClose={() => setChatOpen(false)} onlineUsers={onlineUsers} onNewMessage={() => { if(!chatOpen) setUnreadChat(prev => prev + 1) }} />
 
