@@ -5,7 +5,7 @@ import { fullName } from './ui'
 const ROLE_COLORS = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }
 const ROLE_ABBR = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }
 
-export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMessage }) {
+export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMessage, chatTabRef }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [showPoke, setShowPoke] = useState(false)
@@ -60,7 +60,9 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
   const chatRef = useRef(null)
   useEffect(() => {
     if (!isOpen) return
-    const handleClick = (e) => { if (chatRef.current && !chatRef.current.contains(e.target) && !e.target.closest('.chat-tab')) onClose() }
+    const handleClick = (e) => {
+      if (chatRef.current && !chatRef.current.contains(e.target) && (!chatTabRef?.current || !chatTabRef.current.contains(e.target))) onClose()
+    }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [isOpen, onClose])
