@@ -276,13 +276,13 @@ export default function App() {
       {/* Realtime alerts toast */}
       <RealtimeAlerts onNavigate={navigate} />
 
-      {/* Chat — onglet en bas */}
+      {/* Chat — onglet en haut */}
       <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
-        style={{ position:'fixed', bottom:0, right:40, width:200, padding:'8px 16px', background:'rgba(28,28,46,0.75)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', boxShadow:'0 -2px 8px rgba(0,0,0,0.1)', zIndex:201 }}>
-        <span style={{ fontSize:14 }}>💬</span>
-        <span style={{ color:'#fff', fontSize:12, fontWeight:600 }}>Chat Équipe</span>
-        {unreadChat > 0 && <div style={{ width:18, height:18, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:9, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
-        <span style={{ color:'rgba(255,255,255,0.5)', fontSize:10, marginLeft:'auto' }}>{chatOpen ? '▼' : '▲'}</span>
+        style={{ position:'fixed', top:10, right:16, padding:'4px 12px', background:'rgba(28,28,46,0.65)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:20, display:'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
+        onMouseEnter={e=>e.currentTarget.style.background='rgba(28,28,46,0.85)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(28,28,46,0.65)'}>
+        <span style={{ fontSize:12 }}>💬</span>
+        <span style={{ color:'#fff', fontSize:10, fontWeight:600 }}>Chat</span>
+        {unreadChat > 0 && <div style={{ width:15, height:15, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
       </div>
       <TeamChat profil={{...profil, id: user?.id}} isOpen={chatOpen} onClose={() => setChatOpen(false)} onlineUsers={onlineUsers} onNewMessage={() => { if(!chatOpen) setUnreadChat(prev => prev + 1) }} chatTabRef={chatTabRef} />
 
