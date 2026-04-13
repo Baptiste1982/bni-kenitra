@@ -8,6 +8,7 @@ import { Invites, Groupes, Reporting, AgentIA } from './components/modules'
 import SuiviHebdo from './components/SuiviHebdo'
 import AdminUsers from './components/AdminUsers'
 import Alertes from './components/Alertes'
+import TeamChat from './components/TeamChat'
 
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
 const ALL_MODULES = [
@@ -35,6 +36,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [alertCount, setAlertCount] = useState(4)
   const [onlineUsers, setOnlineUsers] = useState([])
+  const [chatOpen, setChatOpen] = useState(false)
+  const [unreadChat, setUnreadChat] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -271,6 +274,17 @@ export default function App() {
 
       {/* Realtime alerts toast */}
       <RealtimeAlerts onNavigate={navigate} />
+
+      {/* Chat flottant */}
+      {!chatOpen && (
+        <div onClick={() => { setChatOpen(true); setUnreadChat(0) }}
+          style={{ position:'fixed', bottom:24, right:24, width:56, height:56, borderRadius:'50%', background:'#1C1C2E', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 4px 20px rgba(0,0,0,0.25)', zIndex:199, transition:'transform 0.15s' }}
+          onMouseEnter={e=>e.currentTarget.style.transform='scale(1.1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+          <span style={{ fontSize:24 }}>💬</span>
+          {unreadChat > 0 && <div style={{ position:'absolute', top:-2, right:-2, width:20, height:20, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
+        </div>
+      )}
+      <TeamChat profil={{...profil, id: user?.id}} isOpen={chatOpen} onClose={() => setChatOpen(false)} onlineUsers={onlineUsers} />
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
