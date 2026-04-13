@@ -13,7 +13,6 @@
   --orange: #D97706;
   --rouge: #DC2626;
   --gris: #9CA3AF;
-  --font-display: 'Playfair Display', serif;
   --font-body: 'DM Sans', sans-serif;
   --sidebar-width: 220px;
 }
@@ -23,6 +22,7 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -32,7 +32,13 @@ body {
 
 .animate-in { animation: fadeIn 0.25s ease forwards; }
 button { cursor: pointer; font-family: var(--font-body); }
-input, textarea { font-family: var(--font-body); }
+input, textarea, select { font-family: var(--font-body); }
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D4D4D8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 
 /* ── Mobile overlay sidebar ──────────────────────────────── */
 .sidebar-overlay {
@@ -44,23 +50,66 @@ input, textarea { font-family: var(--font-body); }
 }
 .sidebar-overlay.open { display: block; }
 
-/* ── Responsive grid helpers ─────────────────────────────── */
+/* ── Mobile hamburger ───────────────────────────────────── */
+.mobile-topbar { display: none; }
+.hide-desktop { display: none; }
+
+/* ── Tables responsive ──────────────────────────────────── */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── RESPONSIVE MOBILE ──────────────────────────────────── */
 @media (max-width: 768px) {
   :root { --sidebar-width: 0px; }
-  
-  .cards-4 { grid-template-columns: 1fr 1fr !important; }
-  .cards-2 { grid-template-columns: 1fr !important; }
-  .cards-3 { grid-template-columns: 1fr !important; }
-  .pipeline-grid { grid-template-columns: 1fr 1fr !important; }
-  
+
+  /* Sidebar cachée */
   .hide-mobile { display: none !important; }
-  .page-pad { padding: 16px !important; }
-  
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 600px; }
+  .hide-desktop { display: flex !important; }
+  .mobile-topbar { display: flex !important; }
+
+  /* Contenu principal */
+  main > div { padding: 16px !important; }
+
+  /* Grilles responsive */
+  div[style*="gridTemplateColumns: 'repeat(4"] { grid-template-columns: 1fr 1fr !important; }
+  div[style*="gridTemplateColumns: 'repeat(5"] { grid-template-columns: 1fr 1fr !important; }
+  div[style*="gridTemplateColumns: 'repeat(6"] { grid-template-columns: 1fr 1fr !important; }
+  div[style*="gridTemplateColumns: '2fr 1fr"] { grid-template-columns: 1fr !important; }
+  div[style*="gridTemplateColumns: '1fr 1fr"] { grid-template-columns: 1fr !important; }
+
+  /* Tables scrollables */
+  table { min-width: 500px; }
+
+  /* PageHeader responsive */
+  div[style*="justifyContent:'space-between"][style*="alignItems:'flex-start"] {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* Chat box plus petit */
+  div[style*="width:380"] { width: calc(100vw - 20px) !important; right: 10px !important; }
+  div[style*="width:360"] { width: calc(100vw - 20px) !important; right: 10px !important; }
+
+  /* Bandeau mois */
+  div[style*="padding:'28px 32px'"] { padding: 16px !important; }
+
+  /* Titres plus petits */
+  h1 { font-size: 20px !important; }
+
+  /* Boutons cards en haut */
+  div[style*="display:'flex'"][style*="gap:8"] { flex-wrap: wrap !important; }
 }
 
 @media (max-width: 480px) {
-  .cards-4 { grid-template-columns: 1fr !important; }
-  .pipeline-grid { grid-template-columns: 1fr !important; }
+  /* Tout en une colonne */
+  div[style*="gridTemplateColumns"] { grid-template-columns: 1fr !important; }
+
+  /* Filtres wrap */
+  div[style*="flexWrap:'wrap'"] { gap: 4px !important; }
+
+  h1 { font-size: 18px !important; }
+}
+
+/* ── PWA safe areas ─────────────────────────────────────── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 }
