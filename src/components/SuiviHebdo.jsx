@@ -20,6 +20,7 @@ export default function SuiviHebdo() {
   const [rawText, setRawText] = useState('')
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
   const [nbReunions, setNbReunions] = useState(1)
+  const [showImport, setShowImport] = useState(false)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState(null)
   const [monthData, setMonthData] = useState([])
@@ -194,10 +195,17 @@ export default function SuiviHebdo() {
 
   return (
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
-      <PageHeader title="Suivi Hebdomadaire" sub={`Données PALMS intermédiaires — ${moisLabel}`} />
+      <PageHeader title="Suivi Hebdomadaire" sub={`Données PALMS intermédiaires — ${moisLabel}`}
+        right={
+          <button onClick={() => setShowImport(!showImport)}
+            style={{ padding:'9px 16px', background: showImport ? '#1C1C2E' : '#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+            {showImport ? '✕ Fermer' : '📥 Importer PALMS'}
+          </button>
+        }
+      />
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
-      <Card style={{ marginBottom: 24 }}>
+      {showImport && <Card style={{ marginBottom: 24 }}>
         <SectionTitle>Coller les données PALMS</SectionTitle>
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -229,10 +237,21 @@ export default function SuiviHebdo() {
           )}
           {result?.error && <span style={{ fontSize: 12, color: '#DC2626' }}>Erreur : {result.error}</span>}
         </div>
-      </Card>
+      </Card>}
 
       {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
-      <SectionTitle>Suivi du mois — {moisLabel} ({totalReunionsSaisies}/{nbJeudis} réunions saisies, {Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''})</SectionTitle>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', marginBottom:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize' }}>Suivi — {moisLabel}</span>
+          <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{totalReunionsSaisies}/{nbJeudis} réunions</span>
+          <div style={{ display:'flex', gap:3 }}>
+            {Array.from({length:nbJeudis}).map((_,i) => (
+              <div key={i} style={{ width:8, height:8, borderRadius:'50%', background: i < totalReunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+            ))}
+          </div>
+        </div>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
+      </div>
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
@@ -270,18 +289,32 @@ export default function SuiviHebdo() {
                 {sorted.map((m, i) => {
                   const mTat = manque(m.cumul.tat, objTat)
                   const mRefs = manque(m.cumul.refs, objRefs)
+                  // Couleur de fond basée sur l'activité globale
+                  const activity = m.cumul.tat + m.cumul.refs
+                  const rowBg = activity >= objTat ? '#D1FAE5' : activity > 0 ? '#FEF9C3' : m.cumul.presences === 0 ? '#FEE2E2' : '#F9FAFB'
+                  const nameCol = activity >= objTat ? '#065F46' : activity > 0 ? '#854D0E' : m.cumul.presences === 0 ? '#991B1B' : '#6B7280'
+                  // Couleur présence
+                  const presTotal = m.cumul.presences + m.cumul.absences
+                  const presBg = presTotal === 0 ? '#FEE2E2' : m.cumul.absences === 0 ? '#D1FAE5' : '#FEF9C3'
+                  const presCol = presTotal === 0 ? '#991B1B' : m.cumul.absences === 0 ? '#065F46' : '#854D0E'
+                  // Couleur TàT
+                  const tatBg = mTat === 0 ? '#D1FAE5' : mTat <= 2 ? '#FEF9C3' : '#FEE2E2'
+                  const tatCol = mTat === 0 ? '#065F46' : mTat <= 2 ? '#854D0E' : '#991B1B'
+                  // Couleur Reco
+                  const refsBg = mRefs === 0 ? '#D1FAE5' : mRefs <= 2 ? '#FEF9C3' : '#FEE2E2'
+                  const refsCol = mRefs === 0 ? '#065F46' : mRefs <= 2 ? '#854D0E' : '#991B1B'
                   return (
-                    <tr key={i} onMouseEnter={e => e.currentTarget.style.background = '#FAFAF8'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={tdName}>{fullName(m.prenom, m.nom)}</td>
-                      <td style={{ ...td, background: '#F7F6F3', fontWeight: 600 }}>{m.cumul.presences}/{m.cumul.presences + m.cumul.absences}</td>
+                    <tr key={i} style={{ background: rowBg }} onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                      <td style={{ ...tdName, color: nameCol, fontWeight: 600 }}>{fullName(m.prenom, m.nom)}</td>
+                      <td style={{ ...td, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{m.cumul.tat}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>
-                      <td style={{ ...td, fontWeight: 700, color: manqueColor(mTat) }}>{mTat === 0 ? '✓' : mTat}</td>
+                      <td style={{ ...td, fontWeight: 700, background: tatBg, color: tatCol }}>{mTat === 0 ? '✓' : mTat}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{m.cumul.refs}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>
-                      <td style={{ ...td, fontWeight: 700, color: manqueColor(mRefs) }}>{mRefs === 0 ? '✓' : mRefs}</td>
+                      <td style={{ ...td, fontWeight: 700, background: refsBg, color: refsCol }}>{mRefs === 0 ? '✓' : mRefs}</td>
                       <td style={td}>{m.cumul.invites}</td>
-                      <td style={td}>{Number(m.cumul.mpb).toLocaleString('fr-FR')}</td>
+                      <td style={{ ...td, fontWeight: 600, color: m.cumul.mpb > 0 ? '#065F46' : '#9CA3AF' }}>{Number(m.cumul.mpb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                       <td style={td}>{m.cumul.ueg}</td>
                     </tr>
                   )
