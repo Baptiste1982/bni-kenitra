@@ -5,51 +5,58 @@ import { fullName } from './ui'
 const ROLE_COLORS = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }
 const ROLE_ABBR = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }
 
-export default function TeamChat({ profil, isOpen, onClose, onlineUsers }) {
+export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMessage }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [showPoke, setShowPoke] = useState(false)
+  const [pokeTarget, setPokeTarget] = useState(null)
   const [pokeNotif, setPokeNotif] = useState(null)
   const msgsRef = useRef(null)
+  const inputRef = useRef(null)
   const userId = profil?.id || null
 
-  // Charger les messages
   useEffect(() => {
-    if (!isOpen) return
     supabase.from('team_messages').select('*').order('created_at', { ascending: true }).limit(100)
       .then(({ data }) => { setMessages(data || []); scrollBottom() })
 
-    // Écouter les nouveaux messages en temps réel
     const channel = supabase.channel('team-chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, payload => {
         setMessages(prev => [...prev, payload.new])
         scrollBottom()
-        // Notification si poke pour moi
-        if (payload.new.poke_user_id === userId) {
-          setPokeNotif(payload.new)
-          setTimeout(() => setPokeNotif(null), 5000)
+        if (payload.new.user_id !== userId) {
+          if (onNewMessage) onNewMessage()
+          if (payload.new.poke_user_id === userId) {
+            setPokeNotif(payload.new)
+            setTimeout(() => setPokeNotif(null), 5000)
+          }
         }
       }).subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [isOpen, userId])
+  }, [userId])
 
   const scrollBottom = () => setTimeout(() => { if (msgsRef.current) msgsRef.current.scrollTop = msgsRef.current.scrollHeight }, 50)
 
-  const sendMessage = async (pokeUserId, pokePrenom) => {
+  const sendMessage = async () => {
     const msg = input.trim()
     if (!msg || !profil) return
     await supabase.from('team_messages').insert({
       user_id: userId, prenom: profil.prenom, nom: profil.nom, role: profil.role,
-      message: msg, poke_user_id: pokeUserId || null, poke_prenom: pokePrenom || null,
+      message: msg, poke_user_id: pokeTarget?.id || null, poke_prenom: pokeTarget?.prenom || null,
     })
     setInput('')
+    setPokeTarget(null)
     setShowPoke(false)
   }
 
-  if (!isOpen) return null
+  const handlePoke = (u) => {
+    setPokeTarget(u)
+    setInput(prev => `@${u.prenom} ${prev}`)
+    setShowPoke(false)
+    inputRef.current?.focus()
+  }
 
-  // Grouper les messages par jour
+  // Grouper par jour
   const groupByDay = {}
   messages.forEach(m => {
     const day = new Date(m.created_at).toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
@@ -58,10 +65,17 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers }) {
   })
 
   return (
-    <div style={{ position:'fixed', bottom:20, right:20, width:380, maxHeight:'70vh', background:'#fff', borderRadius:16, boxShadow:'0 8px 32px rgba(0,0,0,0.15)', display:'flex', flexDirection:'column', zIndex:200, overflow:'hidden', border:'1px solid #E8E6E1' }}>
+    <div style={{ position:'fixed', top:0, right: isOpen ? 0 : -360, width:360, height:'100vh', background:'#fff', boxShadow: isOpen ? '-4px 0 24px rgba(0,0,0,0.12)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'right 0.3s ease', borderLeft:'1px solid #E8E6E1' }}>
+
+      {/* Onglet replié sur le bord */}
+      <div onClick={isOpen ? onClose : undefined}
+        style={{ position:'absolute', left:-36, top:'50%', transform:'translateY(-50%)', width:36, height:80, background:'#1C1C2E', borderRadius:'10px 0 0 10px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'-2px 0 8px rgba(0,0,0,0.1)' }}>
+        <span style={{ fontSize:16, transform: isOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition:'transform 0.3s' }}>💬</span>
+        <span style={{ color:'#fff', fontSize:8, marginTop:2 }}>{isOpen ? '→' : '←'}</span>
+      </div>
 
       {/* Header */}
-      <div style={{ background:'#1C1C2E', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:'#1C1C2E', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <span style={{ fontSize:16 }}>💬</span>
           <span style={{ color:'#fff', fontSize:14, fontWeight:700 }}>Chat Équipe</span>
@@ -72,14 +86,14 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers }) {
 
       {/* Poke notification */}
       {pokeNotif && (
-        <div style={{ padding:'10px 16px', background:'#FEF3C7', borderBottom:'1px solid #FDE68A', display:'flex', alignItems:'center', gap:8, animation:'fadeIn 0.3s' }}>
+        <div style={{ padding:'10px 16px', background:'#FEF3C7', borderBottom:'1px solid #FDE68A', display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:14 }}>👋</span>
           <span style={{ fontSize:12, fontWeight:600, color:'#854D0E' }}>{fullName(pokeNotif.prenom, pokeNotif.nom)} vous mentionne !</span>
         </div>
       )}
 
       {/* Messages */}
-      <div ref={msgsRef} style={{ flex:1, overflowY:'auto', padding:'12px 14px', maxHeight:'45vh' }}>
+      <div ref={msgsRef} style={{ flex:1, overflowY:'auto', padding:'12px 14px' }}>
         {Object.entries(groupByDay).map(([day, dayMsgs]) => (
           <div key={day}>
             <div style={{ textAlign:'center', margin:'12px 0 8px' }}>
@@ -94,7 +108,7 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers }) {
                   {!isMe && (
                     <div style={{ width:28, height:28, borderRadius:'50%', background:rc+'33', border:`1.5px solid ${rc}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:rc, flexShrink:0, marginTop:2 }}>{ROLE_ABBR[m.role]||'?'}</div>
                   )}
-                  <div style={{ maxWidth:'70%' }}>
+                  <div style={{ maxWidth:'75%' }}>
                     {!isMe && <div style={{ fontSize:10, fontWeight:600, color:rc, marginBottom:2 }}>{fullName(m.prenom, m.nom)}</div>}
                     {m.poke_prenom && (
                       <div style={{ fontSize:9, color:'#D97706', marginBottom:2 }}>👋 @{m.poke_prenom}</div>
@@ -113,13 +127,13 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers }) {
 
       {/* Poke selector */}
       {showPoke && (
-        <div style={{ padding:'8px 14px', borderTop:'1px solid #E8E6E1', background:'#F7F6F3' }}>
-          <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', marginBottom:6 }}>Mentionner un membre :</div>
+        <div style={{ padding:'8px 14px', borderTop:'1px solid #E8E6E1', background:'#F7F6F3', flexShrink:0 }}>
+          <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', marginBottom:6 }}>Mentionner :</div>
           <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
             {(onlineUsers || []).filter(u => u.id !== userId).map(u => {
               const rc = ROLE_COLORS[u.role] || '#6B7280'
               return (
-                <button key={u.id} onClick={() => sendMessage(u.id, u.prenom)}
+                <button key={u.id} onClick={() => handlePoke(u)}
                   style={{ padding:'4px 10px', borderRadius:16, border:`1px solid ${rc}`, background:rc+'22', color:rc, fontSize:10, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
                   👋 {u.prenom}
                 </button>
@@ -130,15 +144,23 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers }) {
         </div>
       )}
 
+      {/* Poke target indicator */}
+      {pokeTarget && (
+        <div style={{ padding:'4px 14px', background:'#FEF3C7', display:'flex', alignItems:'center', gap:6, fontSize:10, color:'#854D0E', flexShrink:0 }}>
+          👋 @{pokeTarget.prenom}
+          <button onClick={() => setPokeTarget(null)} style={{ background:'none', border:'none', color:'#854D0E', cursor:'pointer', fontSize:12 }}>✕</button>
+        </div>
+      )}
+
       {/* Input */}
-      <div style={{ padding:'10px 14px', borderTop:'1px solid #E8E6E1', display:'flex', gap:8, alignItems:'center' }}>
+      <div style={{ padding:'10px 14px', borderTop:'1px solid #E8E6E1', display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
         <button onClick={() => setShowPoke(!showPoke)} title="Mentionner"
           style={{ width:32, height:32, borderRadius:'50%', border:'1px solid #E8E6E1', background: showPoke ? '#FEF3C7' : '#fff', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>👋</button>
-        <input value={input} onChange={e => setInput(e.target.value)}
+        <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
           placeholder="Écrire un message..."
           style={{ flex:1, padding:'8px 12px', border:'1px solid #E8E6E1', borderRadius:20, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none' }} />
-        <button onClick={() => sendMessage()} disabled={!input.trim()}
+        <button onClick={sendMessage} disabled={!input.trim()}
           style={{ width:32, height:32, borderRadius:'50%', background: input.trim() ? '#C41E3A' : '#E8E6E1', border:'none', cursor: input.trim() ? 'pointer' : 'default', color:'#fff', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>↑</button>
       </div>
     </div>

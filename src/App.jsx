@@ -275,16 +275,14 @@ export default function App() {
       {/* Realtime alerts toast */}
       <RealtimeAlerts onNavigate={navigate} />
 
-      {/* Chat flottant */}
-      {!chatOpen && (
-        <div onClick={() => { setChatOpen(true); setUnreadChat(0) }}
-          style={{ position:'fixed', bottom:24, right:24, width:56, height:56, borderRadius:'50%', background:'#1C1C2E', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 4px 20px rgba(0,0,0,0.25)', zIndex:199, transition:'transform 0.15s' }}
-          onMouseEnter={e=>e.currentTarget.style.transform='scale(1.1)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
-          <span style={{ fontSize:24 }}>💬</span>
-          {unreadChat > 0 && <div style={{ position:'absolute', top:-2, right:-2, width:20, height:20, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
-        </div>
-      )}
-      <TeamChat profil={{...profil, id: user?.id}} isOpen={chatOpen} onClose={() => setChatOpen(false)} onlineUsers={onlineUsers} />
+      {/* Chat latéral */}
+      <div onClick={() => { if(!chatOpen) { setChatOpen(true); setUnreadChat(0) } }}
+        style={{ position:'fixed', right:0, top:'50%', transform:'translateY(-50%)', width: chatOpen ? 0 : 36, height:80, background:'#1C1C2E', borderRadius:'10px 0 0 10px', display: chatOpen ? 'none' : 'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'-2px 0 8px rgba(0,0,0,0.1)', zIndex:199 }}>
+        <span style={{ fontSize:16 }}>💬</span>
+        <span style={{ color:'#fff', fontSize:8, marginTop:2 }}>←</span>
+        {unreadChat > 0 && <div style={{ position:'absolute', top:-6, left:-6, width:20, height:20, borderRadius:'50%', background:'#C41E3A', color:'#fff', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadChat}</div>}
+      </div>
+      <TeamChat profil={{...profil, id: user?.id}} isOpen={chatOpen} onClose={() => setChatOpen(false)} onlineUsers={onlineUsers} onNewMessage={() => { if(!chatOpen) setUnreadChat(prev => prev + 1) }} />
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
