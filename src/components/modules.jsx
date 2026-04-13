@@ -174,9 +174,18 @@ export function Invites() {
             onMouseEnter={e=>e.currentTarget.style.background='#2D2D42'} onMouseLeave={e=>e.currentTarget.style.background='#1C1C2E'}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize', letterSpacing:'0.02em' }}>{month}</span>
-              <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''}</span>
+              <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''} · {Math.round(monthInvites.length/total*100)}%</span>
             </div>
-            <span style={{ color:'rgba(255,255,255,0.5)', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>▼</span>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {(() => {
+                const mStats = {}
+                monthInvites.forEach(inv => { const c = statutColors[inv.statut] || 'gris'; mStats[c] = (mStats[c]||0) + 1 })
+                return Object.entries(mStats).map(([c, n]) => (
+                  <span key={c} style={{ fontSize:9, fontWeight:600, padding:'2px 7px', borderRadius:8, background:COULEURS[c]?.bg || '#F3F4F6', color:COULEURS[c]?.color || '#4B5563' }}>{n}</span>
+                ))
+              })()}
+              <span style={{ color:'rgba(255,255,255,0.5)', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
+            </div>
           </div>
           {!isCollapsed && <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
