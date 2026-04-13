@@ -223,19 +223,29 @@ export default function AdminUsers() {
               const m = diffMin % 60
               return `${h}h${m > 0 ? m.toString().padStart(2,'0') : ''}`
             }
-            // Calculer la durée de session (login → prochain logout ou login du même user)
-            const getDuration = (userId, connectedAt, index) => {
-              const loginTime = new Date(connectedAt)
-              // Chercher le prochain événement du même user dans les logs (logs sont triés desc)
-              const olderLogs = logs.slice(index + 1)
-              const nextSameUser = logs.slice(0, index).find(l => l.user_id === userId)
-              if (nextSameUser) {
-                const diffMin = Math.round((new Date(nextSameUser.connected_at) - loginTime) / 60000)
-                if (Math.abs(diffMin) > 1440) return null
-                return formatDuration(Math.abs(diffMin))
+            // Calculer la durée de session
+            const getDuration = (l, allLogs) => {
+              if (l.action !== 'login') return null
+              const loginTime = new Date(l.connected_at)
+              // Chercher le logout correspondant (même user, après ce login, avant le prochain login)
+              const laterLogs = allLogs.filter(x => x.user_id === l.user_id && new Date(x.connected_at) > loginTime)
+              const logout = laterLogs.find(x => x.action === 'logout')
+              const nextLogin = laterLogs.find(x => x.action === 'login')
+
+              if (logout) {
+                // Logout trouvé
+                const diffMin = Math.round((new Date(logout.connected_at) - loginTime) / 60000)
+                return formatDuration(diffMin)
               }
-              // Pas de prochain événement — session peut-être en cours
+              if (nextLogin) {
+                // Pas de logout mais un login suivant = session terminée sans logout
+                const diffMin = Math.round((new Date(nextLogin.connected_at) - loginTime) / 60000)
+                if (diffMin > 1440) return null
+                return formatDuration(diffMin)
+              }
+              // Dernière session — vérifier si c'est la session en cours (< 5 min)
               const diffMin = Math.round((new Date() - loginTime) / 60000)
+              if (diffMin < 5) return '🟢 En cours'
               if (diffMin > 1440) return null
               return formatDuration(diffMin)
             }
@@ -264,7 +274,7 @@ export default function AdminUsers() {
                       const isLogin = l.action === 'login'
                       const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[l.role] || '?'
                       const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[l.role] || '#6B7280'
-                      const duration = isLogin ? getDuration(l.user_id, l.connected_at, entries.indexOf(l)) : null
+                      const duration = isLogin ? getDuration(l, logs) : null
                       return (
                         <div key={i} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, position:'relative' }}>
                           <div style={{ position:'absolute', left:-22, width:10, height:10, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
