@@ -311,7 +311,8 @@ export default function AdminUsers() {
                       <span style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginLeft:4, transition:'transform 0.2s', transform: isDayOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                     </div>
                   </div>
-                  {isDayOpen && <div style={{ background:'#fff', border:'1px solid #E8E6E1', borderTop:'none', borderRadius:'0 0 10px 10px', padding:'12px 14px' }}>
+                  {isDayOpen && <div style={{ background:'#fff', border:'1px solid #E8E6E1', borderTop:'none', borderRadius:'0 0 10px 10px', padding:'12px 14px 12px 0' }}>
+                    <div style={{ marginLeft:12, borderLeft:'2px solid #D1FAE5', paddingLeft:20 }}>
                   {Object.entries(users).map(([uid, u], idx) => {
                     const logins = u.events.filter(e => e.action === 'login')
                     const firstLogin = logins.length > 0 ? new Date(logins[logins.length-1].connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—'
@@ -319,15 +320,8 @@ export default function AdminUsers() {
                     const rc = roleCol(u.role)
                     const isExpanded = expandedKpi === `log-${day}-${uid}`
                     return (
-                      <React.Fragment key={uid}>
-                        {idx > 0 && (
-                          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:3, padding:'4px 0', marginLeft:23 }}>
-                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
-                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
-                            <span style={{ width:4, height:4, borderRadius:'50%', background:'#059669' }} />
-                          </div>
-                        )}
-                      <div style={{ marginBottom:4 }}>
+                      <div key={uid} style={{ marginBottom:8, position:'relative' }}>
+                        <div style={{ position:'absolute', left:-28, top:8, width:10, height:10, borderRadius:'50%', background:'#059669', border:'2px solid #fff' }} />
                         <div onClick={() => setExpandedKpi(isExpanded ? null : `log-${day}-${uid}`)}
                           style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderRadius:8, background: isExpanded ? '#F7F6F3' : '#fff', border:'1px solid #E8E6E1', cursor:'pointer' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e=>{ if(!isExpanded) e.currentTarget.style.background='#fff' }}>
@@ -340,14 +334,14 @@ export default function AdminUsers() {
                           <span style={{ fontSize:10, color:'#9CA3AF' }}>{isExpanded ? '▲' : '▼'}</span>
                         </div>
                         {isExpanded && (
-                          <div style={{ marginLeft:20, borderLeft:'2px solid #E8E6E1', paddingLeft:14, marginTop:4 }}>
+                          <div style={{ paddingLeft:36, marginTop:6 }}>
                             {u.events.map((l, i) => {
                               const time = new Date(l.connected_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
                               const isLogin = l.action === 'login'
                               const duration = isLogin ? getDuration(l, logs) : null
                               return (
-                                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, position:'relative' }}>
-                                  <div style={{ position:'absolute', left:-20, width:8, height:8, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', border:'2px solid #fff' }} />
+                                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                                  <div style={{ width:6, height:6, borderRadius:'50%', background: isLogin ? '#059669' : '#DC2626', flexShrink:0 }} />
                                   <span style={{ fontSize:10, color:'#9CA3AF', width:55, flexShrink:0 }}>{time}</span>
                                   <span style={{ fontSize:10, fontWeight:600, padding:'1px 5px', borderRadius:4, background: isLogin ? '#D1FAE5' : '#FEE2E2', color: isLogin ? '#065F46' : '#991B1B' }}>{isLogin ? 'Connexion' : 'Déconnexion'}</span>
                                   {duration && <span style={{ fontSize:9, fontWeight:500, padding:'1px 6px', borderRadius:4, background:'#EDE9FE', color:'#5B21B6' }}>⏱ {duration}</span>}
@@ -357,9 +351,9 @@ export default function AdminUsers() {
                           </div>
                         )}
                       </div>
-                      </React.Fragment>
                     )
                   })}
+                    </div>
                   </div>}
                 </div>
               )
