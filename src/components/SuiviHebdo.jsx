@@ -45,6 +45,8 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const [palmsInitResult, setPalmsInitResult] = useState(null)
   const [palmsInitError, setPalmsInitError] = useState('')
   const [palmsInitExists, setPalmsInitExists] = useState(false)
+  const [palmsInitData, setPalmsInitData] = useState([])
+  const [showPalmsInitData, setShowPalmsInitData] = useState(false)
   const palmsInitFileRef = useRef(null)
 
   const now = new Date()
@@ -76,11 +78,15 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
     setLoading(false)
   }
 
-  // Vérifier si l'import initial PALMS existe déjà
-  useEffect(() => {
-    supabase.from('palms_imports').select('id').eq('periode_debut', '2025-12-12').limit(1)
-      .then(({ data }) => setPalmsInitExists((data || []).length > 0))
-  }, [groupeCode])
+  // Vérifier si l'import initial PALMS existe déjà + charger les données
+  const loadPalmsInit = async () => {
+    const { data } = await supabase.from('palms_imports').select('*, membres(prenom, nom)').eq('periode_debut', '2025-12-12').order('mpb', { ascending: false })
+    const exists = (data || []).length > 0
+    setPalmsInitExists(exists)
+    setPalmsInitData(data || [])
+    if (exists) setShowPalmsInitData(true)
+  }
+  useEffect(() => { loadPalmsInit() }, [groupeCode])
 
   // Parser XML PALMS (même logique que PalmsImport)
   const parseXML = (text) => {
@@ -173,6 +179,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       try { scoreResult = await recalculateScores(groupeCode) } catch (e) { console.error('[PALMS Init] Erreur recalcul:', e) }
       setPalmsInitResult({ imported, skipped, total: rows.length, scoreResult })
       setPalmsInitExists(true)
+      await loadPalmsInit()
       await loadMonth()
     } catch (err) {
       setPalmsInitError('Erreur : ' + err.message)
@@ -405,11 +412,72 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           </div>
 
           {palmsInitExists && (
-            <div style={{ padding:'10px 14px', background:'#D1FAE5', border:'1px solid #A7F3D0', borderRadius:8, marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:16 }}>✅</span>
-              <div>
-                <div style={{ fontSize:12, fontWeight:600, color:'#065F46' }}>Import initial déjà effectué</div>
-                <div style={{ fontSize:11, color:'#059669' }}>Vous pouvez ré-importer pour écraser les données existantes.</div>
+            <div style={{ padding:'10px 14px', background:'#D1FAE5', border:'1px solid #A7F3D0', borderRadius:8, marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:16 }}>✅</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:600, color:'#065F46' }}>Import initial déjà effectué — {palmsInitData.length} membres</div>
+                  <div style={{ fontSize:11, color:'#059669' }}>Vous pouvez ré-importer pour écraser les données existantes.</div>
+                </div>
+              </div>
+              <button onClick={() => setShowPalmsInitData(!showPalmsInitData)}
+                style={{ fontSize:11, fontWeight:600, padding:'4px 12px', borderRadius:6, border:'1px solid #A7F3D0', background: showPalmsInitData ? '#065F46' : '#fff', color: showPalmsInitData ? '#fff' : '#065F46', cursor:'pointer', fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>
+                {showPalmsInitData ? '▲ Masquer' : '▼ Consulter'}
+              </button>
+            </div>
+          )}
+
+          {/* Tableau de consultation des données importées */}
+          {showPalmsInitData && palmsInitData.length > 0 && (
+            <div style={{ marginBottom:12, border:'1px solid #E8E6E1', borderRadius:10, overflow:'hidden' }}>
+              <div style={{ padding:'10px 16px', background:'#1C1C2E', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>📊 Données PALMS consolidées — 12/12/2025 → 31/03/2026</span>
+                <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{palmsInitData.length} membres</span>
+              </div>
+              <div style={{ overflowX:'auto', background:'#fff' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead><tr>{['Membre','P','A','L','M','S','RDI','RDE','RRI','RRE','Inv.','TàT','MPB','CEU'].map(h => (
+                    <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', whiteSpace:'nowrap' }}>{h}</th>
+                  ))}</tr></thead>
+                  <tbody>
+                    {palmsInitData.map((d, i) => {
+                      const totalR = (d.presences||0) + (d.absences||0)
+                      const presRate = totalR > 0 ? (d.presences||0) / totalR : 0
+                      const presBg = presRate >= 0.95 ? '#D1FAE5' : presRate >= 0.88 ? '#FEF9C3' : '#FEE2E2'
+                      const presCol = presRate >= 0.95 ? '#065F46' : presRate >= 0.88 ? '#854D0E' : '#991B1B'
+                      return (
+                        <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500, whiteSpace:'nowrap' }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, background:presBg, color:presCol }}>{d.presences||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color: (d.absences||0) > 0 ? '#DC2626' : '#9CA3AF' }}>{d.absences||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{d.late||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{d.makeup||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{d.substitut||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.rdi||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.rde||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rri||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rre||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.invites||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(d.tat||0).toFixed(1)}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: Number(d.mpb||0) > 0 ? '#065F46' : '#9CA3AF' }}>{Number(d.mpb||0).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.ueg||0}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop:'2px solid #E8E6E1', background:'#F9F8F6' }}>
+                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:700 }}>Total</td>
+                      {['presences','absences','late','makeup','substitut','rdi','rde','rri','rre','invites'].map(k => (
+                        <td key={k} style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700 }}>{palmsInitData.reduce((s,d) => s + (d[k]||0), 0)}</td>
+                      ))}
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700 }}>{palmsInitData.reduce((s,d) => s + Number(d.tat||0), 0).toFixed(1)}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700, color:'#065F46' }}>{palmsInitData.reduce((s,d) => s + Number(d.mpb||0), 0).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700 }}>{palmsInitData.reduce((s,d) => s + (d.ueg||0), 0)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
           )}
