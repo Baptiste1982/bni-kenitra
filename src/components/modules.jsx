@@ -25,7 +25,7 @@ export function Invites({ profil }) {
   const [statutColors, setStatutColors] = useState({})
   const [columnAccess, setColumnAccess] = useState({})
   const [showAccessConfig, setShowAccessConfig] = useState(false)
-  const [collapsedMonths, setCollapsedMonths] = useState({})
+  const [collapsedMonths, setCollapsedMonths] = useState(null)
   const [showCommentaires, setShowCommentaires] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const isMobile = window.innerWidth <= 768
@@ -51,22 +51,18 @@ export function Invites({ profil }) {
 
   useEffect(() => { load() }, [])
 
-  // Replier tous les mois sauf le mois en cours
+  // Replier tous les mois sauf le mois en cours (une seule fois au chargement)
   useEffect(() => {
-    if (!invites.length) return
+    if (!invites.length || collapsedMonths !== null) return
     const now = new Date()
     const currentMonth = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
-    const allMonths = {}
+    const collapsed = {}
     invites.forEach(inv => {
       const d = inv.date_visite ? new Date(inv.date_visite + 'T12:00:00') : null
       const key = d ? d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' }) : 'Sans date'
-      if (key !== currentMonth) allMonths[key] = true
+      if (key !== currentMonth) collapsed[key] = true
     })
-    setCollapsedMonths(prev => {
-      // Ne pas écraser si déjà initialisé
-      if (Object.keys(prev).length > 0) return prev
-      return allMonths
-    })
+    setCollapsedMonths(collapsed)
   }, [invites])
 
   const COULEURS = {
@@ -472,10 +468,10 @@ export function Invites({ profil }) {
         const months = Object.entries(byMonth).sort((a,b) => b[1].sortKey.localeCompare(a[1].sortKey))
 
         return months.map(([month, { invites: monthInvites }]) => {
-        const isCollapsed = collapsedMonths[month]
+        const isCollapsed = (collapsedMonths || {})[month]
         return (
         <div key={month} style={{ marginBottom:16 }}>
-          <div onClick={() => setCollapsedMonths(prev => ({...prev, [month]: !prev[month]}))}
+          <div onClick={() => setCollapsedMonths(prev => ({...(prev||{}), [month]: !(prev||{})[month]}))}
             style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 18px', background:'#1C1C2E', borderRadius: isCollapsed ? 10 : '10px 10px 0 0', cursor:'pointer', userSelect:'none' }}
             onMouseEnter={e=>e.currentTarget.style.background='#2D2D42'} onMouseLeave={e=>e.currentTarget.style.background='#1C1C2E'}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
