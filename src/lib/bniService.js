@@ -105,13 +105,13 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
   console.log(`[recalculateScores] Période 6m: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis), Mois: ${premierJourMois} (${nbJeudisMois} jeudis), PALMS importé le ${palmsImportDate}`)
 
-  // 4. Charger scores existants pour récupérer sponsors
-  const { data: existingScores } = await supabase
-    .from('scores_bni')
-    .select('membre_id, sponsors, sponsor_score')
+  // 4. Charger BNI Insight (Sponsors + CEU Rate) — source prioritaire
+  const { data: insightData } = await supabase
+    .from('bni_insight_imports')
+    .select('membre_id, sponsors, ceu_rate')
     .eq('groupe_id', groupeId)
-  const sponsorMap = {}
-  ;(existingScores || []).forEach(s => { sponsorMap[s.membre_id] = { sponsors: s.sponsors || 0, score: Number(s.sponsor_score) || 0 } })
+  const insightMap = {}
+  ;(insightData || []).forEach(d => { insightMap[d.membre_id] = { sponsors: d.sponsors || 0, ceu_rate: Number(d.ceu_rate) || 0 } })
 
   // 5. Charger les membres pour matcher invite_par_nom → membre_id
   const { data: membres } = await supabase
@@ -146,6 +146,13 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
     const rateUeg = ueg / nbSemaines
 
+    // ── BNI INSIGHT : CEU Rate et Sponsors (source prioritaire si importé) ──
+    const insight = insightMap[p.membre_id] || { sponsors: 0, ceu_rate: 0 }
+    // CEU : BNI Insight rate si disponible, sinon calcul depuis PALMS+hebdo
+    const finalCeuRate = insight.ceu_rate > 0 ? insight.ceu_rate : rateUeg
+    // Sponsors : depuis BNI Insight
+    const finalSponsors = insight.sponsors
+
     // ── INDICATEURS MENSUELS : mois courant UNIQUEMENT (hebdo) ──
     const tatMois = h.moisCourant.tat
     const refsMois = h.moisCourant.rdi + h.moisCourant.rde
@@ -162,10 +169,12 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const visitorScore = visitors >= 5 ? 25 : visitors >= 4 ? 20 : visitors >= 3 ? 15 : visitors >= 2 ? 10 : visitors >= 1 ? 5 : 0
     const tyfcbK = tyfcb / 1000
     const tyfcbScore = tyfcbK >= 30 ? 5 : tyfcbK >= 15 ? 4 : tyfcbK >= 5 ? 3 : tyfcbK >= 2 ? 2 : tyfcb > 0 ? 1 : 0
-    const ceuScore = rateUeg > 0.5 ? 10 : rateUeg > 0 ? 5 : 0
-    const sp = sponsorMap[p.membre_id] || { sponsors: 0, score: 0 }
+    // CEU /10 (6 mois) : >0.5→10, >0→5, 0→0
+    const ceuScore = finalCeuRate > 0.5 ? 10 : finalCeuRate > 0 ? 5 : 0
+    // Sponsors /5 (6 mois) : 1+→5, 0→0
+    const sponsorScore = finalSponsors >= 1 ? 5 : 0
 
-    const totalScore = attendanceScore + score121 + refsScore + visitorScore + tyfcbScore + ceuScore + sp.score
+    const totalScore = attendanceScore + score121 + refsScore + visitorScore + tyfcbScore + ceuScore + sponsorScore
     const trafficLight = totalScore >= 70 ? 'vert' : totalScore >= 50 ? 'orange' : totalScore >= 30 ? 'rouge' : 'gris'
 
     return {
@@ -183,10 +192,10 @@ export async function recalculateScores(groupeCode = 'MK-01') {
       visitor_score: visitorScore,
       tyfcb,
       tyfcb_score: tyfcbScore,
-      ceu_rate: rateUeg,
+      ceu_rate: finalCeuRate,
       ceu_score: ceuScore,
-      sponsors: sp.sponsors,
-      sponsor_score: sp.score,
+      sponsors: finalSponsors,
+      sponsor_score: sponsorScore,
       periode_debut: periodeDebut,
       periode_fin: aujourdHui,
     }

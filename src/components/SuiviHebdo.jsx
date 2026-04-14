@@ -47,10 +47,16 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const [palmsInitExists, setPalmsInitExists] = useState(false)
   const [palmsInitData, setPalmsInitData] = useState([])
   const [showPalmsInitData, setShowPalmsInitData] = useState(false)
+  const [showInsight, setShowInsight] = useState(false)
+  const [insightLoading, setInsightLoading] = useState(false)
+  const [insightResult, setInsightResult] = useState(null)
+  const [insightData, setInsightData] = useState([])
   const palmsInitFileRef = useRef(null)
+  const insightFileRef = useRef(null)
   const palmsInitPanelRef = useRef(null)
   const archivesPanelRef = useRef(null)
   const importPanelRef = useRef(null)
+  const insightPanelRef = useRef(null)
   const headerBtnsRef = useRef(null)
 
   // Click outside pour replier les accordéons (exclut les boutons header)
@@ -60,10 +66,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       if (showPalmsInit && palmsInitPanelRef.current && !palmsInitPanelRef.current.contains(e.target)) setShowPalmsInit(false)
       if (showArchives && archivesPanelRef.current && !archivesPanelRef.current.contains(e.target)) setShowArchives(false)
       if (showImport && importPanelRef.current && !importPanelRef.current.contains(e.target)) setShowImport(false)
+      if (showInsight && insightPanelRef.current && !insightPanelRef.current.contains(e.target)) setShowInsight(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showPalmsInit, showArchives, showImport])
+  }, [showPalmsInit, showArchives, showImport, showInsight])
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -201,6 +208,87 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       setPalmsInitError('Erreur : ' + err.message)
     }
     setPalmsInitLoading(false)
+  }
+
+  // ── Charger les données BNI Insight existantes ──
+  const loadInsightData = async () => {
+    const { data } = await supabase.from('bni_insight_imports').select('*, membres(prenom, nom)').order('imported_at', { ascending: false })
+    setInsightData(data || [])
+  }
+
+  // ── Import BNI Insight CSV (Sponsors + CEU Rate) ──
+  const handleInsightImport = async (file) => {
+    if (!file) return
+    setInsightLoading(true)
+    setInsightResult(null)
+    try {
+      const text = await file.text()
+      const membres = await fetchMembresForMatch(groupeCode)
+
+      // Parser CSV avec gestion des champs entre guillemets (ex: "MK-01 KENITRA ATLANTIQUE,MA")
+      const parseCSVLine = (line) => {
+        const result = []
+        let current = '', inQuotes = false
+        for (const ch of line) {
+          if (ch === '"') { inQuotes = !inQuotes }
+          else if (ch === ',' && !inQuotes) { result.push(current.trim()); current = '' }
+          else { current += ch }
+        }
+        result.push(current.trim())
+        return result
+      }
+
+      const lines = text.split('\n').filter(l => l.trim())
+      const headers = parseCSVLine(lines[0])
+      const nameIdx = headers.indexOf('Name')
+      const sponsorsIdx = headers.indexOf('Sponsors')
+      const ceuRateIdx = headers.indexOf('CEU Rate')
+
+      if (nameIdx === -1 || sponsorsIdx === -1 || ceuRateIdx === -1) {
+        throw new Error('Colonnes manquantes : Name, Sponsors ou CEU Rate introuvables')
+      }
+
+      const rows = []
+      let matched = 0
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i])
+        if (cols.length <= nameIdx) continue
+        const fullNameStr = cols[nameIdx]
+        const parts = fullNameStr.trim().split(/\s+/)
+        const nom = parts.pop()
+        const prenom = parts.join(' ')
+        const m = matchMembre(prenom, nom, membres)
+        if (m) {
+          matched++
+          rows.push({
+            groupe_id: m.groupe_id,
+            membre_id: m.id,
+            sponsors: parseInt(cols[sponsorsIdx]) || 0,
+            ceu_rate: parseFloat(cols[ceuRateIdx]) || 0,
+            periode_debut: null,
+            periode_fin: null,
+            imported_at: new Date().toISOString(),
+          })
+        }
+      }
+
+      if (rows.length === 0) throw new Error('Aucun membre matché')
+
+      // Supprimer les anciennes données et insérer les nouvelles
+      const groupeId = rows[0].groupe_id
+      await supabase.from('bni_insight_imports').delete().eq('groupe_id', groupeId)
+      const { error } = await supabase.from('bni_insight_imports').insert(rows)
+      if (error) throw error
+
+      // Recalculer les scores
+      await recalculateScores(groupeCode)
+      await loadInsightData()
+      setInsightResult({ matched, total: lines.length - 1 })
+    } catch (e) {
+      console.error('[BNI Insight]', e)
+      setInsightResult({ error: e.message })
+    }
+    setInsightLoading(false)
   }
 
   useEffect(() => { loadMonth() }, [groupeCode])
@@ -362,7 +450,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
         right={
           <div ref={headerBtnsRef} style={{ display:'flex', gap:8 }}>
             {/* Bouton Import initial */}
-            <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false) } }}
+            <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false); setShowInsight(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -377,7 +465,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               </div>
             </div>
             {/* Bouton Archives */}
-            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
+            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); setShowInsight(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -391,8 +479,23 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
+            {/* Bouton BNI Insight */}
+            <div onClick={() => { setShowInsight(!showInsight); if(!showInsight) { setShowImport(false); setShowArchives(false); setShowPalmsInit(false); loadInsightData() } }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>BNI Insight</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{insightData.length > 0 ? '✅' : '📥'} CEU · Parr.</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+              </div>
+            </div>
             {/* Bouton Dernière saisie */}
-            <div onClick={() => { setShowImport(!showImport); if(!showImport) { setShowArchives(false); setShowPalmsInit(false) } }}
+            <div onClick={() => { setShowImport(!showImport); if(!showImport) { setShowArchives(false); setShowPalmsInit(false); setShowInsight(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -640,6 +743,73 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
             </div>
           )}
         </Card></div>
+      )}
+
+      {/* ─── BNI INSIGHT ─────────────────────────────────────────────────── */}
+      {showInsight && (
+        <div ref={insightPanelRef} style={{ marginBottom:24 }}>
+          {insightData.length > 0 ? (
+            <>
+              <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>BNI Insight — CEU · Parrainages</span>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <button onClick={() => { insightFileRef.current?.click() }} style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>🔄 Ré-importer</button>
+                  <button onClick={() => setShowInsight(false)} style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', width:26, height:26, borderRadius:'50%', cursor:'pointer', fontSize:12 }}>✕</button>
+                </div>
+              </div>
+              <input ref={insightFileRef} type="file" accept=".csv" hidden onChange={e => handleInsightImport(e.target.files[0])} />
+              <TableWrap>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                  <thead>
+                    <tr style={{ background:'#F7F6F3' }}>
+                      <th style={{ padding:'8px 12px', textAlign:'left', fontWeight:600, color:'#6B7280' }}>Membre</th>
+                      <th style={{ padding:'8px 12px', textAlign:'center', fontWeight:600, color:'#6B7280' }}>Sponsors</th>
+                      <th style={{ padding:'8px 12px', textAlign:'center', fontWeight:600, color:'#6B7280' }}>CEU Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {insightData.map((d, i) => (
+                      <tr key={i} style={{ borderTop:'1px solid #F3F2EF' }}>
+                        <td style={{ padding:'6px 12px', fontWeight:600 }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
+                        <td style={{ padding:'6px 12px', textAlign:'center', fontWeight:700, color: d.sponsors > 0 ? '#059669' : '#9CA3AF' }}>{d.sponsors}</td>
+                        <td style={{ padding:'6px 12px', textAlign:'center', fontWeight:700, color: d.ceu_rate > 0 ? '#059669' : '#9CA3AF' }}>{Number(d.ceu_rate).toFixed(4)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableWrap>
+              {insightResult && !insightResult.error && (
+                <div style={{ padding:10, background:'#D1FAE5', borderRadius:'0 0 10px 10px', fontSize:12, color:'#065F46', fontWeight:600 }}>
+                  ✅ Import réussi — {insightResult.matched}/{insightResult.total} membres matchés
+                </div>
+              )}
+            </>
+          ) : (
+            <Card>
+              <SectionTitle>📊 Import BNI Insight — CEU · Parrainages</SectionTitle>
+              <p style={{ fontSize:12, color:'#6B7280', marginBottom:12 }}>Importez le fichier CSV "Rank" depuis BNI Insight. Seules les colonnes <strong>Sponsors</strong> et <strong>CEU Rate</strong> sont extraites.</p>
+              {insightLoading ? (
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:12 }}>
+                  <Spinner size={16} />
+                  <span style={{ fontSize:13, color:'#6B7280' }}>Import et recalcul des scores en cours...</span>
+                </div>
+              ) : (
+                <div
+                  style={{ border:'2px dashed #E8E6E1', borderRadius:10, padding:24, textAlign:'center', cursor:'pointer' }}
+                  onClick={() => insightFileRef.current?.click()}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => { e.preventDefault(); handleInsightImport(e.dataTransfer.files[0]) }}>
+                  <div style={{ fontSize:28, marginBottom:8 }}>📄</div>
+                  <div style={{ fontSize:13, color:'#6B7280' }}>Cliquez ou glissez le CSV BNI Insight ici</div>
+                </div>
+              )}
+              <input ref={insightFileRef} type="file" accept=".csv" hidden onChange={e => handleInsightImport(e.target.files[0])} />
+              {insightResult?.error && (
+                <div style={{ padding:10, background:'#FEE2E2', borderRadius:8, fontSize:12, color:'#991B1B', marginTop:10 }}>❌ {insightResult.error}</div>
+              )}
+            </Card>
+          )}
+        </div>
       )}
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
