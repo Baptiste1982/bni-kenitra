@@ -20,6 +20,17 @@ const SidebarClock = () => {
   )
 }
 
+// Toast de connexion
+const ConnectionToast = ({ name, onDone }) => {
+  React.useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t) }, [])
+  return (
+    <div style={{ position:'fixed', top:16, left:'50%', transform:'translateX(-50%)', background:'#1C1C2E', color:'#fff', padding:'8px 18px', borderRadius:20, fontSize:12, fontWeight:500, display:'flex', alignItems:'center', gap:8, boxShadow:'0 4px 16px rgba(0,0,0,0.25)', zIndex:9999, animation:'fadeIn 0.3s ease' }}>
+      <div style={{ width:8, height:8, borderRadius:'50%', background:'#059669' }} />
+      {name} vient de se connecter
+    </div>
+  )
+}
+
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
 const ALL_MODULES = [
   { id:'alertes',   label:'Alertes',           icon:'🚨' },
@@ -46,6 +57,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [alertCount, setAlertCount] = useState(4)
   const [onlineUsers, setOnlineUsers] = useState([])
+  const [connectionToasts, setConnectionToasts] = useState([])
+  const [teamCollapsed, setTeamCollapsed] = useState(true)
   const [chatOpen, setChatOpen] = useState(false)
   const [unreadChat, setUnreadChat] = useState(0)
   const chatTabRef = React.useRef(null)
@@ -102,11 +115,19 @@ export default function App() {
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState()
-      // Mettre à jour les statuts en ligne en temps réel
       setOnlineUsers(prev => prev.map(u => ({
         ...u,
         isLive: !!state[u.id]?.length
       })))
+    })
+
+    channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      if (key === user.id) return // pas se notifier soi-même
+      const p = newPresences[0]
+      if (p?.prenom) {
+        const name = `${p.prenom} ${p.nom || ''}`
+        setConnectionToasts(prev => [...prev, { id: Date.now(), name }])
+      }
     })
 
     channel.subscribe(async (status) => {
@@ -182,8 +203,8 @@ export default function App() {
   const Sidebar = () => (
     <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%' }}>
       {/* Logo BNI */}
-      <div style={{ padding:'16px', borderBottom:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', alignItems:'center' }}>
-        <img src="/logo-bni-kenitra.png" alt="BNI Kénitra" style={{ width:'80%', maxWidth:160, borderRadius:'50%', objectFit:'cover', boxShadow:'0 4px 16px rgba(196,30,58,0.3)', marginBottom:10 }} />
+      <div style={{ padding:'16px', paddingTop: window.innerWidth <= 768 ? 56 : 16, borderBottom:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', alignItems:'center' }}>
+        <img src="/logo-bni-kenitra.png" alt="BNI Kénitra" loading="eager" fetchPriority="high" style={{ width:'80%', maxWidth:160, borderRadius:'50%', objectFit:'cover', boxShadow:'0 4px 16px rgba(196,30,58,0.3)', marginBottom:10 }} />
         <div style={{ color:'#fff', fontWeight:700, fontSize:14, letterSpacing:'0.05em', textTransform:'uppercase' }}>BNI Kénitra</div>
         <SidebarClock />
       </div>
@@ -211,9 +232,12 @@ export default function App() {
       </nav>
 
       {/* Utilisateurs en ligne */}
-      <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Équipe</div>
-        {onlineUsers.map(u => {
+      <div style={{ padding:'6px 16px 10px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+        <div onClick={() => setTeamCollapsed(!teamCollapsed)} style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom: teamCollapsed ? 0 : 8, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 0' }}>
+          <span>Équipe ({onlineUsers.filter(u=>u.isLive).length} en ligne)</span>
+          <span style={{ fontSize:8, color:'rgba(255,255,255,0.2)' }}>{teamCollapsed ? '▶' : '▼'}</span>
+        </div>
+        {!teamCollapsed && onlineUsers.map(u => {
           const statusColor = u.isLive ? '#059669' : '#6B7280'
           const roleAbr = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }[u.role] || '?'
           const roleCol = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }[u.role] || '#6B7280'
@@ -294,6 +318,11 @@ export default function App() {
 
       {/* Realtime alerts toast */}
       <RealtimeAlerts onNavigate={navigate} />
+
+      {/* Connection toasts */}
+      {connectionToasts.map(t => (
+        <ConnectionToast key={t.id} name={t.name} onDone={() => setConnectionToasts(prev => prev.filter(x => x.id !== t.id))} />
+      ))}
 
       {/* Chat — onglet en haut */}
       <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
