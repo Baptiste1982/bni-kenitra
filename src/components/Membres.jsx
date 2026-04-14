@@ -125,8 +125,8 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
           // Score sponsors du consolidé
           const consolidé = scoresData.find(s => s.membre_id === id)
           const sponsorScore = consolidé ? Number(consolidé.sponsor_score) || 0 : 0
-          // Pour visiteurs et TYFCB, combiner consolidé + hebdo
-          const totalInv = (consolidé ? Number(consolidé.visitors) || 0 : 0) + prevInv
+          // Visiteurs : déjà calculé sur 6 mois glissants dans scores_bni (table invites), pas d'ajout hebdo
+          const totalInv = consolidé ? Number(consolidé.visitors) || 0 : 0
           const totalMpb = (consolidé ? Number(consolidé.tyfcb) || 0 : 0) + prevMpb
           const { score, tl } = bniScore(rateTat, rateRefs, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
           prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs, nbSemaines: nbSemaines }

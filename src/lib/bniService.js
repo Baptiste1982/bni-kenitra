@@ -55,6 +55,44 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const sponsorMap = {}
   ;(existingScores || []).forEach(s => { sponsorMap[s.membre_id] = { sponsors: s.sponsors || 0, score: Number(s.sponsor_score) || 0 } })
 
+  // 3b. Charger les membres pour matcher invite_par_nom → membre_id
+  const { data: membres } = await supabase
+    .from('membres')
+    .select('id, prenom, nom')
+    .eq('groupe_id', groupeId)
+
+  // 3c. Charger les visiteurs sur 6 mois glissants depuis la table invites
+  const sixMoisAvant = new Date()
+  sixMoisAvant.setMonth(sixMoisAvant.getMonth() - 6)
+  const sixMoisStr = sixMoisAvant.toISOString().split('T')[0]
+  const { data: invitesData } = await supabase
+    .from('invites')
+    .select('invite_par_nom, date_visite')
+    .eq('groupe_id', groupeId)
+    .gte('date_visite', sixMoisStr)
+
+  // Matcher invite_par_nom aux membres (matching normalisé, insensible casse/accents)
+  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  const visitorsPerMembre = {}
+  ;(invitesData || []).forEach(inv => {
+    if (!inv.invite_par_nom) return
+    const invNorm = norm(inv.invite_par_nom)
+    // Matcher : exact "Prénom NOM" / "NOM Prénom", ou nom contenu + prénom partiel (3 chars min)
+    const membre = (membres || []).find(m => {
+      const mPrenom = norm(m.prenom), mNom = norm(m.nom)
+      const fullA = `${mPrenom} ${mNom}`, fullB = `${mNom} ${mPrenom}`
+      if (invNorm === fullA || invNorm === fullB) return true
+      if (invNorm.includes(mNom) && invNorm.includes(mPrenom)) return true
+      // Matching souple : nom exact + début du prénom (gère Mohammed/Mohamed, Oumaoma/Oumaima)
+      if (mPrenom.length >= 3 && invNorm.includes(mNom) && invNorm.includes(mPrenom.slice(0, 3))) return true
+      return false
+    })
+    if (membre) {
+      visitorsPerMembre[membre.id] = (visitorsPerMembre[membre.id] || 0) + 1
+    }
+  })
+  console.log('[recalculateScores] Visiteurs 6 mois glissants:', visitorsPerMembre)
+
   // 4. Calculer les scores pour chaque membre
   const scored = palms.map(p => {
     const presences = p.presences || 0
@@ -67,7 +105,8 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const refsGiven = (p.rdi || 0) + (p.rde || 0)
     const rateTat = tat / nbSemaines
     const rateRefs = refsGiven / nbSemaines
-    const visitors = p.invites || 0
+    // Visiteurs : 6 mois glissants depuis table invites (pas palms_imports)
+    const visitors = visitorsPerMembre[p.membre_id] || 0
     const tyfcb = Number(p.mpb) || 0
     const ueg = p.ueg || 0
     const rateUeg = ueg / nbSemaines
@@ -79,7 +118,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const score121 = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
     // Referrals Given /25
     const refsScore = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
-    // Visitors /25 (cumulé sur la période)
+    // Visitors /25 (6 mois glissants depuis table invites)
     const visitorScore = visitors >= 5 ? 25 : visitors >= 4 ? 20 : visitors >= 3 ? 15 : visitors >= 2 ? 10 : visitors >= 1 ? 5 : 0
     // TYFCB /5 (en milliers MAD)
     const tyfcbK = tyfcb / 1000
