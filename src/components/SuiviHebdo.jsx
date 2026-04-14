@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois, recalculateScores } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, Card, Spinner, fullName } from './ui'
@@ -40,6 +40,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const [result, setResult] = useState(null)
   const [monthData, setMonthData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showPalmsInit, setShowPalmsInit] = useState(false)
+  const [palmsInitLoading, setPalmsInitLoading] = useState(false)
+  const [palmsInitResult, setPalmsInitResult] = useState(null)
+  const [palmsInitError, setPalmsInitError] = useState('')
+  const [palmsInitExists, setPalmsInitExists] = useState(false)
+  const palmsInitFileRef = useRef(null)
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -68,6 +74,110 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
     const data = await fetchPalmsHebdoMois(mois, annee, groupeCode)
     setMonthData(data)
     setLoading(false)
+  }
+
+  // Vérifier si l'import initial PALMS existe déjà
+  useEffect(() => {
+    supabase.from('palms_imports').select('id').eq('periode_debut', '2025-12-12').limit(1)
+      .then(({ data }) => setPalmsInitExists((data || []).length > 0))
+  }, [groupeCode])
+
+  // Parser XML PALMS (même logique que PalmsImport)
+  const parseXML = (text) => {
+    const data = []
+    let headers = []
+    let headerFound = false
+    const rowChunks = text.split(/<Row[^>]*>/i).slice(1)
+    rowChunks.forEach(chunk => {
+      const cellMatches = [...chunk.matchAll(/<Cell([^>]*)>[\s\S]*?<Data[^>]*>([\s\S]*?)<\/Data>/g)]
+      if (!cellMatches.length) return
+      const vals = []
+      cellMatches.forEach(m => {
+        const idxMatch = m[1].match(/ss:Index="(\d+)"/)
+        if (idxMatch) { while (vals.length < parseInt(idxMatch[1]) - 1) vals.push('') }
+        vals.push(m[2].trim())
+      })
+      if (vals.every(v => !v)) return
+      if (!headerFound) {
+        if (vals.includes('Prénom') && vals.includes('Nom')) { headers = vals; headerFound = true }
+        return
+      }
+      const obj = {}
+      headers.forEach((h, j) => { obj[h] = vals[j] || '' })
+      if (obj['Prénom'] || obj['Nom']) data.push(obj)
+    })
+    return data
+  }
+
+  const handlePalmsInitImport = async (file) => {
+    if (!file) return
+    setPalmsInitLoading(true)
+    setPalmsInitError('')
+    setPalmsInitResult(null)
+    try {
+      const text = await file.text()
+      if (!text.includes('<?xml') && !text.includes('<Workbook')) {
+        setPalmsInitError('Format non reconnu. Utilisez l\'export XLS de BNI Connect.')
+        setPalmsInitLoading(false)
+        return
+      }
+      const rows = parseXML(text)
+      if (rows.length === 0) {
+        setPalmsInitError('Aucune donnée trouvée. Vérifiez le format du fichier.')
+        setPalmsInitLoading(false)
+        return
+      }
+      const { data: groupeData } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
+      const groupeId = groupeData?.id
+      const { data: membres } = await supabase.from('membres').select('id,prenom,nom').eq('groupe_id', groupeId)
+      const norm = (s) => (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+      // Supprimer l'ancien import initial s'il existe
+      await supabase.from('palms_imports').delete().eq('groupe_id', groupeId).eq('periode_debut', '2025-12-12')
+
+      let imported = 0, skipped = 0
+      for (const row of rows) {
+        const prenom = (row['Prénom'] || '').trim()
+        const nomVal = (row['Nom'] || '').trim()
+        if (!prenom && !nomVal) continue
+        const pNorm = norm(prenom), nNorm = norm(nomVal)
+        const membre = membres?.find(m => norm(m.nom) === nNorm && (norm(m.prenom) === pNorm || norm(m.prenom).includes(pNorm) || pNorm.includes(norm(m.prenom))))
+          || membres?.find(m => norm(m.nom) === nNorm)
+        if (!membre) { skipped++; continue }
+
+        const palmsRow = {
+          groupe_id: groupeId,
+          membre_id: membre.id,
+          presences: parseInt(row['P'] || row['Présences'] || 0),
+          absences: parseInt(row['A'] || row['Absences'] || 0),
+          late: parseInt(row['L'] || row['En retard'] || 0),
+          makeup: parseInt(row['M'] || row['Makeup'] || 0),
+          substitut: parseInt(row['S'] || row['Substitut'] || 0),
+          rdi: parseInt(row['RDI'] || 0),
+          rde: parseInt(row['RDE'] || 0),
+          rri: parseInt(row['RRI'] || 0),
+          rre: parseInt(row['RRE'] || 0),
+          invites: parseInt(row['Inv.'] || row['Invités'] || 0),
+          tat: parseFloat(row['TàT'] || row['T\u00e0T'] || 0),
+          mpb: parseFloat(row['MPB'] || 0),
+          ueg: parseInt(row['UEG'] || 0),
+          periode_debut: '2025-12-12',
+          periode_fin: '2026-02-28',
+        }
+        const { error } = await supabase.from('palms_imports').upsert(palmsRow, { onConflict: 'membre_id,periode_debut' })
+        if (error) { skipped++; continue }
+        imported++
+      }
+      // Recalculer les scores
+      let scoreResult = null
+      try { scoreResult = await recalculateScores(groupeCode) } catch (e) { console.error('[PALMS Init] Erreur recalcul:', e) }
+      setPalmsInitResult({ imported, skipped, total: rows.length, scoreResult })
+      setPalmsInitExists(true)
+      await loadMonth()
+    } catch (err) {
+      setPalmsInitError('Erreur : ' + err.message)
+    }
+    setPalmsInitLoading(false)
   }
 
   useEffect(() => { loadMonth() }, [groupeCode])
@@ -228,7 +338,19 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
           <div style={{ display:'flex', gap:8 }}>
-            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
+            <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false) } }}
+              style={{ background: palmsInitExists ? '#D1FAE5' : '#FEF3C7', border:`1px solid ${palmsInitExists ? '#A7F3D0' : '#FDE68A'}`, borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Import initial</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{palmsInitExists ? '✅ PALMS Base' : '📥 PALMS Base'}</div>
+              </div>
+              <div style={{ fontSize:9, padding:'2px 6px', borderRadius:6, background: palmsInitExists ? '#065F46' : '#92400E', color:'#fff', fontWeight:600 }}>
+                {palmsInitExists ? 'OK' : 'Requis'}
+              </div>
+            </div>
+            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -242,7 +364,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
-            <div onClick={() => { setShowImport(!showImport); if(!showImport) setShowArchives(false) }}
+            <div onClick={() => { setShowImport(!showImport); if(!showImport) { setShowArchives(false); setShowPalmsInit(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -261,6 +383,99 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           </div>
         }
       />
+
+      {/* ─── IMPORT INITIAL PALMS (12 déc 2025 → 28 fév 2026) ──────────── */}
+      {showPalmsInit && (
+        <Card style={{ marginBottom: 24 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+            <SectionTitle>📥 Import PALMS Initial — Base de départ</SectionTitle>
+            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#EDE9FE', color:'#5B21B6', fontWeight:600 }}>Unique · Consolidé</span>
+          </div>
+          <div style={{ padding:'12px 16px', background:'#F9F8F6', borderRadius:8, marginBottom:16, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:11, color:'#6B7280' }}>Période :</span>
+              <span style={{ fontSize:13, fontWeight:700, color:'#1C1C2E' }}>12 déc. 2025 → 28 fév. 2026</span>
+            </div>
+            <div style={{ fontSize:10, color:'#9CA3AF' }}>Rapport PALMS depuis le lancement du groupe jusqu'avant mars</div>
+          </div>
+
+          {palmsInitExists && (
+            <div style={{ padding:'10px 14px', background:'#D1FAE5', border:'1px solid #A7F3D0', borderRadius:8, marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:16 }}>✅</span>
+              <div>
+                <div style={{ fontSize:12, fontWeight:600, color:'#065F46' }}>Import initial déjà effectué</div>
+                <div style={{ fontSize:11, color:'#059669' }}>Vous pouvez ré-importer pour écraser les données existantes.</div>
+              </div>
+            </div>
+          )}
+
+          <div
+            onDragOver={e => { e.preventDefault() }}
+            onDrop={e => { e.preventDefault(); handlePalmsInitImport(e.dataTransfer.files[0]) }}
+            onClick={() => palmsInitFileRef.current?.click()}
+            style={{ border:`2px dashed ${palmsInitLoading ? '#9CA3AF' : '#C41E3A'}`, borderRadius:10, padding:'28px 20px', textAlign:'center', cursor: palmsInitLoading ? 'wait' : 'pointer', background:'#FAFAF8', transition:'all 0.15s' }}
+          >
+            {palmsInitLoading ? (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                <Spinner size={16} />
+                <span style={{ fontSize:13, color:'#6B7280' }}>Import et recalcul des scores en cours...</span>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize:28, marginBottom:6 }}>📊</div>
+                <div style={{ fontSize:13, fontWeight:600, color:'#1C1C2E', marginBottom:4 }}>Glisser le fichier PALMS ici</div>
+                <div style={{ fontSize:11, color:'#9CA3AF' }}>Export BNI Connect · XLS · Période déc 2025 → fév 2026</div>
+              </>
+            )}
+            <input ref={palmsInitFileRef} type="file" accept=".xls,.xlsx" style={{ display:'none' }}
+              onChange={e => handlePalmsInitImport(e.target.files[0])} />
+          </div>
+
+          {palmsInitError && (
+            <div style={{ marginTop:12, padding:10, background:'#FEF2F2', border:'1px solid #FEE2E2', borderRadius:8, fontSize:12, color:'#DC2626' }}>⚠️ {palmsInitError}</div>
+          )}
+
+          {palmsInitResult && (
+            <div style={{ marginTop:12, padding:12, background:'#D1FAE5', border:'1px solid #A7F3D0', borderRadius:8 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:'#065F46', marginBottom:4 }}>✅ Import initial réussi !</div>
+              <div style={{ fontSize:12, color:'#059669' }}>
+                {palmsInitResult.imported} membres importés · {palmsInitResult.skipped > 0 ? `${palmsInitResult.skipped} non trouvés · ` : ''}{palmsInitResult.total} lignes traitées
+              </div>
+              <div style={{ fontSize:11, color:'#065F46', marginTop:4 }}>Période : 12/12/2025 → 28/02/2026</div>
+              {palmsInitResult.scoreResult && (
+                <div style={{ fontSize:11, color:'#065F46', marginTop:4, padding:'4px 8px', background:'rgba(255,255,255,0.5)', borderRadius:4 }}>
+                  📊 Scores recalculés : {palmsInitResult.scoreResult.count} membres
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ marginTop:12, fontSize:11, color:'#9CA3AF', lineHeight:1.6 }}>
+            💡 Ce rapport sert de base de départ pour les calculs sur 6 mois glissants. Les saisies hebdomadaires viendront se compiler par-dessus.
+          </div>
+
+          {palmsInitExists && (
+            <div style={{ marginTop:12, display:'flex', justifyContent:'flex-end' }}>
+              <button onClick={async () => {
+                if (!window.confirm('Supprimer l\'import initial PALMS ? Les scores seront recalculés sans cette base.')) return
+                const { data: grp } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
+                if (grp?.id) {
+                  await supabase.from('palms_imports').delete().eq('groupe_id', grp.id).eq('periode_debut', '2025-12-12')
+                  setPalmsInitExists(false)
+                  setPalmsInitResult(null)
+                  try { await recalculateScores(groupeCode) } catch(e) {}
+                  await loadMonth()
+                }
+              }}
+                style={{ fontSize:11, color:'#DC2626', background:'none', border:'1px solid #FEE2E2', borderRadius:6, padding:'4px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                onMouseEnter={e => e.currentTarget.style.background='#FEF2F2'}
+                onMouseLeave={e => e.currentTarget.style.background='none'}>
+                🗑 Supprimer l'import initial
+              </button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ─── ARCHIVES ────────────────────────────────────────────────────── */}
       {showArchives && (
