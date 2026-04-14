@@ -203,7 +203,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
 
   return (
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
-      <PageHeader title="Suivi Hebdomadaire" sub={`Données PALMS intermédiaires — ${moisLabel}`}
+      <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
           <div style={{ display:'flex', gap:8 }}>
             <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
@@ -243,7 +243,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       {/* ─── ARCHIVES ────────────────────────────────────────────────────── */}
       {showArchives && (
         <Card style={{ marginBottom: 24 }}>
-          <SectionTitle>📂 Archives des saisies PALMS</SectionTitle>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+            <SectionTitle>📂 Archives des saisies hebdo</SectionTitle>
+            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Texte · Provisoire</span>
+          </div>
           {(() => {
             // Grouper par mois
             const byMonth = {}
@@ -335,7 +338,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
       {showImport && <Card style={{ marginBottom: 24 }}>
-        <SectionTitle>Coller les données PALMS</SectionTitle>
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:0 }}>
+          <SectionTitle>Coller les données PALMS</SectionTitle>
+          <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Import texte · Provisoire</span>
+        </div>
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <label style={{ fontSize: 12, color: '#6B7280' }}>Date :</label>
@@ -372,6 +378,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', marginBottom:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize' }}>Suivi — {moisLabel}</span>
+          <span style={{ fontSize:8, padding:'2px 6px', borderRadius:4, background:'rgba(254,243,199,0.25)', color:'#FDE68A', fontWeight:600 }}>Provisoire</span>
           <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{totalReunionsSaisies}/{nbJeudis} réunions</span>
           <div style={{ display:'flex', gap:3 }}>
             {Array.from({length:nbJeudis}).map((_,i) => (

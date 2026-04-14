@@ -207,13 +207,14 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
                       onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
                       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                      📊 Voir PALMS
+                      📊 PALMS consolidé
+                      <span style={{ fontSize:9, padding:'1px 6px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600, marginLeft:'auto' }}>Définitif</span>
                     </div>
                     <div onClick={e => { e.stopPropagation(); setShowImport(!showImport); setShowPalms(false); setShowPalmsMenu(false) }}
                       style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF' }}
                       onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
                       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                      📥 Importer PALMS
+                      📥 Importer Excel
                     </div>
                   </div>
                 )}
@@ -235,7 +236,10 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
         <div style={{ marginBottom:20 }}>
           <TableWrap>
             <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div style={{ fontSize:13, fontWeight:600 }}>📊 Données PALMS importées</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:13, fontWeight:600 }}>📊 PALMS Consolidé</span>
+                <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Excel · Définitif</span>
+              </div>
               {(() => {
                 const first = Object.values(palmsData)[0]
                 if (!first?.periode_debut || !first?.periode_fin) return null

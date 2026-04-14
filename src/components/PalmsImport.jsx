@@ -178,7 +178,10 @@ export default function PalmsImport({ onImportDone, groupeCode = 'MK-01' }) {
   return (
     <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden' }}>
       <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ fontSize:13, fontWeight:600 }}>📥 Import PALMS XLS</div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:13, fontWeight:600 }}>📥 Import PALMS Excel</span>
+          <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Consolidé · Définitif</span>
+        </div>
         <div style={{ fontSize:11, color:'#9CA3AF' }}>Export BNI Connect · Format XLS</div>
       </div>
       <div style={{ padding:16 }}>
