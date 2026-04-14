@@ -236,88 +236,161 @@ CONSIGNES:
                     </div>
 
                     {/* Détails dépliés */}
-                    {isExpanded && hebdoLoaded && (
-                      <div style={{ background:'#fff', borderRadius:'0 0 10px 10px', border:`1px solid ${cardBg.border}`, borderTop:'none', padding:'10px 14px' }}>
-                        {hebdoData.length === 0 ? (
-                          <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:8 }}>Aucune donnée hebdomadaire saisie</div>
-                        ) : c.label === 'Présence' ? (
+                    {isExpanded && hebdoLoaded && (() => {
+                      // Barème BNI pour chaque KPI
+                      const bareme = {
+                        'Présence': [{ seuil:'≥ 95%', pts:10 }, { seuil:'≥ 88%', pts:5 }, { seuil:'< 88%', pts:0 }],
+                        '1-2-1s': [{ seuil:'≥ 1/sem', pts:20 }, { seuil:'≥ 0.75', pts:15 }, { seuil:'≥ 0.5', pts:10 }, { seuil:'≥ 0.25', pts:5 }, { seuil:'< 0.25', pts:0 }],
+                        'Recommandations': [{ seuil:'≥ 1.25/sem', pts:25 }, { seuil:'≥ 1', pts:20 }, { seuil:'≥ 0.75', pts:15 }, { seuil:'≥ 0.5', pts:10 }, { seuil:'≥ 0.25', pts:5 }],
+                        'Visiteurs': [{ seuil:'5+', pts:25 }, { seuil:'4', pts:20 }, { seuil:'3', pts:15 }, { seuil:'2', pts:10 }, { seuil:'1', pts:5 }],
+                        'Parrainages': [{ seuil:'3+', pts:5 }, { seuil:'2', pts:3 }, { seuil:'1', pts:1 }, { seuil:'0', pts:0 }],
+                        'TYFCB': [{ seuil:'≥ 300k', pts:5 }, { seuil:'≥ 150k', pts:4 }, { seuil:'≥ 50k', pts:3 }, { seuil:'≥ 20k', pts:2 }, { seuil:'> 0', pts:1 }],
+                        'CEU': [{ seuil:'> 0.5/sem', pts:10 }, { seuil:'> 0', pts:5 }, { seuil:'0', pts:0 }],
+                      }[c.label] || []
+
+                      // Prochain palier à atteindre
+                      const currentPts = Number(c.score) || 0
+                      const nextTier = bareme.find(b => b.pts > currentPts)
+                      const prevTier = [...bareme].reverse().find(b => b.pts <= currentPts)
+
+                      // Stats du mois en cours
+                      const totalPresences = hebdoData.filter(h => h.palms === 'P').length
+                      const totalAbsences = hebdoData.filter(h => h.palms === 'A').length
+                      const totalTat = hebdoData.reduce((s,h) => s+(h.tat||0), 0)
+                      const totalRefs = hebdoData.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)
+                      const totalRefsInt = hebdoData.reduce((s,h) => s+(h.rdi||0), 0)
+                      const totalRefsExt = hebdoData.reduce((s,h) => s+(h.rde||0), 0)
+                      const totalInv = hebdoData.reduce((s,h) => s+(h.invites||0), 0)
+                      const totalMpb = hebdoData.reduce((s,h) => s+Number(h.mpb||0), 0)
+                      const totalCeu = hebdoData.reduce((s,h) => s+(h.ueg||0), 0)
+                      const nbReunions = hebdoData.length
+
+                      // Rendu du détail par réunion selon le KPI
+                      const renderWeekly = () => {
+                        if (hebdoData.length === 0) return <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:8 }}>Aucune donnée hebdomadaire saisie</div>
+
+                        if (c.label === 'Présence') return (
                           <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Détail par réunion</div>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                               {hebdoData.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:500, background: h.palms === 'P' ? '#D1FAE5' : '#FEE2E2', color: h.palms === 'P' ? '#065F46' : '#991B1B' }}>
-                                  {formatDate(h.date_reunion)} — {h.palms === 'P' ? 'Présent' : 'Absent'}
+                                  {formatDate(h.date_reunion)} — {h.palms === 'P' ? '✓ Présent' : '✗ Absent'}
                                 </div>
                               ))}
                             </div>
+                            <div style={{ fontSize:11, color:'#6B7280', display:'flex', gap:12 }}>
+                              <span>✓ {totalPresences} présence(s)</span>
+                              <span>✗ {totalAbsences} absence(s)</span>
+                              <span>Taux : {nbReunions ? Math.round(totalPresences/nbReunions*100) : 0}%</span>
+                            </div>
                           </div>
-                        ) : c.label === '1-2-1s' ? (
+                        )
+
+                        if (c.label === '1-2-1s') return (
                           <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>TàT par réunion</div>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                               {hebdoData.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: h.tat > 0 ? '#D1FAE5' : '#F3F4F6', color: h.tat > 0 ? '#065F46' : '#9CA3AF' }}>
                                   {formatDate(h.date_reunion)} — {h.tat || 0} TàT
                                 </div>
                               ))}
                             </div>
-                            <div style={{ marginTop:8, fontSize:11, color:'#6B7280' }}>Total : {hebdoData.reduce((s,h) => s+(h.tat||0), 0)} TàT sur {hebdoData.length} réunion(s)</div>
+                            <div style={{ fontSize:11, color:'#6B7280' }}>Total : {totalTat} TàT sur {nbReunions} réunion(s) · Rythme : {nbReunions ? (totalTat/nbReunions).toFixed(2) : '0'}/sem</div>
                           </div>
-                        ) : c.label === 'Recommandations' ? (
+                        )
+
+                        if (c.label === 'Recommandations') return (
                           <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Recommandations par réunion</div>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                               {hebdoData.map((h, j) => {
                                 const refs = (h.rdi||0) + (h.rde||0)
                                 return (
                                   <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: refs > 0 ? '#D1FAE5' : '#F3F4F6', color: refs > 0 ? '#065F46' : '#9CA3AF' }}>
-                                    {formatDate(h.date_reunion)} — {refs} ({h.rdi||0} int. + {h.rde||0} ext.)
+                                    {formatDate(h.date_reunion)} — {refs} ({h.rdi||0}↗ + {h.rde||0}↙)
                                   </div>
                                 )
                               })}
                             </div>
-                            <div style={{ marginTop:8, fontSize:11, color:'#6B7280' }}>Total : {hebdoData.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)} reco. ({hebdoData.reduce((s,h) => s+(h.rdi||0), 0)} int. + {hebdoData.reduce((s,h) => s+(h.rde||0), 0)} ext.)</div>
+                            <div style={{ fontSize:11, color:'#6B7280' }}>Total : {totalRefs} reco. ({totalRefsInt} internes + {totalRefsExt} externes) · Rythme : {nbReunions ? (totalRefs/nbReunions).toFixed(2) : '0'}/sem</div>
                           </div>
-                        ) : c.label === 'TYFCB' ? (
+                        )
+
+                        if (c.label === 'TYFCB') return (
                           <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>TYFCB par réunion</div>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                              {hebdoData.filter(h => Number(h.mpb) > 0).map((h, j) => (
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                              {hebdoData.filter(h => Number(h.mpb) > 0).length > 0 ? hebdoData.filter(h => Number(h.mpb) > 0).map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background:'#D1FAE5', color:'#065F46' }}>
                                   {formatDate(h.date_reunion)} — {Number(h.mpb).toLocaleString('de-DE')} MAD
                                 </div>
-                              ))}
-                              {hebdoData.filter(h => Number(h.mpb) > 0).length === 0 && <div style={{ fontSize:11, color:'#9CA3AF' }}>Aucun TYFCB déclaré ce mois</div>}
+                              )) : <div style={{ fontSize:11, color:'#9CA3AF' }}>Aucun TYFCB déclaré</div>}
                             </div>
-                            <div style={{ marginTop:8, fontSize:11, color:'#6B7280' }}>Total mois : {hebdoData.reduce((s,h) => s+Number(h.mpb||0), 0).toLocaleString('de-DE')} MAD</div>
+                            <div style={{ fontSize:11, color:'#6B7280' }}>Total : {totalMpb.toLocaleString('de-DE')} MAD</div>
                           </div>
-                        ) : c.label === 'Visiteurs' ? (
+                        )
+
+                        if (c.label === 'Visiteurs') return (
                           <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Visiteurs par réunion</div>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                               {hebdoData.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: (h.invites||0) > 0 ? '#D1FAE5' : '#F3F4F6', color: (h.invites||0) > 0 ? '#065F46' : '#9CA3AF' }}>
                                   {formatDate(h.date_reunion)} — {h.invites || 0} visiteur(s)
                                 </div>
                               ))}
                             </div>
+                            <div style={{ fontSize:11, color:'#6B7280' }}>Total : {totalInv} visiteur(s) sur {nbReunions} réunion(s)</div>
                           </div>
-                        ) : c.label === 'CEU' ? (
+                        )
+
+                        if (c.label === 'CEU') return (
                           <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>CEU par réunion</div>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                               {hebdoData.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: (h.ueg||0) > 0 ? '#D1FAE5' : '#F3F4F6', color: (h.ueg||0) > 0 ? '#065F46' : '#9CA3AF' }}>
                                   {formatDate(h.date_reunion)} — {h.ueg || 0} CEU
                                 </div>
                               ))}
                             </div>
+                            <div style={{ fontSize:11, color:'#6B7280' }}>Total : {totalCeu} CEU · Rythme : {nbReunions ? (totalCeu/nbReunions).toFixed(2) : '0'}/sem</div>
                           </div>
-                        ) : (
-                          <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:8 }}>Données sur 6 mois glissants (consolidé)</div>
-                        )}
-                      </div>
-                    )}
+                        )
+
+                        return <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:8 }}>Données sur 6 mois glissants (consolidé)</div>
+                      }
+
+                      return (
+                        <div style={{ background:'#fff', borderRadius:'0 0 10px 10px', border:`1px solid ${cardBg.border}`, borderTop:'none', padding:'12px 14px' }}>
+                          {/* Barème BNI */}
+                          <div style={{ marginBottom:10 }}>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Barème BNI — {c.label}</div>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                              {bareme.map((b, j) => (
+                                <div key={j} style={{ padding:'3px 8px', borderRadius:6, fontSize:10, fontWeight:600,
+                                  background: b.pts === currentPts ? cardBg.bg : '#F9FAFB',
+                                  color: b.pts === currentPts ? cardBg.color : '#9CA3AF',
+                                  border: b.pts === currentPts ? `1.5px solid ${cardBg.bar}` : '1px solid #E8E6E1'
+                                }}>
+                                  {b.seuil} → {b.pts} pts
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Prochain palier */}
+                          {nextTier && (
+                            <div style={{ padding:'8px 12px', borderRadius:8, background:'#FFFBEB', border:'1px solid #FDE68A', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+                              <span style={{ fontSize:14 }}>🎯</span>
+                              <div style={{ fontSize:11, color:'#854D0E' }}>
+                                <strong>Prochain palier :</strong> {nextTier.seuil} → {nextTier.pts} pts (+{nextTier.pts - currentPts} pts)
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Détail par réunion */}
+                          <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Détail par réunion ({nbReunions})</div>
+                          {renderWeekly()}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )
               })}
