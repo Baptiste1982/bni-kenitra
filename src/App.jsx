@@ -10,6 +10,16 @@ import AdminUsers from './components/AdminUsers'
 import Alertes from './components/Alertes'
 import TeamChat from './components/TeamChat'
 
+const SidebarClock = () => {
+  const [now, setNow] = React.useState(new Date())
+  React.useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
+  return (
+    <div style={{ color:'rgba(255,255,255,0.4)', fontSize:11, marginTop:4, textAlign:'center' }}>
+      {now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })} · {now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
+    </div>
+  )
+}
+
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
 const ALL_MODULES = [
   { id:'alertes',   label:'Alertes',           icon:'🚨' },
@@ -175,6 +185,7 @@ export default function App() {
       <div style={{ padding:'16px', borderBottom:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', alignItems:'center' }}>
         <img src="/logo-bni-kenitra.png" alt="BNI Kénitra" style={{ width:'80%', maxWidth:160, borderRadius:'50%', objectFit:'cover', boxShadow:'0 4px 16px rgba(196,30,58,0.3)', marginBottom:10 }} />
         <div style={{ color:'#fff', fontWeight:700, fontSize:14, letterSpacing:'0.05em', textTransform:'uppercase' }}>BNI Kénitra</div>
+        <SidebarClock />
       </div>
 
       {/* Alertes live — au-dessus du nav */}
