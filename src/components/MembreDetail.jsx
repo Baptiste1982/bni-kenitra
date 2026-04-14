@@ -335,11 +335,14 @@ CONSIGNES:
                         if (c.label === 'TYFCB') return (
                           <div>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                              {hebdoData.filter(h => Number(h.mpb) > 0).length > 0 ? hebdoData.filter(h => Number(h.mpb) > 0).map((h, j) => (
-                                <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background:'#D1FAE5', color:'#065F46' }}>
-                                  {formatDate(h.date_reunion)} — {Number(h.mpb).toLocaleString('de-DE')} MAD
-                                </div>
-                              )) : <div style={{ fontSize:11, color:'#9CA3AF' }}>Aucun TYFCB déclaré</div>}
+                              {hebdoData.length > 0 ? hebdoData.map((h, j) => {
+                                const mpbVal = Number(h.mpb||0)
+                                return (
+                                  <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: mpbVal > 0 ? '#D1FAE5' : '#F3F4F6', color: mpbVal > 0 ? '#065F46' : '#9CA3AF' }}>
+                                    {formatDate(h.date_reunion)} — {mpbVal.toLocaleString('de-DE')} MAD
+                                  </div>
+                                )
+                              }) : <div style={{ fontSize:11, color:'#9CA3AF' }}>Aucun TYFCB déclaré</div>}
                             </div>
                             <div style={{ fontSize:11, color:'#6B7280' }}>Total : {totalMpb.toLocaleString('de-DE')} MAD</div>
                           </div>
