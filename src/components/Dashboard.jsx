@@ -220,14 +220,14 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
 
       {/* Tendances hebdo */}
       {trendData.length > 1 && (
-        <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap:16, marginBottom:24 }}>
+        <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap:16, marginBottom:24, minWidth:0 }}>
           {/* TYFCB par réunion */}
           <TableWrap>
             <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
               <SectionTitle>💰 TYFCB par réunion</SectionTitle>
             </div>
-            <div style={{ padding:'12px 8px 4px', height:200 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ padding:'12px 8px 4px', height:200, minWidth:0 }}>
+              <ResponsiveContainer width="100%" height={190}>
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
                   <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />
@@ -244,8 +244,8 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
             <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
               <SectionTitle>📊 Activité hebdo</SectionTitle>
             </div>
-            <div style={{ padding:'12px 8px 4px', height:200 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ padding:'12px 8px 4px', height:200, minWidth:0 }}>
+              <ResponsiveContainer width="100%" height={190}>
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
                   <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />

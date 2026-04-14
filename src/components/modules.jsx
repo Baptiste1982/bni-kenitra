@@ -1088,7 +1088,7 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
     if (!error) { setEditing(false); load() }
   }
 
-  if (loading) return <div style={{ padding:'28px 32px', display:'flex', justifyContent:'center' }}><Spinner /></div>
+  if (loading) return <div style={{ padding:'28px 32px', textAlign:'center', color:'#9CA3AF' }}>Chargement...</div>
 
   // Calculer les KPIs actuels
   const nbMembres = scores.filter(s => s.membre_id).length
