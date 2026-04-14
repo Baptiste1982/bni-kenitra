@@ -412,6 +412,15 @@ export function Invites({ profil }) {
                         <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>{debut} → {fin}</div>
                         <div style={{ fontSize:10, color:'#9CA3AF' }}>Importé le {importDate} · {a.nb_invites} invité{a.nb_invites>1?'s':''}</div>
                       </div>
+                      <button onClick={async (e) => {
+                        e.stopPropagation()
+                        if (!window.confirm(`Supprimer l'archive du ${debut} → ${fin} ?`)) return
+                        await supabase.from('visitor_imports').delete().eq('id', a.id)
+                        setVisitorArchives(prev => prev.filter(x => x.id !== a.id))
+                        if (isActive) { setArchiveDetail(null); setArchiveData([]) }
+                      }} title="Supprimer l'archive"
+                        style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#DC2626', opacity:0.5, padding:'2px 6px', borderRadius:4, flexShrink:0 }}
+                        onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.5'}>🗑</button>
                       <span style={{ fontSize:10, color:'#9CA3AF' }}>{isActive ? '▲' : '▼'}</span>
                     </div>
                     {isActive && archiveData.length > 0 && (
