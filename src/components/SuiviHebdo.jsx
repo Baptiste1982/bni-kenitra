@@ -396,8 +396,77 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
         }
       />
 
-      {/* ─── IMPORT INITIAL PALMS (12 déc 2025 → 28 fév 2026) ──────────── */}
-      {showPalmsInit && (
+      {/* ─── PALMS BASE : consultation (clic sur bouton header) ─────────── */}
+      {showPalmsInit && palmsInitData.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>
+              PALMS Base — 12 déc. 2025 → 31 mars 2026
+            </span>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{palmsInitData.length} membres</span>
+              <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'rgba(209,250,229,0.2)', color:'#A7F3D0', fontWeight:600 }}>Consolidé</span>
+            </div>
+          </div>
+          <div style={{ overflowX:'auto', background:'#fff', border:'1px solid #E8E6E1', borderTop:'none' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <thead><tr>{['Membre','P/A','RDI','RDE','RRI','RRE','Inv.','TàT','MPB','CEU'].map(h => (
+                <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+              ))}</tr></thead>
+              <tbody>
+                {palmsInitData.map((d, i) => (
+                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.presences||0}/{(d.presences||0)+(d.absences||0)}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rdi||0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rde||0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rri||0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rre||0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.invites||0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.tat||0}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(d.mpb||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.ueg||0}</td>
+                    </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Actions sous le tableau */}
+          <div style={{ padding:'10px 16px', background:'#F9F8F6', borderRadius:'0 0 10px 10px', border:'1px solid #E8E6E1', borderTop:'none', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div onClick={() => palmsInitFileRef.current?.click()}
+                style={{ fontSize:11, color:'#5B21B6', cursor:'pointer', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}
+                onMouseEnter={e=>e.currentTarget.style.opacity='0.7'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                📥 Ré-importer
+              </div>
+              <input ref={palmsInitFileRef} type="file" accept=".xls,.xlsx" style={{ display:'none' }}
+                onChange={e => handlePalmsInitImport(e.target.files[0])} />
+              {palmsInitLoading && <Spinner size={14} />}
+            </div>
+            <div onClick={async () => {
+              if (!window.confirm('Supprimer l\'import initial PALMS ? Les scores seront recalculés sans cette base.')) return
+              const { data: grp } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
+              if (grp?.id) {
+                await supabase.from('palms_imports').delete().eq('groupe_id', grp.id).eq('periode_debut', '2025-12-12')
+                setPalmsInitExists(false)
+                setPalmsInitData([])
+                setPalmsInitResult(null)
+                setShowPalmsInit(false)
+                try { await recalculateScores(groupeCode) } catch(e) {}
+                await loadMonth()
+              }
+            }}
+              style={{ fontSize:11, color:'#DC2626', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}
+              onMouseEnter={e=>e.currentTarget.style.opacity='0.7'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+              🗑 Supprimer
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PALMS BASE : zone d'import si pas encore de données */}
+      {showPalmsInit && palmsInitData.length === 0 && (
         <Card style={{ marginBottom: 24 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
             <SectionTitle>📥 Import PALMS Initial — Base de départ</SectionTitle>
@@ -408,66 +477,13 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               <span style={{ fontSize:11, color:'#6B7280' }}>Période :</span>
               <span style={{ fontSize:13, fontWeight:700, color:'#1C1C2E' }}>12 déc. 2025 → 31 mars 2026</span>
             </div>
-            <div style={{ fontSize:10, color:'#9CA3AF' }}>Rapport PALMS depuis le lancement du groupe jusqu'avant mars</div>
+            <div style={{ fontSize:10, color:'#9CA3AF' }}>Rapport PALMS depuis le lancement du groupe</div>
           </div>
-
-          {palmsInitExists && (
-            <div style={{ padding:'10px 14px', background:'#D1FAE5', border:'1px solid #A7F3D0', borderRadius:8, marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ fontSize:16 }}>✅</span>
-                <div>
-                  <div style={{ fontSize:12, fontWeight:600, color:'#065F46' }}>Import initial déjà effectué — {palmsInitData.length} membres</div>
-                  <div style={{ fontSize:11, color:'#059669' }}>Vous pouvez ré-importer pour écraser les données existantes.</div>
-                </div>
-              </div>
-              <button onClick={() => setShowPalmsInitData(!showPalmsInitData)}
-                style={{ fontSize:11, fontWeight:600, padding:'4px 12px', borderRadius:6, border:'1px solid #A7F3D0', background: showPalmsInitData ? '#065F46' : '#fff', color: showPalmsInitData ? '#fff' : '#065F46', cursor:'pointer', fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>
-                {showPalmsInitData ? '▲ Masquer' : '▼ Consulter'}
-              </button>
-            </div>
-          )}
-
-          {/* Tableau de consultation des données importées — même structure que les archives */}
-          {showPalmsInitData && palmsInitData.length > 0 && (
-            <div style={{ marginBottom:12 }}>
-              <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>
-                  PALMS Base — 12 déc. 2025 → 31 mars 2026
-                </span>
-                <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{palmsInitData.length} membres</span>
-              </div>
-              <div style={{ overflowX:'auto', background:'#fff', borderRadius:'0 0 10px 10px', border:'1px solid #E8E6E1', borderTop:'none' }}>
-                <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                  <thead><tr>{['Membre','P/A','RDI','RDE','RRI','RRE','Inv.','TàT','MPB','CEU'].map(h => (
-                    <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
-                  ))}</tr></thead>
-                  <tbody>
-                    {palmsInitData.map((d, i) => (
-                        <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.presences||0}/{(d.presences||0)+(d.absences||0)}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rdi||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rde||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rri||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rre||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.invites||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.tat||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(d.mpb||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.ueg||0}</td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           <div
             onDragOver={e => { e.preventDefault() }}
             onDrop={e => { e.preventDefault(); handlePalmsInitImport(e.dataTransfer.files[0]) }}
             onClick={() => palmsInitFileRef.current?.click()}
-            style={{ border:`2px dashed ${palmsInitLoading ? '#9CA3AF' : '#C41E3A'}`, borderRadius:10, padding:'28px 20px', textAlign:'center', cursor: palmsInitLoading ? 'wait' : 'pointer', background:'#FAFAF8', transition:'all 0.15s' }}
+            style={{ border:'2px dashed #C41E3A', borderRadius:10, padding:'28px 20px', textAlign:'center', cursor:'pointer', background:'#FAFAF8' }}
           >
             {palmsInitLoading ? (
               <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
@@ -484,50 +500,17 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
             <input ref={palmsInitFileRef} type="file" accept=".xls,.xlsx" style={{ display:'none' }}
               onChange={e => handlePalmsInitImport(e.target.files[0])} />
           </div>
-
           {palmsInitError && (
             <div style={{ marginTop:12, padding:10, background:'#FEF2F2', border:'1px solid #FEE2E2', borderRadius:8, fontSize:12, color:'#DC2626' }}>⚠️ {palmsInitError}</div>
           )}
-
           {palmsInitResult && (
             <div style={{ marginTop:12, padding:12, background:'#D1FAE5', border:'1px solid #A7F3D0', borderRadius:8 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:'#065F46', marginBottom:4 }}>✅ Import initial réussi !</div>
-              <div style={{ fontSize:12, color:'#059669' }}>
-                {palmsInitResult.imported} membres importés · {palmsInitResult.skipped > 0 ? `${palmsInitResult.skipped} non trouvés · ` : ''}{palmsInitResult.total} lignes traitées
-              </div>
-              <div style={{ fontSize:11, color:'#065F46', marginTop:4 }}>Période : 12/12/2025 → 31/03/2026</div>
-              {palmsInitResult.scoreResult && (
-                <div style={{ fontSize:11, color:'#065F46', marginTop:4, padding:'4px 8px', background:'rgba(255,255,255,0.5)', borderRadius:4 }}>
-                  📊 Scores recalculés : {palmsInitResult.scoreResult.count} membres
-                </div>
-              )}
+              <div style={{ fontSize:13, fontWeight:600, color:'#065F46' }}>✅ Import initial réussi — {palmsInitResult.imported} membres</div>
             </div>
           )}
-
           <div style={{ marginTop:12, fontSize:11, color:'#9CA3AF', lineHeight:1.6 }}>
             💡 Ce rapport sert de base de départ pour les calculs sur 6 mois glissants. Les saisies hebdomadaires viendront se compiler par-dessus.
           </div>
-
-          {palmsInitExists && (
-            <div style={{ marginTop:12, display:'flex', justifyContent:'flex-end' }}>
-              <button onClick={async () => {
-                if (!window.confirm('Supprimer l\'import initial PALMS ? Les scores seront recalculés sans cette base.')) return
-                const { data: grp } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
-                if (grp?.id) {
-                  await supabase.from('palms_imports').delete().eq('groupe_id', grp.id).eq('periode_debut', '2025-12-12')
-                  setPalmsInitExists(false)
-                  setPalmsInitResult(null)
-                  try { await recalculateScores(groupeCode) } catch(e) {}
-                  await loadMonth()
-                }
-              }}
-                style={{ fontSize:11, color:'#DC2626', background:'none', border:'1px solid #FEE2E2', borderRadius:6, padding:'4px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-                onMouseEnter={e => e.currentTarget.style.background='#FEF2F2'}
-                onMouseLeave={e => e.currentTarget.style.background='none'}>
-                🗑 Supprimer l'import initial
-              </button>
-            </div>
-          )}
         </Card>
       )}
 
