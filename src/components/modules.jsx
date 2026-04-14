@@ -1157,39 +1157,105 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
         </div>
       )}
 
-      {/* Classement individuel vs objectifs */}
-      <TableWrap>
-        <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
-          <SectionTitle>Progression individuelle</SectionTitle>
-        </div>
-        <table style={{ width:'100%', borderCollapse:'collapse' }}>
-          <thead><tr>{['Membre','Score','Présence','Recos/sem','Visiteurs','TYFCB'].map(h => (
-            <th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
-          ))}</tr></thead>
-          <tbody>
-            {scores.filter(s => s.membres).sort((a,b) => (Number(b.total_score)||0) - (Number(a.total_score)||0)).map((s, i) => {
-              const pres = Math.round((Number(s.attendance_rate)||0)*100)
-              const presOk = pres >= Number(obj.objectif_retention)
-              const refsRate = Number(s.referrals_given_rate)||0
-              const refsOk = refsRate >= Number(obj.objectif_references_semaine)
-              const visOk = (Number(s.visitors)||0) >= Number(obj.objectif_invites_semaine)
-              const tyfcbVal = Number(s.tyfcb)||0
-              const cellStyle = (ok) => ({ padding:'8px 12px', fontSize:12, textAlign:'center', fontWeight:600, color: ok ? '#065F46' : '#991B1B', background: ok ? '#D1FAE520' : 'transparent' })
-              return (
-                <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{ padding:'8px 12px', fontSize:12, fontWeight:500 }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
-                  <td style={{ padding:'8px 12px', fontSize:13, textAlign:'center', fontWeight:700, color: Number(s.total_score) >= 70 ? '#065F46' : Number(s.total_score) >= 50 ? '#854D0E' : '#991B1B' }}>{Number(s.total_score||0).toFixed(0)}</td>
-                  <td style={cellStyle(presOk)}>{pres}%</td>
-                  <td style={cellStyle(refsOk)}>{refsRate.toFixed(2)}</td>
-                  <td style={cellStyle(visOk)}>{Number(s.visitors)||0}</td>
-                  <td style={{ padding:'8px 12px', fontSize:12, textAlign:'center', fontWeight:600, color: tyfcbVal > 0 ? '#065F46' : '#9CA3AF' }}>{tyfcbVal.toLocaleString('fr-FR')}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </TableWrap>
+      {/* Progression individuelle vs objectifs */}
+      {(() => {
+        const MiniBar = ({ value, max, color }) => {
+          const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0
+          return (
+            <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+              <div style={{ flex:1, height:6, background:'#F3F2EF', borderRadius:3, minWidth:40 }}>
+                <div style={{ height:6, width:`${pct}%`, background:color, borderRadius:3, transition:'width 0.4s ease' }} />
+              </div>
+              <span style={{ fontSize:10, color:'#6B7280', whiteSpace:'nowrap', minWidth:28, textAlign:'right' }}>{pct}%</span>
+            </div>
+          )
+        }
+        const tlColor = { vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' }
+        const tlLabel = { vert:'Vert', orange:'Orange', rouge:'Rouge', gris:'Gris' }
+        const objPres = Number(obj.objectif_retention)
+        const objRefs = Number(obj.objectif_references_semaine)
+        const objVis = Number(obj.objectif_invites_semaine)
+        // TYFCB objectif par membre = total / nb membres
+        const objTyfcbMembre = nbMembres > 0 ? Number(obj.objectif_tyfcb) / nbMembres : 20000
+
+        const membresData = scores.filter(s => s.membres).map(s => {
+          const pres = Math.round((Number(s.attendance_rate)||0)*100)
+          const refs = Number(s.referrals_given_rate)||0
+          const vis = Number(s.visitors)||0
+          const tyfcb = Number(s.tyfcb)||0
+          // Score d'atteinte : moyenne pondérée des 4 KPIs (capped à 100%)
+          const pctPres = objPres > 0 ? Math.min(100, pres / objPres * 100) : 100
+          const pctRefs = objRefs > 0 ? Math.min(100, refs / objRefs * 100) : 100
+          const pctVis = objVis > 0 ? Math.min(100, vis / objVis * 100) : 100
+          const pctTyfcb = objTyfcbMembre > 0 ? Math.min(100, tyfcb / objTyfcbMembre * 100) : 100
+          const atteinte = Math.round((pctPres * 0.3 + pctRefs * 0.25 + pctVis * 0.2 + pctTyfcb * 0.25))
+          return { ...s, pres, refs, vis, tyfcb, pctPres, pctRefs, pctVis, pctTyfcb, atteinte }
+        }).sort((a,b) => b.atteinte - a.atteinte)
+
+        const atteinteColor = (v) => v >= 80 ? '#059669' : v >= 50 ? '#D97706' : '#DC2626'
+
+        return (
+          <TableWrap>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <SectionTitle>Progression individuelle vs objectifs</SectionTitle>
+              <div style={{ display:'flex', gap:12, fontSize:10, color:'#9CA3AF' }}>
+                <span>Présence ≥{objPres}%</span>
+                <span>Recos ≥{objRefs}/sem</span>
+                <span>Visiteurs ≥{objVis}/sem</span>
+                <span>TYFCB ≥{Math.round(objTyfcbMembre).toLocaleString('fr-FR')}/mb</span>
+              </div>
+            </div>
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <thead><tr>
+                <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width:'18%' }}>Membre</th>
+                <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'7%' }}>TL</th>
+                <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'8%' }}>Atteinte</th>
+                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>Présence</th>
+                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>Recos/sem</th>
+                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>Visiteurs</th>
+                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>TYFCB</th>
+              </tr></thead>
+              <tbody>
+                {membresData.map((s, i) => {
+                  const barPres = s.pctPres >= 100 ? '#059669' : s.pctPres >= 60 ? '#D97706' : '#DC2626'
+                  const barRefs = s.pctRefs >= 100 ? '#059669' : s.pctRefs >= 60 ? '#D97706' : '#DC2626'
+                  const barVis = s.pctVis >= 100 ? '#059669' : s.pctVis >= 60 ? '#D97706' : '#DC2626'
+                  const barTyfcb = s.pctTyfcb >= 100 ? '#059669' : s.pctTyfcb >= 30 ? '#D97706' : '#DC2626'
+                  const tl = s.traffic_light || 'gris'
+                  return (
+                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <td style={{ padding:'8px 12px', fontSize:12, fontWeight:500 }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
+                      <td style={{ padding:'8px 12px', textAlign:'center' }}>
+                        <div style={{ width:10, height:10, borderRadius:'50%', background:tlColor[tl], margin:'0 auto' }} title={tlLabel[tl]} />
+                      </td>
+                      <td style={{ padding:'8px 12px', textAlign:'center' }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:atteinteColor(s.atteinte) }}>{s.atteinte}%</span>
+                      </td>
+                      <td style={{ padding:'8px 14px' }}>
+                        <div style={{ fontSize:11, fontWeight:600, color: barPres, marginBottom:3 }}>{s.pres}%</div>
+                        <MiniBar value={s.pres} max={objPres} color={barPres} />
+                      </td>
+                      <td style={{ padding:'8px 14px' }}>
+                        <div style={{ fontSize:11, fontWeight:600, color: barRefs, marginBottom:3 }}>{s.refs.toFixed(2)}</div>
+                        <MiniBar value={s.refs} max={objRefs} color={barRefs} />
+                      </td>
+                      <td style={{ padding:'8px 14px' }}>
+                        <div style={{ fontSize:11, fontWeight:600, color: barVis, marginBottom:3 }}>{s.vis}</div>
+                        <MiniBar value={s.vis} max={objVis} color={barVis} />
+                      </td>
+                      <td style={{ padding:'8px 14px' }}>
+                        <div style={{ fontSize:11, fontWeight:600, color: barTyfcb, marginBottom:3 }}>{s.tyfcb.toLocaleString('fr-FR')}</div>
+                        <MiniBar value={s.tyfcb} max={objTyfcbMembre} color={barTyfcb} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </TableWrap>
+        )
+      })()}
     </div>
   )
 }
