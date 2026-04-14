@@ -56,12 +56,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
 
   const loadMonth = async () => {
     setLoading(true)
-    const data = await fetchPalmsHebdoMois(mois, annee)
+    const data = await fetchPalmsHebdoMois(mois, annee, groupeCode)
     setMonthData(data)
     setLoading(false)
   }
 
-  useEffect(() => { loadMonth() }, [])
+  useEffect(() => { loadMonth() }, [groupeCode])
 
   // ─── PARSING & IMPORT ───────────────────────────────────────────────────────
   const handleImport = async () => {
