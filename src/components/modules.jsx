@@ -472,11 +472,11 @@ export function Invites({ profil }) {
         return (
         <div key={month} style={{ marginBottom:16 }}>
           <div onClick={() => setCollapsedMonths(prev => ({...(prev||{}), [month]: !(prev||{})[month]}))}
-            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 18px', background:'#1C1C2E', borderRadius: isCollapsed ? 10 : '10px 10px 0 0', cursor:'pointer', userSelect:'none' }}
-            onMouseEnter={e=>e.currentTarget.style.background='#2D2D42'} onMouseLeave={e=>e.currentTarget.style.background='#1C1C2E'}>
+            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 18px', background:'#F3F2EF', borderRadius: isCollapsed ? 10 : '10px 10px 0 0', cursor:'pointer', userSelect:'none', border:'1px solid #E8E6E1' }}
+            onMouseEnter={e=>e.currentTarget.style.background='#EAE8E4'} onMouseLeave={e=>e.currentTarget.style.background='#F3F2EF'}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize', letterSpacing:'0.02em' }}>{month}</span>
-              <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''} · {Math.round(monthInvites.length/total*100)}%</span>
+              <span style={{ color:'#1C1C2E', fontSize:15, fontWeight:700, textTransform:'capitalize', letterSpacing:'0.02em' }}>{month}</span>
+              <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(0,0,0,0.07)', color:'#6B7280' }}>{monthInvites.length} invité{monthInvites.length > 1 ? 's' : ''} · {Math.round(monthInvites.length/total*100)}%</span>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               {(() => {
@@ -486,7 +486,7 @@ export function Invites({ profil }) {
                   <span key={c} style={{ fontSize:9, fontWeight:600, padding:'2px 7px', borderRadius:8, background:COULEURS[c]?.bg || '#F3F4F6', color:COULEURS[c]?.color || '#4B5563' }}>{n}</span>
                 ))
               })()}
-              <span style={{ color:'rgba(255,255,255,0.5)', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
+              <span style={{ color:'#9CA3AF', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
             </div>
           </div>
           {!isCollapsed && <div>
