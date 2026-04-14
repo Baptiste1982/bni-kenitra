@@ -367,7 +367,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
         </div>
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{['#','Membre', ...(showExtra ? ['Société'] : []),'Score', ...(showExtra ? ['Traffic Light'] : []),'Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []), ...(showExtra ? ['Renouvellement'] : [])].map(h => (
+            <thead><tr>{['#','Membre', ...(showExtra ? ['Société'] : []),'Score', ...(showExtra ? ['Traffic Light'] : []),'Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB','CEU', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []), ...(showExtra ? ['Renouvellement'] : [])].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
             <tbody>
@@ -430,6 +430,12 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       const tyfcb = Number(s.tyfcb||0)
                       const manqueTyfcb = tyfcb >= 300000 ? '✓ Max atteint' : tyfcb >= 150000 ? `+${(300000-tyfcb).toLocaleString('de-DE')} MAD pour 5pts` : tyfcb >= 50000 ? `+${(150000-tyfcb).toLocaleString('de-DE')} MAD pour 4pts` : tyfcb >= 20000 ? `+${(50000-tyfcb).toLocaleString('de-DE')} MAD pour 3pts` : `+${(20000-tyfcb).toLocaleString('de-DE')} MAD pour 2pts`
                       return <KpiCell value={tyfcb.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD'} pts={Number(s.tyfcb_score||0)} max={5} bg={tyfcbBg(tyfcb)} tooltip={`TYFCB sur 6 mois glissants\n${manqueTyfcb}\n>=300k→5 | >=150k→4 | >=50k→3 | >=20k→2 | >0→1`} />
+                    })()}
+                    {(() => {
+                      const ceuRate = Number(s.ceu_rate||0)
+                      const ceuPts = Number(s.ceu_score||0)
+                      const ceuBgC = ceuRate > 0.5 ? tlBg('vert') : ceuRate > 0 ? tlBg('jaune') : tlBg('gris')
+                      return <KpiCell value={ceuRate.toFixed(2)} pts={ceuPts} max={10} bg={ceuBgC} tooltip={`${ceuRate.toFixed(2)} CEU/sem sur 6 mois\n${ceuPts >= 10 ? '✓ Max atteint' : ceuRate > 0 ? '+CEU pour 10pts (>0.5/sem)' : 'Aucun CEU'}\n>0.5→10 | >0→5 | 0→0`} />
                     })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
