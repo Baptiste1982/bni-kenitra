@@ -40,17 +40,19 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   if (pErr) throw pErr
   if (!palms?.length) throw new Error('Aucune donnée PALMS importée')
 
-  // 2. Déterminer la période PALMS et la date de fin effective
+  // 2. Déterminer la période PALMS et la date d'import (point de coupure)
   const periodeDebut = palms[0]?.periode_debut
   const periodeFin = palms[0]?.periode_fin
   const aujourdHui = new Date().toISOString().split('T')[0]
+  // La date d'import = dernier jour couvert par le PALMS Excel
+  const palmsImportDate = palms[0]?.created_at ? new Date(palms[0].created_at).toISOString().split('T')[0] : periodeFin
 
-  // 3. Charger palms_hebdo APRÈS la période PALMS (données compilées mois suivants)
+  // 3. Charger palms_hebdo APRÈS la date d'import PALMS (données compilées qui s'ajoutent)
   const { data: hebdoData } = await supabase
     .from('palms_hebdo')
     .select('membre_id, palms, rdi, rde, rri, rre, invites, tat, mpb, ueg, nb_reunions, date_reunion')
     .eq('groupe_id', groupeId)
-    .gt('date_reunion', periodeFin)
+    .gt('date_reunion', palmsImportDate)
 
   // Agréger hebdo par membre
   const hebdoAgg = {}
@@ -74,8 +76,8 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   // Nombre total de jeudis : du début PALMS jusqu'à aujourd'hui (période combinée)
   const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
   const nbSemainesPalms = countJeudis(periodeDebut, periodeFin) || 1
-  const nbSemainesHebdo = Object.values(hebdoAgg).length > 0 ? countJeudis(periodeFin, aujourdHui) : 0
-  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis = ${nbSemainesPalms} PALMS + ${nbSemainesHebdo} hebdo)`)
+  const nbSemainesHebdo = Object.values(hebdoAgg).length > 0 ? countJeudis(palmsImportDate, aujourdHui) : 0
+  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis total, PALMS importé le ${palmsImportDate}, ${nbSemainesHebdo} jeudis hebdo compilés)`)
 
   // 4. Charger scores existants pour récupérer sponsors
   const { data: existingScores } = await supabase
