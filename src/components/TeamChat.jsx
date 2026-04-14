@@ -75,8 +75,37 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
     groupByDay[day].push(m)
   })
 
+  const mob = window.innerWidth <= 768
+
   return (
-    <div ref={chatRef} style={{ position:'fixed', bottom: isOpen ? 36 : '-100vh', right:40, width:380, height:'60vh', visibility: isOpen ? 'visible' : 'hidden', background:'#fff', boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none', display:'flex', flexDirection:'column', zIndex:200, transition:'bottom 0.3s ease', borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none' }}>
+    <div ref={chatRef} style={{
+      position:'fixed',
+      ...(mob ? {
+        top: isOpen ? 0 : '100vh',
+        left:0, right:0, bottom:0,
+        width:'100%', height:'100%',
+        borderRadius:0, border:'none',
+      } : {
+        bottom: isOpen ? 36 : '-100vh',
+        right:40, width:380, height:'60vh',
+        borderRadius:'12px 12px 0 0', border:'1px solid #E8E6E1', borderBottom:'none',
+      }),
+      visibility: isOpen ? 'visible' : 'hidden',
+      background:'#fff',
+      boxShadow: isOpen ? '0 -4px 24px rgba(0,0,0,0.15)' : 'none',
+      display:'flex', flexDirection:'column', zIndex:200,
+      transition: mob ? 'top 0.3s ease' : 'bottom 0.3s ease',
+    }}>
+
+      {/* Header mobile */}
+      {mob && isOpen && (
+        <div style={{ padding:'12px 16px', background:'#1C1C2E', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:18, cursor:'pointer', padding:0 }}>←</button>
+          <span style={{ fontSize:14 }}>💬</span>
+          <span style={{ color:'#fff', fontSize:14, fontWeight:600 }}>Chat Équipe</span>
+          <span style={{ color:'rgba(255,255,255,0.4)', fontSize:11, marginLeft:'auto' }}>{(onlineUsers||[]).filter(u=>u.isLive).length} en ligne</span>
+        </div>
+      )}
 
       {/* Poke notification */}
       {pokeNotif && (
