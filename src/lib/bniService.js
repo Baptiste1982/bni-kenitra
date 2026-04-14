@@ -77,7 +77,10 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
   const nbSemainesPalms = countJeudis(periodeDebut, periodeFin) || 1
   const nbSemainesHebdo = Object.values(hebdoAgg).length > 0 ? countJeudis(palmsImportDate, aujourdHui) : 0
-  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis total, PALMS importé le ${palmsImportDate}, ${nbSemainesHebdo} jeudis hebdo compilés)`)
+  // Nombre de mois (pour TàT et Refs qui sont mensuels)
+  const dDebut = new Date(periodeDebut + 'T12:00:00'), dFin = new Date(aujourdHui + 'T12:00:00')
+  const nbMois = Math.max(1, (dFin.getFullYear() - dDebut.getFullYear()) * 12 + (dFin.getMonth() - dDebut.getMonth()) + (dFin.getDate() >= dDebut.getDate() ? 1 : 0))
+  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis, ${nbMois} mois, PALMS importé le ${palmsImportDate}, ${nbSemainesHebdo} jeudis hebdo compilés)`)
 
   // 4. Charger scores existants pour récupérer sponsors
   const { data: existingScores } = await supabase
@@ -137,16 +140,21 @@ export async function recalculateScores(groupeCode = 'MK-01') {
 
     // Taux sur la période totale combinée
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
-    const rateTat = tat / nbSemaines
-    const rateRefs = refsGiven / nbSemaines
+    // TàT et Refs : taux MENSUEL (divisé par nb de mois)
+    const rateTat = tat / nbMois
+    const rateRefs = refsGiven / nbMois
+    // CEU : taux sur 6 mois (divisé par nb de semaines)
     const rateUeg = ueg / nbSemaines
     // Visiteurs : 6 mois glissants depuis table invites
     const visitors = visitorsPerMembre[p.membre_id] || 0
 
     // Barème BNI
+    // Présence /10 (6 mois)
     const attendanceScore = attendanceRate >= 0.95 ? 10 : attendanceRate >= 0.88 ? 5 : 0
-    const score121 = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
-    const refsScore = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
+    // TàT /20 (par mois) : >=4 → 20, >=3 → 15, >=2 → 10, >=1 → 5
+    const score121 = rateTat >= 4 ? 20 : rateTat >= 3 ? 15 : rateTat >= 2 ? 10 : rateTat >= 1 ? 5 : 0
+    // Referrals /25 (par mois) : >=5 → 25, >=4 → 20, >=3 → 15, >=2 → 10, >=1 → 5
+    const refsScore = rateRefs >= 5 ? 25 : rateRefs >= 4 ? 20 : rateRefs >= 3 ? 15 : rateRefs >= 2 ? 10 : rateRefs >= 1 ? 5 : 0
     const visitorScore = visitors >= 5 ? 25 : visitors >= 4 ? 20 : visitors >= 3 ? 15 : visitors >= 2 ? 10 : visitors >= 1 ? 5 : 0
     const tyfcbK = tyfcb / 1000
     const tyfcbScore = tyfcbK >= 30 ? 5 : tyfcbK >= 15 ? 4 : tyfcbK >= 5 ? 3 : tyfcbK >= 2 ? 2 : tyfcb > 0 ? 1 : 0

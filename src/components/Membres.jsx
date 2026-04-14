@@ -86,21 +86,21 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
           }
         })
         // Barème BNI exact pour le score prévisionnel
-        // On part des scores consolidés et on projette avec les données hebdo
-        const bniScore = (rateTat, rateRefs, ratePres, prevInv, prevMpb, rateUeg, sponsorScore) => {
-          // Attendance /10 : >=95% → 10, >=88% → 5, <88% → 0
+        // TàT et Refs = mensuel, le reste = 6 mois glissants
+        const bniScore = (tatMensuel, refsMensuel, ratePres, prevInv, prevMpb, rateUeg, sponsorScore) => {
+          // Présence /10 (6 mois) : >=95% → 10, >=88% → 5, <88% → 0
           const sPres = ratePres >= 0.95 ? 10 : ratePres >= 0.88 ? 5 : 0
-          // 1-2-1s /20 (par semaine) : >=1 → 20, >=0.75 → 15, >=0.5 → 10, >=0.25 → 5, <0.25 → 0
-          const sTat = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
-          // Referrals /25 (par semaine) : >=1.25 → 25, >=1 → 20, >=0.75 → 15, >=0.50 → 10, >=0.25 → 5, <0.25 → 0
-          const sRefs = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
-          // Visitors /25 (6 mois) : 5+ → 25, 4 → 20, 3 → 15, 2 → 10, 1 → 5, 0 → 0
+          // TàT /20 (par mois) : >=4 → 20, >=3 → 15, >=2 → 10, >=1 → 5
+          const sTat = tatMensuel >= 4 ? 20 : tatMensuel >= 3 ? 15 : tatMensuel >= 2 ? 10 : tatMensuel >= 1 ? 5 : 0
+          // Referrals /25 (par mois) : >=5 → 25, >=4 → 20, >=3 → 15, >=2 → 10, >=1 → 5
+          const sRefs = refsMensuel >= 5 ? 25 : refsMensuel >= 4 ? 20 : refsMensuel >= 3 ? 15 : refsMensuel >= 2 ? 10 : refsMensuel >= 1 ? 5 : 0
+          // Visitors /25 (6 mois glissants) : 5+ → 25, 4 → 20, 3 → 15, 2 → 10, 1 → 5, 0 → 0
           const sInv = prevInv >= 5 ? 25 : prevInv >= 4 ? 20 : prevInv >= 3 ? 15 : prevInv >= 2 ? 10 : prevInv >= 1 ? 5 : 0
-          // TYFCB /5 : >=30 → 5, >=15 → 4, >=5 → 3, >=2 → 2, >0 → 1, 0 → 0
+          // TYFCB /5 (6 mois) : >=30K → 5, >=15K → 4, >=5K → 3, >=2K → 2, >0 → 1, 0 → 0
           const sTyfcb = prevMpb >= 30 ? 5 : prevMpb >= 15 ? 4 : prevMpb >= 5 ? 3 : prevMpb >= 2 ? 2 : prevMpb > 0 ? 1 : 0
-          // CEU /10 (par semaine) : >0.5 → 10, >0 → 5, 0 → 0
+          // CEU /10 (6 mois, par semaine) : >0.5 → 10, >0 → 5, 0 → 0
           const sUeg = rateUeg > 0.5 ? 10 : rateUeg > 0 ? 5 : 0
-          // Sponsors /5 : on garde le score consolidé
+          // Sponsors /5 : score consolidé
           const total = sPres + sTat + sRefs + sInv + sTyfcb + sUeg + (sponsorScore || 0)
           const tl = total >= 70 ? 'vert' : total >= 50 ? 'orange' : total >= 30 ? 'rouge' : 'gris'
           return { score: total, tl }
@@ -114,22 +114,21 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
         Object.entries(map).forEach(([id, m]) => {
           const prevTat = m.cumul.tat + (m.derniere.tat * reunionsRestantes)
           const prevRefs = m.cumul.refs + (m.derniere.refs * reunionsRestantes)
-          const prevInv = m.cumul.invites + (m.derniere.invites * reunionsRestantes)
           const prevMpb = m.cumul.mpb + (m.derniere.mpb * reunionsRestantes)
           const prevUeg = m.cumul.ueg + (m.derniere.ueg * reunionsRestantes)
-          // Taux par semaine (sur le mois complet = nbJeudis)
-          const rateTat = nbJeudis > 0 ? prevTat / nbJeudis : 0
-          const rateRefs = nbJeudis > 0 ? prevRefs / nbJeudis : 0
+          // TàT et Refs : taux mensuel (projection du mois = total prévu du mois)
+          const tatMensuel = prevTat
+          const refsMensuel = prevRefs
           const ratePres = m.cumul.total > 0 ? m.cumul.presences / m.cumul.total : 1
           const rateUeg = nbJeudis > 0 ? prevUeg / nbJeudis : 0
           // Score sponsors du consolidé
           const consolidé = scoresData.find(s => s.membre_id === id)
           const sponsorScore = consolidé ? Number(consolidé.sponsor_score) || 0 : 0
-          // Visiteurs : déjà calculé sur 6 mois glissants dans scores_bni (table invites), pas d'ajout hebdo
+          // Visiteurs : déjà calculé sur 6 mois glissants dans scores_bni (table invites)
           const totalInv = consolidé ? Number(consolidé.visitors) || 0 : 0
           const totalMpb = (consolidé ? Number(consolidé.tyfcb) || 0 : 0) + prevMpb
-          const { score, tl } = bniScore(rateTat, rateRefs, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
-          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs, nbSemaines: nbSemaines }
+          const { score, tl } = bniScore(tatMensuel, refsMensuel, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
+          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs }
         })
         setPrevisions(prev)
         setLoading(false)
@@ -400,22 +399,22 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       const palmsRefs = p ? (p.rdi || 0) + (p.rde || 0) : 0
                       const totalTat = palmsTat + (h?.cumulTat || 0)
                       const totalRefs = palmsRefs + (h?.cumulRefs || 0)
-                      // Taux = total du mois / nombre total de jeudis du mois (pas juste les écoulés)
-                      const rateTat = nbJeudis > 0 ? totalTat / nbJeudis : 0
-                      const rateRefs = nbJeudis > 0 ? totalRefs / nbJeudis : 0
-                      const tatBgC = rateBg(rateTat)
-                      const refsBgC = rateBg(rateRefs)
-                      // Recalculer les scores sur le taux du mois (barème BNI)
-                      const ptsTat = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
-                      const ptsRefs = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
+                      // TàT et Refs = mensuel (total du mois = le taux directement)
+                      const tatMensuel = totalTat
+                      const refsMensuel = totalRefs
+                      const tatBgC = tatMensuel >= 4 ? tlBg('vert') : tatMensuel >= 2 ? tlBg('jaune') : tatMensuel >= 1 ? tlBg('orange') : tlBg('rouge')
+                      const refsBgC = refsMensuel >= 5 ? tlBg('vert') : refsMensuel >= 3 ? tlBg('jaune') : refsMensuel >= 1 ? tlBg('orange') : tlBg('rouge')
+                      // Barème mensuel
+                      const ptsTat = tatMensuel >= 4 ? 20 : tatMensuel >= 3 ? 15 : tatMensuel >= 2 ? 10 : tatMensuel >= 1 ? 5 : 0
+                      const ptsRefs = refsMensuel >= 5 ? 25 : refsMensuel >= 4 ? 20 : refsMensuel >= 3 ? 15 : refsMensuel >= 2 ? 10 : refsMensuel >= 1 ? 5 : 0
                       // Ce qu'il manque pour le score max
-                      const manqueTat = ptsTat >= 20 ? 0 : Math.max(0, nbJeudis - totalTat)
-                      const prochainSeuilTat = ptsTat >= 20 ? '✓ Max atteint' : ptsTat >= 15 ? `+${Math.ceil(nbJeudis*1 - totalTat)} pour 20pts` : ptsTat >= 10 ? `+${Math.ceil(nbJeudis*0.75 - totalTat)} pour 15pts` : ptsTat >= 5 ? `+${Math.ceil(nbJeudis*0.5 - totalTat)} pour 10pts` : `+${Math.ceil(nbJeudis*0.25 - totalTat)} pour 5pts`
-                      const manqueRefs = ptsRefs >= 25 ? 0 : Math.max(0, Math.ceil(nbJeudis*1.25) - totalRefs)
-                      const prochainSeuilRefs = ptsRefs >= 25 ? '✓ Max atteint' : ptsRefs >= 20 ? `+${Math.ceil(nbJeudis*1.25 - totalRefs)} pour 25pts` : ptsRefs >= 15 ? `+${Math.ceil(nbJeudis*1 - totalRefs)} pour 20pts` : ptsRefs >= 10 ? `+${Math.ceil(nbJeudis*0.75 - totalRefs)} pour 15pts` : ptsRefs >= 5 ? `+${Math.ceil(nbJeudis*0.5 - totalRefs)} pour 10pts` : `+${Math.ceil(nbJeudis*0.25 - totalRefs)} pour 5pts`
+                      const manqueTat = Math.max(0, 4 - totalTat)
+                      const prochainSeuilTat = ptsTat >= 20 ? '✓ Max atteint' : `+${manqueTat} TàT pour 20pts (obj: 4/mois)`
+                      const manqueRefs = Math.max(0, 5 - totalRefs)
+                      const prochainSeuilRefs = ptsRefs >= 25 ? '✓ Max atteint' : `+${manqueRefs} réf. pour 25pts (obj: 5/mois)`
                       return <>
-                        <KpiCell value={totalTat} pts={ptsTat} max={20} bg={tatBgC} tooltip={`Taux: ${rateTat.toFixed(2)}/sem (${totalTat}/${nbJeudis} jeudis)\n${prochainSeuilTat}\nIl manque ${manqueTat} TàT pour le score max (20pts)`} />
-                        <KpiCell value={totalRefs} pts={ptsRefs} max={25} bg={refsBgC} tooltip={`Taux: ${rateRefs.toFixed(2)}/sem (${totalRefs}/${nbJeudis} jeudis)\n${prochainSeuilRefs}\nIl manque ${manqueRefs} reco. pour le score max (25pts)`} />
+                        <KpiCell value={totalTat} pts={ptsTat} max={20} bg={tatBgC} tooltip={`${totalTat} TàT ce mois\n${prochainSeuilTat}\n>=4→20 | >=3→15 | >=2→10 | >=1→5`} />
+                        <KpiCell value={totalRefs} pts={ptsRefs} max={25} bg={refsBgC} tooltip={`${totalRefs} réf. ce mois\n${prochainSeuilRefs}\n>=5→25 | >=4→20 | >=3→15 | >=2→10 | >=1→5`} />
                       </>
                     })()}
                     {(() => {
@@ -439,9 +438,9 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       // Total = PALMS consolidés + hebdo
                       const totalTat = (pm ? Number(pm.tat || 0) : 0) + (pr?.cumulTat || 0)
                       const totalRefs = (pm ? (pm.rdi || 0) + (pm.rde || 0) : 0) + (pr?.cumulRefs || 0)
-                      const objTat = nbJeudis, objRefs = Math.ceil(nbJeudis * 1.25)
-                      const manqueTat = Math.max(0, objTat - totalTat)
-                      const manqueRefs = Math.max(0, objRefs - totalRefs)
+                      // Objectifs mensuels : 4 TàT/mois, 5 refs/mois
+                      const manqueTat = Math.max(0, 4 - totalTat)
+                      const manqueRefs = Math.max(0, 5 - totalRefs)
                       return <>
                         <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: pr ? (pr.score >= 70 ? '#059669' : pr.score >= 50 ? '#D97706' : pr.score >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{pr ? pr.score : '0'}</td>
                         <td style={{ padding:'10px 14px' }}>{pr ? <TLBadge tl={pr.tl} /> : <TLBadge tl="gris" />}</td>
