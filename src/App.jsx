@@ -353,7 +353,7 @@ export default function App() {
           </div>
         </div>
 
-        <main key={active} style={{ flex:1, overflowY:'auto', overflowX:'hidden', background:'#F7F6F3', display:'flex', flexDirection:'column' }}>
+        <main key={active} style={{ flex:1, overflowY:'auto', overflowX:'hidden', background: active === 'region' ? 'linear-gradient(160deg, #F0EDE6 0%, #DDE4ED 40%, #E4DCE8 70%, #EDE9E3 100%)' : '#F7F6F3', display:'flex', flexDirection:'column' }}>
           {MODULES[active]}
         </main>
       </div>
