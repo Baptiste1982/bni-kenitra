@@ -26,7 +26,7 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
       .then(({ data }) => { setHebdoData(data || []); setHebdoLoaded(true) })
   }, [score?.membre_id])
 
-  // ── Calculer les indicateurs MENSUELS (1-2-1, Reco, CEU) depuis hebdo du mois ──
+  // ── Calculer les indicateurs MENSUELS (1-2-1, Reco) depuis hebdo du mois ──
   const now = new Date()
   const premierJourMois = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
   const dernierJourMois = new Date(now.getFullYear(), now.getMonth()+1, 0)
@@ -35,13 +35,10 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
   const hebdoMois = hebdoData.filter(h => h.date_reunion >= premierJourMois && h.date_reunion <= dernierJourStr)
   const tatMois = hebdoMois.reduce((s,h) => s+(h.tat||0), 0)
   const refsMois = hebdoMois.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)
-  const ceuMois = hebdoMois.reduce((s,h) => s+(h.ueg||0), 0)
   const rateTatMois = tatMois / nbJeudisMois
   const rateRefsMois = refsMois / nbJeudisMois
-  const rateCeuMois = ceuMois / nbJeudisMois
   const scoreTat = rateTatMois >= 1 ? 20 : rateTatMois >= 0.75 ? 15 : rateTatMois >= 0.5 ? 10 : rateTatMois >= 0.25 ? 5 : 0
   const scoreRefs = rateRefsMois >= 1.25 ? 25 : rateRefsMois >= 1 ? 20 : rateRefsMois >= 0.75 ? 15 : rateRefsMois >= 0.50 ? 10 : rateRefsMois >= 0.25 ? 5 : 0
-  const scoreCeu = rateCeuMois > 0.5 ? 10 : rateCeuMois > 0 ? 5 : 0
 
   const criteria = [
     { label:'Présence', rate: s.attendance_rate, score: s.attendance_score, max:10, format: v => `${Math.round(v*100)}%` },
@@ -50,7 +47,7 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
     { label:'Visiteurs', rate: s.visitors, score: s.visitor_score, max:25, format: v => `${v} en 6 mois` },
     { label:'Parrainages', rate: s.sponsors, score: s.sponsor_score, max:5, format: v => `${v} en 6 mois` },
     { label:'TYFCB', rate: s.tyfcb, score: s.tyfcb_score, max:5, format: v => `${Number(v).toLocaleString('fr-FR')} MAD` },
-    { label:'CEU', rate: rateCeuMois, score: scoreCeu, max:10, format: v => `${Number(v).toFixed(2)}/sem` },
+    { label:'CEU', rate: s.ceu_rate, score: s.ceu_score, max:10, format: v => `${Number(v).toFixed(2)}/sem` },
   ]
 
   const formatDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
@@ -272,7 +269,7 @@ CONSIGNES:
 
                       // Indicateurs mensuels (1-2-1, Reco, CEU) = mois en cours
                       // Indicateurs 6 mois (Présence, Visiteurs, TYFCB) = tout l'hebdo
-                      const isMensuel = ['1-2-1s','Recommandations','CEU'].includes(c.label)
+                      const isMensuel = ['1-2-1s','Recommandations'].includes(c.label)
                       const dataSource = isMensuel ? hebdoMois : hebdoData
                       const totalPresences = hebdoData.filter(h => h.palms === 'P').length
                       const totalAbsences = hebdoData.filter(h => h.palms === 'A').length
@@ -282,7 +279,7 @@ CONSIGNES:
                       const totalRefsExt = hebdoMois.reduce((s,h) => s+(h.rde||0), 0)
                       const totalInv = hebdoData.reduce((s,h) => s+(h.invites||0), 0)
                       const totalMpb = hebdoData.reduce((s,h) => s+Number(h.mpb||0), 0)
-                      const totalCeu = hebdoMois.reduce((s,h) => s+(h.ueg||0), 0)
+                      const totalCeu = hebdoData.reduce((s,h) => s+(h.ueg||0), 0)
                       const nbReunions = dataSource.length
 
                       // Rendu du détail par réunion selon le KPI
@@ -364,7 +361,7 @@ CONSIGNES:
                         if (c.label === 'CEU') return (
                           <div>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                              {hebdoMois.map((h, j) => (
+                              {hebdoData.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: (h.ueg||0) > 0 ? '#D1FAE5' : '#F3F4F6', color: (h.ueg||0) > 0 ? '#065F46' : '#9CA3AF' }}>
                                   {formatDate(h.date_reunion)} — {h.ueg || 0} CEU
                                 </div>

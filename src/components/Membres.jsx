@@ -430,14 +430,11 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       return <KpiCell value={tyfcb.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD'} pts={Number(s.tyfcb_score||0)} max={5} bg={tyfcbBg(tyfcb)} tooltip={`TYFCB sur 6 mois glissants\n${manqueTyfcb}\n>=300k→5 | >=150k→4 | >=50k→3 | >=20k→2 | >0→1`} />
                     })()}
                     {(() => {
-                      const h = previsions[s.membre_id]
-                      // CEU : mois en cours uniquement (palms_hebdo), remis à 0 chaque mois
-                      const ceuMois = h?.cumul?.ueg || 0
-                      const ceuBgC = ceuMois > 0 ? tlBg('vert') : tlBg('gris')
-                      // Score CEU affiché = barème sur le mois
-                      const rateCeu = nbJeudis > 0 ? ceuMois / nbJeudis : 0
-                      const ceuPts = rateCeu > 0.5 ? 10 : rateCeu > 0 ? 5 : 0
-                      return <KpiCell value={ceuMois} pts={ceuPts} max={10} bg={ceuBgC} tooltip={`${ceuMois} CEU ce mois (${rateCeu.toFixed(2)}/sem)\n${ceuPts >= 10 ? '✓ Max atteint' : ceuMois > 0 ? '+CEU pour 10pts (>0.5/sem)' : 'Aucun CEU'}\n>0.5→10 | >0→5 | 0→0`} />
+                      // CEU : 6 mois glissants (palms_imports + tout hebdo)
+                      const ceuRate = Number(s.ceu_rate||0)
+                      const ceuPts = Number(s.ceu_score||0)
+                      const ceuBgC = ceuRate > 0.5 ? tlBg('vert') : ceuRate > 0 ? tlBg('jaune') : tlBg('gris')
+                      return <KpiCell value={ceuRate.toFixed(2)} pts={ceuPts} max={10} bg={ceuBgC} tooltip={`${ceuRate.toFixed(2)} CEU/sem sur 6 mois\n${ceuPts >= 10 ? '✓ Max atteint' : ceuRate > 0 ? '+CEU pour 10pts (>0.5/sem)' : 'Aucun CEU'}\n>0.5→10 | >0→5 | 0→0`} />
                     })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
