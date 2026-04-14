@@ -111,19 +111,37 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     .eq('groupe_id', groupeId)
 
   // 6. Visiteurs : 6 mois glissants depuis la table invites
+  //    EXCLURE les invités qui sont devenus membres du groupe
   const sixMoisAvant = new Date()
   sixMoisAvant.setMonth(sixMoisAvant.getMonth() - 6)
   const sixMoisStr = sixMoisAvant.toISOString().split('T')[0]
   const { data: invitesData } = await supabase
     .from('invites')
-    .select('invite_par_nom, date_visite')
+    .select('invite_par_nom, date_visite, prenom, nom')
     .eq('groupe_id', groupeId)
     .gte('date_visite', sixMoisStr)
 
   const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+
+  // Fonction pour vérifier si un invité est devenu membre du groupe
+  const isMembreGroupe = (invPrenom, invNom) => {
+    const pN = norm(invPrenom), nN = norm(invNom)
+    return (membres || []).some(m => {
+      const mP = norm(m.prenom), mN = norm(m.nom)
+      if (mN === nN && mP === pN) return true
+      if (mN === nN && (mP.includes(pN) || pN.includes(mP))) return true
+      if (mN === nN && pN.length >= 3 && mP.slice(0, 3) === pN.slice(0, 3)) return true
+      return false
+    })
+  }
+
   const visitorsPerMembre = {}
+  let excludedCount = 0
   ;(invitesData || []).forEach(inv => {
     if (!inv.invite_par_nom) return
+    // Exclure les invités devenus membres
+    if (isMembreGroupe(inv.prenom, inv.nom)) { excludedCount++; return }
+
     const invNorm = norm(inv.invite_par_nom)
     const membre = (membres || []).find(m => {
       const mPrenom = norm(m.prenom), mNom = norm(m.nom)
@@ -137,7 +155,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
       visitorsPerMembre[membre.id] = (visitorsPerMembre[membre.id] || 0) + 1
     }
   })
-  console.log('[recalculateScores] Visiteurs 6 mois glissants:', visitorsPerMembre)
+  console.log(`[recalculateScores] Visiteurs 6 mois glissants (${excludedCount} invités devenus membres exclus):`, visitorsPerMembre)
 
   // 7. Calculer les scores : PALMS base + hebdo compilé
   const scored = palms.map(p => {
