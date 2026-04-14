@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, StatCard, Card, fullName, cap } from './ui'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
-export function Invites({ profil }) {
+export function Invites({ profil, groupeCode = 'MK-01' }) {
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('tous')
@@ -33,7 +33,7 @@ export function Invites({ profil }) {
   const load = () => {
     setLoading(true)
     Promise.all([
-      fetchInvites(),
+      fetchInvites(groupeCode),
       supabase.from('statut_colors').select('statut, couleur'),
       supabase.from('invite_column_access').select('role, column_key, visible'),
     ]).then(([invData, colorsRes, accessRes]) => {
@@ -145,7 +145,7 @@ export function Invites({ profil }) {
       const iInvitedBy = colIdx('invited by') >= 0 ? colIdx('invited by') : colIdx('invité par')
       const iType = colIdx('type')
 
-      const groupeId = (await supabase.from('groupes').select('id').eq('code','MK-01').single()).data?.id
+      const groupeId = (await supabase.from('groupes').select('id').eq('code', groupeCode).single()).data?.id
 
       for (const r of rows) {
         const prenom = (r[iPrenom] || '').trim()
@@ -293,7 +293,7 @@ export function Invites({ profil }) {
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title="Pipeline Invités" sub={`MK-01 · ${invites.length} invités depuis déc 2025`}
+      <PageHeader title="Pipeline Invités" sub={`${groupeCode} · ${invites.length} invités`}
         right={
           <div style={{ display:'flex', gap: isMobile ? 6 : 10, alignItems:'center', flexWrap:'wrap' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
@@ -748,7 +748,7 @@ export function Groupes() {
 }
 
 // ─── REPORTING ───────────────────────────────────────────────────────────────
-export function Reporting() {
+export function Reporting({ groupeCode = 'MK-01' }) {
   const [scores, setScores] = useState([])
   const [kpis, setKpis] = useState(null)
   const [hebdo, setHebdo] = useState([])
@@ -763,7 +763,7 @@ export function Reporting() {
   const prevAnnee = mois === 1 ? annee - 1 : annee
 
   useEffect(() => {
-    Promise.all([fetchScoresMK01(), fetchDashboardKPIs(), fetchPalmsHebdoMois(mois, annee), fetchMonthlySnapshots(prevMois, prevAnnee)])
+    Promise.all([fetchScoresMK01(groupeCode), fetchDashboardKPIs(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchMonthlySnapshots(prevMois, prevAnnee, groupeCode)])
       .then(([s, k, h, ps]) => { setScores(s); setKpis(k); setHebdo(h); setPrevSnapshot(ps); setLoading(false) })
   }, [])
 
@@ -813,7 +813,7 @@ export function Reporting() {
 
   return (
     <div style={{ padding: mob ? '16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title="Reporting" sub={`MK-01 Kénitra Atlantique · ${moisLabel}`} />
+      <PageHeader title="Reporting" sub={`${groupeCode} · ${moisLabel}`} />
       <div style={{ display:'grid', gridTemplateColumns: mob ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: mob ? 8 : 16, marginBottom: mob ? 16 : 24 }}>
         {[
           { label:'TYFCB total', value: kpis ? `${Math.round(kpis.tyfcb).toLocaleString('de-DE')} MAD` : '…', sub:'6 mois glissants',

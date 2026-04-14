@@ -5,7 +5,7 @@ import { TLBadge, PageHeader, TableWrap, fullName } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
 
-export default function Membres({ profil }) {
+export default function Membres({ profil, groupeCode = 'MK-01' }) {
   const [scores, setScores] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -45,7 +45,7 @@ export default function Membres({ profil }) {
 
   const load = () => {
     setLoading(true)
-    Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee), fetchPalmsMK01(), supabase.from('palms_imports').select('periode_debut, created_at').limit(1)])
+    Promise.all([fetchScoresMK01(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchPalmsMK01(groupeCode), supabase.from('palms_imports').select('periode_debut, created_at').limit(1)])
       .then(([scoresData, hebdoData, palmsRaw, palmsImportRes]) => {
         // Réunions saisies
         const pi = palmsImportRes?.data?.[0]
@@ -175,7 +175,7 @@ export default function Membres({ profil }) {
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader
         title="Membres"
-        sub={`MK-01 Kénitra Atlantique · ${scores.length} membres scorés`}
+        sub={`${groupeCode} · ${scores.length} membres scorés`}
         right={
           <div style={{ position:'relative' }}>
             <div onClick={() => { setShowImport(!showImport); setShowPalms(false); setShowPalmsMenu(false) }}
@@ -226,7 +226,7 @@ export default function Membres({ profil }) {
       {/* PALMS Import */}
       {showImport && (
         <div style={{ marginBottom:20 }}>
-          <PalmsImport onImportDone={() => { load(); setShowImport(false) }} />
+          <PalmsImport onImportDone={() => { load(); setShowImport(false) }} groupeCode={groupeCode} />
         </div>
       )}
 

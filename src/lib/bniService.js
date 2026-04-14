@@ -17,8 +17,8 @@ export async function fetchGroupes() {
 }
 
 // ─── SCORES ──────────────────────────────────────────────────────────────────
-export async function fetchScoresMK01() {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchScoresMK01(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
 
   // Charger scores avec membres
@@ -83,8 +83,8 @@ export async function marquerAlerteLue(id) {
 }
 
 // ─── PALMS ───────────────────────────────────────────────────────────────────
-export async function fetchPalmsMK01() {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchPalmsMK01(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
   const { data, error } = await supabase
     .from('palms_imports')
@@ -95,24 +95,24 @@ export async function fetchPalmsMK01() {
 }
 
 // ─── PALMS HEBDO ────────────────────────────────────────────────────────────
-export async function fetchMembresForMatch() {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchMembresForMatch(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
   const { data } = await supabase.from('membres').select('id, prenom, nom').eq('groupe_id', groupeId).eq('statut', 'actif')
   return data || []
 }
 
-export async function insertPalmsHebdo(rows, dateReunion, nbReunions = 1) {
-  const groupeId = await getGroupeId('MK-01')
-  if (!groupeId) throw new Error('Groupe MK-01 introuvable')
+export async function insertPalmsHebdo(rows, dateReunion, nbReunions = 1, groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
+  if (!groupeId) throw new Error(`Groupe ${groupeCode} introuvable`)
   const records = rows.map(r => ({ ...r, groupe_id: groupeId, date_reunion: dateReunion, nb_reunions: nbReunions }))
   const { data, error } = await supabase.from('palms_hebdo').upsert(records, { onConflict: 'membre_id,date_reunion' })
   if (error) throw error
   return data
 }
 
-export async function fetchPalmsHebdoMois(mois, annee) {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchPalmsHebdoMois(mois, annee, groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
   const debut = `${annee}-${String(mois).padStart(2, '0')}-01`
   const finDate = new Date(annee, mois, 0)
@@ -149,8 +149,8 @@ export async function fetchTemplates() {
 }
 
 // ─── DASHBOARD KPIs ──────────────────────────────────────────────────────────
-export async function fetchDashboardKPIs() {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchDashboardKPIs(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return null
 
   const troisMoisAvant = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0]
@@ -269,8 +269,8 @@ export async function readGoogleSheet() {
   return data
 }
 
-export async function syncSheetToSupabase() {
-  const groupeId = await getGroupeId('MK-01')
+export async function syncSheetToSupabase(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) throw new Error('Groupe introuvable')
 
   const sheetData = await readGoogleSheet()
@@ -340,11 +340,11 @@ export async function writeInviteToSheet(invite) {
 }
 
 // ─── MONTHLY SNAPSHOTS ──────────────────────────────────────────────────────
-export async function cloturerMois(mois, annee, userId) {
-  const groupeId = await getGroupeId('MK-01')
+export async function cloturerMois(mois, annee, userId, groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) throw new Error('Groupe introuvable')
-  const hebdo = await fetchPalmsHebdoMois(mois, annee)
-  const membres = await fetchMembresForMatch()
+  const hebdo = await fetchPalmsHebdoMois(mois, annee, groupeCode)
+  const membres = await fetchMembresForMatch(groupeCode)
   const map = {}
   hebdo.filter(r => r.membre_id).forEach(r => {
     if (!map[r.membre_id]) map[r.membre_id] = { tat:0, refs:0, invites:0, mpb:0, ueg:0, presences:0, absences:0 }
@@ -362,16 +362,16 @@ export async function cloturerMois(mois, annee, userId) {
   return { count: snapshots.length }
 }
 
-export async function fetchMonthlySnapshots(mois, annee) {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchMonthlySnapshots(mois, annee, groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
   const { data, error } = await supabase.from('monthly_snapshots').select('*, membres(prenom, nom)').eq('groupe_id', groupeId).eq('mois', mois).eq('annee', annee)
   if (error) throw error
   return data || []
 }
 
-export async function fetchAllSnapshots() {
-  const groupeId = await getGroupeId('MK-01')
+export async function fetchAllSnapshots(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
   const { data, error } = await supabase.from('monthly_snapshots').select('mois, annee, cloture_at').eq('groupe_id', groupeId).order('annee',{ascending:false}).order('mois',{ascending:false})
   if (error) throw error

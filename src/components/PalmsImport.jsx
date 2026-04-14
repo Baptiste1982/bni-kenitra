@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function PalmsImport({ onImportDone }) {
+export default function PalmsImport({ onImportDone, groupeCode = 'MK-01' }) {
   const [dragging, setDragging] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
@@ -84,7 +84,7 @@ export default function PalmsImport({ onImportDone }) {
       console.log('[PALMS Import] Parsed:', rows.length, 'rows, meta:', meta)
 
       // Get groupe MK-01
-      const { data: groupes } = await supabase.from('groupes').select('id,code').eq('code', 'MK-01').single()
+      const { data: groupes } = await supabase.from('groupes').select('id,code').eq('code', groupeCode).single()
       const groupeId = groupes?.id
 
       // Get existing membres

@@ -61,6 +61,8 @@ export default function App() {
   const [teamCollapsed, setTeamCollapsed] = useState(true)
   const [chatOpen, setChatOpen] = useState(false)
   const [unreadChat, setUnreadChat] = useState(0)
+  const [groupeCode, setGroupeCode] = useState('MK-01')
+  const [groupes, setGroupes] = useState([])
   const chatTabRef = React.useRef(null)
 
   useEffect(() => {
@@ -98,6 +100,25 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Charger les groupes + déterminer le groupe par défaut du profil
+  useEffect(() => {
+    supabase.from('groupes').select('id, code, nom, statut').order('code').then(({ data }) => {
+      if (data) setGroupes(data)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!profil || !groupes.length) return
+    if (profil.groupe_id) {
+      const g = groupes.find(g => g.id === profil.groupe_id)
+      if (g) setGroupeCode(g.code)
+    }
+    // super_admin/DC sans groupe_id → reste sur MK-01 par défaut (peut switcher)
+  }, [profil, groupes])
+
+  const canSwitchGroupe = !profil?.groupe_id && ['super_admin', 'directeur_executif', 'directrice_consultante'].includes(profil?.role)
+  const currentGroupe = groupes.find(g => g.code === groupeCode)
 
   // Realtime Presence — activité live
   useEffect(() => {
@@ -185,12 +206,12 @@ export default function App() {
 
   const MODULES = {
     alertes:   <Alertes />,
-    dashboard: <Dashboard onNavigate={navigate} profil={profil} />,
-    membres:   <Membres profil={profil} />,
-    hebdo:     <SuiviHebdo />,
-    invites:   <Invites profil={profil} />,
+    dashboard: <Dashboard onNavigate={navigate} profil={profil} groupeCode={groupeCode} />,
+    membres:   <Membres profil={profil} groupeCode={groupeCode} />,
+    hebdo:     <SuiviHebdo groupeCode={groupeCode} />,
+    invites:   <Invites profil={profil} groupeCode={groupeCode} />,
     groupes:   <Groupes />,
-    reporting: <Reporting />,
+    reporting: <Reporting groupeCode={groupeCode} />,
     agent:     <AgentIA />,
     admin:     <AdminUsers />,
   }
@@ -208,6 +229,25 @@ export default function App() {
         <div style={{ color:'#fff', fontWeight:700, fontSize:14, letterSpacing:'0.05em', textTransform:'uppercase' }}>BNI Kénitra</div>
         <SidebarClock />
       </div>
+
+      {/* Sélecteur de groupe */}
+      {canSwitchGroupe && groupes.length > 1 && (
+        <div style={{ padding:'8px 14px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>Groupe actif</div>
+          <div style={{ display:'flex', gap:4 }}>
+            {groupes.map(g => (
+              <button key={g.code} onClick={() => setGroupeCode(g.code)}
+                style={{ flex:1, padding:'6px 8px', borderRadius:6, border:'none', cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'DM Sans, sans-serif',
+                  background: groupeCode === g.code ? '#C41E3A' : 'rgba(255,255,255,0.08)',
+                  color: groupeCode === g.code ? '#fff' : 'rgba(255,255,255,0.4)',
+                  transition:'all 0.15s'
+                }}>
+                {g.code}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alertes live — au-dessus du nav */}
       <div style={{ padding:'8px 10px' }}>

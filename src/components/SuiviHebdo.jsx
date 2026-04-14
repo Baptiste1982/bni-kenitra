@@ -17,7 +17,7 @@ function matchMembre(prenom, nom, membres) {
     || null
 }
 
-export default function SuiviHebdo() {
+export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const [rawText, setRawText] = useState('')
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
   const [nbReunions, setNbReunions] = useState(1)
@@ -70,7 +70,7 @@ export default function SuiviHebdo() {
     setResult(null)
 
     try {
-      const membres = await fetchMembresForMatch()
+      const membres = await fetchMembresForMatch(groupeCode)
       const lines = rawText.trim().split('\n').map(l => l.split('\t'))
 
       // Detect headers
@@ -124,8 +124,8 @@ export default function SuiviHebdo() {
         imported++
       }
 
-      if (rows.length > 0) await insertPalmsHebdo(rows, dateReunion, nbReunions)
-      if (bniRow) await insertPalmsHebdo([bniRow], dateReunion, nbReunions)
+      if (rows.length > 0) await insertPalmsHebdo(rows, dateReunion, nbReunions, groupeCode)
+      if (bniRow) await insertPalmsHebdo([bniRow], dateReunion, nbReunions, groupeCode)
 
       setResult({ imported, skipped, bni: !!bniRow })
       setRawText('')

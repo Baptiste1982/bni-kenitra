@@ -9,7 +9,7 @@ const tyfcbBg = (val) => val >= 300000 ? {bg:'#D1FAE5',color:'#065F46'} : val >=
 const nameColor = (score) => Number(score||0) >= 70 ? '#065F46' : Number(score||0) >= 50 ? '#854D0E' : Number(score||0) >= 30 ? '#991B1B' : '#6B7280'
 const rowBg = (tl) => ({ vert:'#D1FAE5', orange:'#FEF9C3', rouge:'#FEE2E2', gris:'#F9FAFB' }[tl] || '#fff')
 
-export default function Dashboard({ onNavigate, profil }) {
+export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) {
   const [kpis, setKpis] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reunionsSaisies, setReunionsSaisies] = useState(0)
@@ -33,7 +33,7 @@ export default function Dashboard({ onNavigate, profil }) {
 
   useEffect(() => {
     Promise.all([
-      fetchDashboardKPIs(),
+      fetchDashboardKPIs(groupeCode),
       supabase.from('palms_imports').select('periode_debut, created_at').limit(1),
       supabase.from('app_settings').select('key, value'),
     ]).then(([data, palmsRes, settingsRes]) => {
@@ -63,7 +63,7 @@ export default function Dashboard({ onNavigate, profil }) {
     setCloturing(true); setClotureMsg('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const result = await cloturerMois(mois, annee, session?.user?.id)
+      const result = await cloturerMois(mois, annee, session?.user?.id, groupeCode)
       setClotureMsg(`Mois clôturé — ${result.count} membres sauvegardés`)
     } catch(e) { setClotureMsg('Erreur : ' + e.message) }
     setCloturing(false)
