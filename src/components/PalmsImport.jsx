@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { recalculateScores } from '../lib/bniService'
 
 export default function PalmsImport({ onImportDone, groupeCode = 'MK-01' }) {
   const [dragging, setDragging] = useState(false)
@@ -150,7 +151,15 @@ export default function PalmsImport({ onImportDone, groupeCode = 'MK-01' }) {
         imported++
       }
 
-      setResult({ imported, skipped, total: rows.length, periode_debut, periode_fin, dateImport, jeudisCouverts, jeudisTotalMois })
+      // Recalculer les scores BNI automatiquement après l'import
+      let scoreResult = null
+      try {
+        scoreResult = await recalculateScores(groupeCode)
+      } catch (e) {
+        console.error('[PALMS Import] Erreur recalcul scores:', e)
+      }
+
+      setResult({ imported, skipped, total: rows.length, periode_debut, periode_fin, dateImport, jeudisCouverts, jeudisTotalMois, scoreResult })
       if (onImportDone) onImportDone()
 
     } catch (err) {
@@ -208,6 +217,11 @@ export default function PalmsImport({ onImportDone, groupeCode = 'MK-01' }) {
             {result.periode_debut && result.periode_fin && (
               <div style={{ fontSize:12, color:'#065F46', marginTop:4 }}>
                 Période : du {new Date(result.periode_debut).toLocaleDateString('fr-FR')} au {new Date(result.periode_fin).toLocaleDateString('fr-FR')} · Import au {new Date(result.dateImport).toLocaleDateString('fr-FR')} · {result.jeudisCouverts}/{result.jeudisTotalMois} réunions couvertes
+              </div>
+            )}
+            {result.scoreResult && (
+              <div style={{ fontSize:12, color:'#065F46', marginTop:4, padding:'6px 10px', background:'rgba(255,255,255,0.5)', borderRadius:6 }}>
+                📊 Scores recalculés : {result.scoreResult.count} membres · {result.scoreResult.nbSemaines} semaine{result.scoreResult.nbSemaines > 1 ? 's' : ''} couverte{result.scoreResult.nbSemaines > 1 ? 's' : ''}
               </div>
             )}
           </div>

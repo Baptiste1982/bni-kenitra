@@ -16,6 +16,119 @@ export async function fetchGroupes() {
   return data
 }
 
+// ─── RECALCUL SCORES BNI ────────────────────────────────────────────────────
+// Recalcule scores_bni à partir de palms_imports (données Excel définitives)
+// Applique le barème BNI officiel
+export async function recalculateScores(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
+  if (!groupeId) throw new Error('Groupe introuvable')
+
+  // 1. Charger palms_imports pour ce groupe
+  const { data: palms, error: pErr } = await supabase
+    .from('palms_imports')
+    .select('*')
+    .eq('groupe_id', groupeId)
+  if (pErr) throw pErr
+  if (!palms?.length) throw new Error('Aucune donnée PALMS importée')
+
+  // 2. Déterminer la période et le nombre de semaines (jeudis)
+  const periodeDebut = palms[0]?.periode_debut
+  const periodeFin = palms[0]?.periode_fin
+  const importDate = palms[0]?.created_at ? new Date(palms[0].created_at).toISOString().split('T')[0] : periodeFin
+
+  // Compter les jeudis entre debut et min(import_date, aujourd'hui)
+  const endDate = importDate < periodeFin ? importDate : periodeFin
+  const countJeudis = (from, to) => {
+    let count = 0
+    const d = new Date(from + 'T12:00:00')
+    const end = new Date(to + 'T12:00:00')
+    while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
+    return count
+  }
+  const nbSemaines = countJeudis(periodeDebut, endDate) || 1
+
+  // 3. Charger scores existants pour récupérer sponsors (non présent dans palms_imports)
+  const { data: existingScores } = await supabase
+    .from('scores_bni')
+    .select('membre_id, sponsors, sponsor_score')
+    .eq('groupe_id', groupeId)
+  const sponsorMap = {}
+  ;(existingScores || []).forEach(s => { sponsorMap[s.membre_id] = { sponsors: s.sponsors || 0, score: Number(s.sponsor_score) || 0 } })
+
+  // 4. Calculer les scores pour chaque membre
+  const scored = palms.map(p => {
+    const presences = p.presences || 0
+    const absences = p.absences || 0
+    const totalReunions = presences + absences
+
+    // Taux
+    const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
+    const tat = Number(p.tat) || 0
+    const refsGiven = (p.rdi || 0) + (p.rde || 0)
+    const rateTat = tat / nbSemaines
+    const rateRefs = refsGiven / nbSemaines
+    const visitors = p.invites || 0
+    const tyfcb = Number(p.mpb) || 0
+    const ueg = p.ueg || 0
+    const rateUeg = ueg / nbSemaines
+
+    // Barème BNI
+    // Attendance /10
+    const attendanceScore = attendanceRate >= 0.95 ? 10 : attendanceRate >= 0.88 ? 5 : 0
+    // 1-2-1 (TàT) /20
+    const score121 = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
+    // Referrals Given /25
+    const refsScore = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
+    // Visitors /25 (cumulé sur la période)
+    const visitorScore = visitors >= 5 ? 25 : visitors >= 4 ? 20 : visitors >= 3 ? 15 : visitors >= 2 ? 10 : visitors >= 1 ? 5 : 0
+    // TYFCB /5 (en milliers MAD)
+    const tyfcbK = tyfcb / 1000
+    const tyfcbScore = tyfcbK >= 30 ? 5 : tyfcbK >= 15 ? 4 : tyfcbK >= 5 ? 3 : tyfcbK >= 2 ? 2 : tyfcb > 0 ? 1 : 0
+    // CEU /10
+    const ceuScore = rateUeg > 0.5 ? 10 : rateUeg > 0 ? 5 : 0
+    // Sponsors /5 (récupéré des scores existants si dispo)
+    const sp = sponsorMap[p.membre_id] || { sponsors: 0, score: 0 }
+
+    const totalScore = attendanceScore + score121 + refsScore + visitorScore + tyfcbScore + ceuScore + sp.score
+    const trafficLight = totalScore >= 70 ? 'vert' : totalScore >= 50 ? 'orange' : totalScore >= 30 ? 'rouge' : 'gris'
+
+    return {
+      membre_id: p.membre_id,
+      groupe_id: groupeId,
+      total_score: totalScore,
+      traffic_light: trafficLight,
+      attendance_rate: attendanceRate,
+      attendance_score: attendanceScore,
+      rate_121: rateTat,
+      score_121: score121,
+      referrals_given_rate: rateRefs,
+      referrals_given_score: refsScore,
+      visitors,
+      visitor_score: visitorScore,
+      tyfcb,
+      tyfcb_score: tyfcbScore,
+      ceu_rate: rateUeg,
+      ceu_score: ceuScore,
+      sponsors: sp.sponsors,
+      sponsor_score: sp.score,
+      periode_debut: periodeDebut,
+      periode_fin: periodeFin,
+    }
+  })
+
+  // 5. Trier par score et attribuer les rangs
+  scored.sort((a, b) => b.total_score - a.total_score || a.attendance_rate - b.attendance_rate)
+  scored.forEach((s, i) => { s.rank = i + 1 })
+
+  // 6. Upsert dans scores_bni
+  const { error: uErr } = await supabase
+    .from('scores_bni')
+    .upsert(scored, { onConflict: 'membre_id' })
+  if (uErr) throw uErr
+
+  return { count: scored.length, nbSemaines, periodeDebut, periodeFin }
+}
+
 // ─── SCORES ──────────────────────────────────────────────────────────────────
 export async function fetchScoresMK01(groupeCode = 'MK-01') {
   const groupeId = await getGroupeId(groupeCode)
