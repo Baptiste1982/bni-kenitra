@@ -94,8 +94,8 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
           const sRefs = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
           // Visitors /25 (6 mois glissants) : 5+→25, 4→20, 3→15, 2→10, 1→5, 0→0
           const sInv = prevInv >= 5 ? 25 : prevInv >= 4 ? 20 : prevInv >= 3 ? 15 : prevInv >= 2 ? 10 : prevInv >= 1 ? 5 : 0
-          // TYFCB /5 (6 mois) : >=30→5, 15-<30→4, 5-<15→3, 2-<5→2, >0-<2→1, 0→0
-          const sTyfcb = prevMpb >= 30 ? 5 : prevMpb >= 15 ? 4 : prevMpb >= 5 ? 3 : prevMpb >= 2 ? 2 : prevMpb > 0 ? 1 : 0
+          // TYFCB /5 (6 mois) : >=300→5, 150-<300→4, 50-<150→3, 20-<50→2, >0-<20→1, 0→0
+          const sTyfcb = prevMpb >= 300 ? 5 : prevMpb >= 150 ? 4 : prevMpb >= 50 ? 3 : prevMpb >= 20 ? 2 : prevMpb > 0 ? 1 : 0
           // CEU /10 (per week, 6 mois) : >0.5→10, >0→5, 0→0
           const sUeg = rateUeg > 0.5 ? 10 : rateUeg > 0 ? 5 : 0
           // Sponsors /5 : 1+→5, 0→0
@@ -134,7 +134,10 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       .catch(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [groupeCode])
+  useEffect(() => {
+    // Recalcul auto des scores au chargement puis affichage
+    recalculateScores(groupeCode).catch(() => {}).finally(() => load())
+  }, [groupeCode])
 
   const prevColor = (val, obj) => val >= obj ? '#059669' : val >= obj * 0.6 ? '#D97706' : '#DC2626'
   const nameColor = (score) => Number(score||0) >= 70 ? '#065F46' : Number(score||0) >= 50 ? '#854D0E' : Number(score||0) >= 30 ? '#991B1B' : '#6B7280'
@@ -213,12 +216,6 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
                       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                       📥 Importer Excel
-                    </div>
-                    <div onClick={async e => { e.stopPropagation(); setShowPalmsMenu(false); try { await recalculateScores(groupeCode); load() } catch(err) { console.error('Recalcul:', err) } }}
-                      style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF' }}
-                      onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
-                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                      🔄 Recalculer les scores
                     </div>
                   </div>
                 )}
