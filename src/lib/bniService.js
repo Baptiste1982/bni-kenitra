@@ -70,7 +70,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const hebdoAgg = {}
   ;(hebdoData || []).forEach(h => {
     if (!h.membre_id) return
-    if (!hebdoAgg[h.membre_id]) hebdoAgg[h.membre_id] = { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, mpb:0, ueg:0, reunions:0 }
+    if (!hebdoAgg[h.membre_id]) hebdoAgg[h.membre_id] = { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, invites:0, mpb:0, ueg:0, reunions:0 }
     const a = hebdoAgg[h.membre_id]
     const nb = h.nb_reunions || 1
     if (h.palms === 'P') a.presences += nb
@@ -81,6 +81,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     a.rri += h.rri || 0
     a.rre += h.rre || 0
     a.mpb += Number(h.mpb) || 0
+    a.invites += h.invites || 0
     a.ueg += h.ueg || 0
     a.reunions += nb
   })
@@ -110,58 +111,14 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     .select('id, prenom, nom')
     .eq('groupe_id', groupeId)
 
-  // 6. Visiteurs : 6 mois glissants depuis la table invites
-  //    EXCLURE les invités qui sont devenus membres du groupe
-  const sixMoisAvant = new Date()
-  sixMoisAvant.setMonth(sixMoisAvant.getMonth() - 6)
-  const sixMoisStr = sixMoisAvant.toISOString().split('T')[0]
-  const { data: invitesData } = await supabase
-    .from('invites')
-    .select('invite_par_nom, date_visite, prenom, nom')
-    .eq('groupe_id', groupeId)
-    .gte('date_visite', sixMoisStr)
-
-  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-
-  // Fonction pour vérifier si un invité est devenu membre du groupe
-  const isMembreGroupe = (invPrenom, invNom) => {
-    const pN = norm(invPrenom), nN = norm(invNom)
-    return (membres || []).some(m => {
-      const mP = norm(m.prenom), mN = norm(m.nom)
-      if (mN === nN && mP === pN) return true
-      if (mN === nN && (mP.includes(pN) || pN.includes(mP))) return true
-      if (mN === nN && pN.length >= 3 && mP.slice(0, 3) === pN.slice(0, 3)) return true
-      return false
-    })
-  }
-
-  const visitorsPerMembre = {}
-  let excludedCount = 0
-  ;(invitesData || []).forEach(inv => {
-    if (!inv.invite_par_nom) return
-    // Exclure les invités devenus membres
-    if (isMembreGroupe(inv.prenom, inv.nom)) { excludedCount++; return }
-
-    const invNorm = norm(inv.invite_par_nom)
-    const membre = (membres || []).find(m => {
-      const mPrenom = norm(m.prenom), mNom = norm(m.nom)
-      const fullA = `${mPrenom} ${mNom}`, fullB = `${mNom} ${mPrenom}`
-      if (invNorm === fullA || invNorm === fullB) return true
-      if (invNorm.includes(mNom) && invNorm.includes(mPrenom)) return true
-      if (mPrenom.length >= 3 && invNorm.includes(mNom) && invNorm.includes(mPrenom.slice(0, 3))) return true
-      return false
-    })
-    if (membre) {
-      visitorsPerMembre[membre.id] = (visitorsPerMembre[membre.id] || 0) + 1
-    }
-  })
-  console.log(`[recalculateScores] Visiteurs 6 mois glissants (${excludedCount} invités devenus membres exclus):`, visitorsPerMembre)
+  // 6. Visiteurs : PALMS base (invites) + hebdo compilé (invites)
+  //    Même logique d'addition que TàT, Refs, MPB, etc.
 
   // 7. Calculer les scores : PALMS base + hebdo compilé
   const scored = palms.map(p => {
-    const h = hebdoAgg[p.membre_id] || { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, mpb:0, ueg:0 }
+    const h = hebdoAgg[p.membre_id] || { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, invites:0, mpb:0, ueg:0 }
 
-    // Cumuler PALMS + hebdo
+    // Cumuler PALMS + hebdo (addition simple de tous les indicateurs)
     const presences = (p.presences || 0) + h.presences
     const absences = (p.absences || 0) + h.absences
     const totalReunions = presences + absences
@@ -169,6 +126,8 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const refsGiven = (p.rdi || 0) + (p.rde || 0) + h.rdi + h.rde
     const tyfcb = (Number(p.mpb) || 0) + h.mpb
     const ueg = (p.ueg || 0) + h.ueg
+    // Visiteurs : PALMS base + hebdo compilé (même addition que les autres)
+    const visitors = (p.invites || 0) + h.invites
 
     // Taux sur la période totale combinée
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
@@ -177,8 +136,6 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const rateRefs = refsGiven / nbJeudisMois
     // CEU : taux par semaine sur 6 mois
     const rateUeg = ueg / nbSemaines
-    // Visiteurs : 6 mois glissants depuis table invites
-    const visitors = visitorsPerMembre[p.membre_id] || 0
 
     // Barème BNI officiel
     // Attendance /10 (6 mois) : >=95%→10, >=88%→5, <88%→0
