@@ -56,7 +56,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
       if (sMap.greeting_logo) setGreetingLogo(sMap.greeting_logo)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [])
+  }, [groupeCode])
 
   const handleCloture = async () => {
     if (!window.confirm(`Clôturer le mois de ${moisLabel} ? Les données seront sauvegardées.`)) return

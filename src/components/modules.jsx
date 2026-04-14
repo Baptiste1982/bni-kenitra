@@ -49,7 +49,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
     }).catch(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [groupeCode])
 
   // Replier tous les mois sauf le mois en cours (une seule fois au chargement)
   useEffect(() => {
@@ -765,7 +765,7 @@ export function Reporting({ groupeCode = 'MK-01' }) {
   useEffect(() => {
     Promise.all([fetchScoresMK01(groupeCode), fetchDashboardKPIs(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchMonthlySnapshots(prevMois, prevAnnee, groupeCode)])
       .then(([s, k, h, ps]) => { setScores(s); setKpis(k); setHebdo(h); setPrevSnapshot(ps); setLoading(false) })
-  }, [])
+  }, [groupeCode])
 
   // Agréger les données hebdo du mois
   const hebdoMap = {}

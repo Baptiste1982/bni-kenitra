@@ -136,7 +136,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       .catch(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [groupeCode])
 
   const prevColor = (val, obj) => val >= obj ? '#059669' : val >= obj * 0.6 ? '#D97706' : '#DC2626'
   const nameColor = (score) => Number(score||0) >= 70 ? '#065F46' : Number(score||0) >= 50 ? '#854D0E' : Number(score||0) >= 30 ? '#991B1B' : '#6B7280'
