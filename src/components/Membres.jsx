@@ -123,7 +123,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
           const totalInv = consolidé ? Number(consolidé.visitors) || 0 : 0
           const totalMpb = (consolidé ? Number(consolidé.tyfcb) || 0 : 0) + prevMpb
           const { score, tl } = bniScore(rateTat, rateRefs, ratePres, totalInv, totalMpb, rateUeg, sponsorScore)
-          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs }
+          prev[id] = { tat: prevTat, refs: prevRefs, score, tl, cumulTat: m.cumul.tat, cumulRefs: m.cumul.refs, cumul: m.cumul }
         })
         setPrevisions(prev)
         setLoading(false)
@@ -393,13 +393,10 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       return <KpiCell value={att ? `${Math.round(att*100)}%` : '0%'} pts={attPts} max={10} bg={presBg(att)} tooltip={`Présence: ${Math.round(att*100)}% sur 6 mois\n${manquePres}\n>=95%→10 | >=88%→5 | <88%→0`} />
                     })()}
                     {(() => {
-                      const p = palmsData[s.membre_id]
                       const h = previsions[s.membre_id]
-                      // PALMS consolidés (avril) + hebdo
-                      const palmsTat = p ? Number(p.tat || 0) : 0
-                      const palmsRefs = p ? (p.rdi || 0) + (p.rde || 0) : 0
-                      const totalTat = palmsTat + (h?.cumulTat || 0)
-                      const totalRefs = palmsRefs + (h?.cumulRefs || 0)
+                      // 1-2-1 et Reco : mois en cours uniquement (palms_hebdo), remis à 0 chaque mois
+                      const totalTat = h?.cumulTat || 0
+                      const totalRefs = h?.cumulRefs || 0
                       // TàT et Refs : taux per week (total du mois / nb jeudis du mois)
                       const rateTat = nbJeudis > 0 ? totalTat / nbJeudis : 0
                       const rateRefs = nbJeudis > 0 ? totalRefs / nbJeudis : 0
@@ -433,17 +430,20 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       return <KpiCell value={tyfcb.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD'} pts={Number(s.tyfcb_score||0)} max={5} bg={tyfcbBg(tyfcb)} tooltip={`TYFCB sur 6 mois glissants\n${manqueTyfcb}\n>=300k→5 | >=150k→4 | >=50k→3 | >=20k→2 | >0→1`} />
                     })()}
                     {(() => {
-                      const ceuRate = Number(s.ceu_rate||0)
-                      const ceuPts = Number(s.ceu_score||0)
-                      const ceuBgC = ceuRate > 0.5 ? tlBg('vert') : ceuRate > 0 ? tlBg('jaune') : tlBg('gris')
-                      return <KpiCell value={ceuRate.toFixed(2)} pts={ceuPts} max={10} bg={ceuBgC} tooltip={`${ceuRate.toFixed(2)} CEU/sem sur 6 mois\n${ceuPts >= 10 ? '✓ Max atteint' : ceuRate > 0 ? '+CEU pour 10pts (>0.5/sem)' : 'Aucun CEU'}\n>0.5→10 | >0→5 | 0→0`} />
+                      const h = previsions[s.membre_id]
+                      // CEU : mois en cours uniquement (palms_hebdo), remis à 0 chaque mois
+                      const ceuMois = h?.cumul?.ueg || 0
+                      const ceuBgC = ceuMois > 0 ? tlBg('vert') : tlBg('gris')
+                      // Score CEU affiché = barème sur le mois
+                      const rateCeu = nbJeudis > 0 ? ceuMois / nbJeudis : 0
+                      const ceuPts = rateCeu > 0.5 ? 10 : rateCeu > 0 ? 5 : 0
+                      return <KpiCell value={ceuMois} pts={ceuPts} max={10} bg={ceuBgC} tooltip={`${ceuMois} CEU ce mois (${rateCeu.toFixed(2)}/sem)\n${ceuPts >= 10 ? '✓ Max atteint' : ceuMois > 0 ? '+CEU pour 10pts (>0.5/sem)' : 'Aucun CEU'}\n>0.5→10 | >0→5 | 0→0`} />
                     })()}
                     {hasPrevisions && (() => {
                       const pr = previsions[s.membre_id]
-                      const pm = palmsData[s.membre_id]
-                      // Total = PALMS consolidés + hebdo
-                      const totalTat = (pm ? Number(pm.tat || 0) : 0) + (pr?.cumulTat || 0)
-                      const totalRefs = (pm ? (pm.rdi || 0) + (pm.rde || 0) : 0) + (pr?.cumulRefs || 0)
+                      // Mois en cours uniquement
+                      const totalTat = pr?.cumulTat || 0
+                      const totalRefs = pr?.cumulRefs || 0
                       // Objectifs : 1 TàT/sem = nbJeudis/mois, 1.25 refs/sem
                       const manqueTat = Math.max(0, nbJeudis - totalTat)
                       const manqueRefs = Math.max(0, Math.ceil(nbJeudis * 1.25) - totalRefs)
