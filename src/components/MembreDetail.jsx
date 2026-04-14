@@ -19,22 +19,39 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
   const daysToRenew = renouv ? Math.round((renouv - new Date()) / (1000*60*60*24)) : null
   const isUrgent = daysToRenew !== null && daysToRenew < 90
 
-  const criteria = [
-    { label:'Présence', rate: s.attendance_rate, score: s.attendance_score, max:10, format: v => `${Math.round(v*100)}%` },
-    { label:'1-2-1s', rate: s.rate_121, score: s.score_121, max:20, format: v => `${Number(v).toFixed(2)}/sem` },
-    { label:'Recommandations', rate: s.referrals_given_rate, score: s.referrals_given_score, max:25, format: v => `${Number(v).toFixed(2)}/sem` },
-    { label:'Visiteurs', rate: s.visitors, score: s.visitor_score, max:25, format: v => `${v} en 6 mois` },
-    { label:'Parrainages', rate: s.sponsors, score: s.sponsor_score, max:5, format: v => `${v} en 6 mois` },
-    { label:'TYFCB', rate: s.tyfcb, score: s.tyfcb_score, max:5, format: v => `${Number(v).toLocaleString('fr-FR')} MAD` },
-    { label:'CEU', rate: s.ceu_rate, score: s.ceu_score, max:10, format: v => `${Number(v).toFixed(2)}/sem` },
-  ]
-
   // Charger les données hebdo du membre pour les détails
   useEffect(() => {
     if (!score?.membre_id) return
     supabase.from('palms_hebdo').select('*').eq('membre_id', score.membre_id).order('date_reunion')
       .then(({ data }) => { setHebdoData(data || []); setHebdoLoaded(true) })
   }, [score?.membre_id])
+
+  // ── Calculer les indicateurs MENSUELS (1-2-1, Reco, CEU) depuis hebdo du mois ──
+  const now = new Date()
+  const premierJourMois = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
+  const dernierJourMois = new Date(now.getFullYear(), now.getMonth()+1, 0)
+  const dernierJourStr = dernierJourMois.toISOString().split('T')[0]
+  const nbJeudisMois = (() => { let c=0; for(let d=1;d<=dernierJourMois.getDate();d++) if(new Date(now.getFullYear(),now.getMonth(),d).getDay()===4) c++; return c||1 })()
+  const hebdoMois = hebdoData.filter(h => h.date_reunion >= premierJourMois && h.date_reunion <= dernierJourStr)
+  const tatMois = hebdoMois.reduce((s,h) => s+(h.tat||0), 0)
+  const refsMois = hebdoMois.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)
+  const ceuMois = hebdoMois.reduce((s,h) => s+(h.ueg||0), 0)
+  const rateTatMois = tatMois / nbJeudisMois
+  const rateRefsMois = refsMois / nbJeudisMois
+  const rateCeuMois = ceuMois / nbJeudisMois
+  const scoreTat = rateTatMois >= 1 ? 20 : rateTatMois >= 0.75 ? 15 : rateTatMois >= 0.5 ? 10 : rateTatMois >= 0.25 ? 5 : 0
+  const scoreRefs = rateRefsMois >= 1.25 ? 25 : rateRefsMois >= 1 ? 20 : rateRefsMois >= 0.75 ? 15 : rateRefsMois >= 0.50 ? 10 : rateRefsMois >= 0.25 ? 5 : 0
+  const scoreCeu = rateCeuMois > 0.5 ? 10 : rateCeuMois > 0 ? 5 : 0
+
+  const criteria = [
+    { label:'Présence', rate: s.attendance_rate, score: s.attendance_score, max:10, format: v => `${Math.round(v*100)}%` },
+    { label:'1-2-1s', rate: rateTatMois, score: scoreTat, max:20, format: v => `${Number(v).toFixed(2)}/sem` },
+    { label:'Recommandations', rate: rateRefsMois, score: scoreRefs, max:25, format: v => `${Number(v).toFixed(2)}/sem` },
+    { label:'Visiteurs', rate: s.visitors, score: s.visitor_score, max:25, format: v => `${v} en 6 mois` },
+    { label:'Parrainages', rate: s.sponsors, score: s.sponsor_score, max:5, format: v => `${v} en 6 mois` },
+    { label:'TYFCB', rate: s.tyfcb, score: s.tyfcb_score, max:5, format: v => `${Number(v).toLocaleString('fr-FR')} MAD` },
+    { label:'CEU', rate: rateCeuMois, score: scoreCeu, max:10, format: v => `${Number(v).toFixed(2)}/sem` },
+  ]
 
   const formatDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
 
@@ -253,17 +270,20 @@ CONSIGNES:
                       const nextTier = bareme.find(b => b.pts > currentPts)
                       const prevTier = [...bareme].reverse().find(b => b.pts <= currentPts)
 
-                      // Stats du mois en cours
+                      // Indicateurs mensuels (1-2-1, Reco, CEU) = mois en cours
+                      // Indicateurs 6 mois (Présence, Visiteurs, TYFCB) = tout l'hebdo
+                      const isMensuel = ['1-2-1s','Recommandations','CEU'].includes(c.label)
+                      const dataSource = isMensuel ? hebdoMois : hebdoData
                       const totalPresences = hebdoData.filter(h => h.palms === 'P').length
                       const totalAbsences = hebdoData.filter(h => h.palms === 'A').length
-                      const totalTat = hebdoData.reduce((s,h) => s+(h.tat||0), 0)
-                      const totalRefs = hebdoData.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)
-                      const totalRefsInt = hebdoData.reduce((s,h) => s+(h.rdi||0), 0)
-                      const totalRefsExt = hebdoData.reduce((s,h) => s+(h.rde||0), 0)
+                      const totalTat = hebdoMois.reduce((s,h) => s+(h.tat||0), 0)
+                      const totalRefs = hebdoMois.reduce((s,h) => s+(h.rdi||0)+(h.rde||0), 0)
+                      const totalRefsInt = hebdoMois.reduce((s,h) => s+(h.rdi||0), 0)
+                      const totalRefsExt = hebdoMois.reduce((s,h) => s+(h.rde||0), 0)
                       const totalInv = hebdoData.reduce((s,h) => s+(h.invites||0), 0)
                       const totalMpb = hebdoData.reduce((s,h) => s+Number(h.mpb||0), 0)
-                      const totalCeu = hebdoData.reduce((s,h) => s+(h.ueg||0), 0)
-                      const nbReunions = hebdoData.length
+                      const totalCeu = hebdoMois.reduce((s,h) => s+(h.ueg||0), 0)
+                      const nbReunions = dataSource.length
 
                       // Rendu du détail par réunion selon le KPI
                       const renderWeekly = () => {
@@ -289,7 +309,7 @@ CONSIGNES:
                         if (c.label === '1-2-1s') return (
                           <div>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                              {hebdoData.map((h, j) => (
+                              {hebdoMois.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: h.tat > 0 ? '#D1FAE5' : '#F3F4F6', color: h.tat > 0 ? '#065F46' : '#9CA3AF' }}>
                                   {formatDate(h.date_reunion)} — {h.tat || 0} TàT
                                 </div>
@@ -302,7 +322,7 @@ CONSIGNES:
                         if (c.label === 'Recommandations') return (
                           <div>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                              {hebdoData.map((h, j) => {
+                              {hebdoMois.map((h, j) => {
                                 const refs = (h.rdi||0) + (h.rde||0)
                                 return (
                                   <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: refs > 0 ? '#D1FAE5' : '#F3F4F6', color: refs > 0 ? '#065F46' : '#9CA3AF' }}>
@@ -344,7 +364,7 @@ CONSIGNES:
                         if (c.label === 'CEU') return (
                           <div>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                              {hebdoData.map((h, j) => (
+                              {hebdoMois.map((h, j) => (
                                 <div key={j} style={{ padding:'5px 10px', borderRadius:6, fontSize:11, fontWeight:600, background: (h.ueg||0) > 0 ? '#D1FAE5' : '#F3F4F6', color: (h.ueg||0) > 0 ? '#065F46' : '#9CA3AF' }}>
                                   {formatDate(h.date_reunion)} — {h.ueg || 0} CEU
                                 </div>
