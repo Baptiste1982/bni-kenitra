@@ -1,0 +1,24 @@
+{
+  "name": "BNI Kénitra",
+  "short_name": "BNI Kénitra",
+  "description": "Application de pilotage BNI Kénitra Atlantique",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1C1C2E",
+  "theme_color": "#C41E3A",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo-bni-kenitra.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-bni-kenitra.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

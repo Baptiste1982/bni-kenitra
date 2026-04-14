@@ -370,8 +370,8 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
         await supabase.from('palms_hebdo').delete().eq('groupe_id', groupeData.id).eq('date_reunion', jeudiDate)
       }
 
-      if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode)
-      if (bniRow) await insertPalmsHebdo([bniRow], jeudiDate, nbReunions, groupeCode)
+      if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode, { isProvisoire: true })
+      if (bniRow) await insertPalmsHebdo([bniRow], jeudiDate, nbReunions, groupeCode, { isProvisoire: true })
 
       // Recalculer les scores BNI (PALMS base + hebdo compilé)
       let scoreResult = null
@@ -472,7 +472,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               </div>
             </div>
             {/* Bouton Archives */}
-            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); setShowInsight(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
+            <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); setShowInsight(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id, is_provisoire, date_import').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
@@ -652,14 +652,16 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
             <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Texte · Provisoire</span>
           </div>
           {(() => {
-            // Grouper par mois
+            // Grouper par mois + garder info provisoire par date
             const byMonth = {}
+            const dateInfo = {} // { date_reunion: { is_provisoire, date_import } }
             archives.forEach(a => {
               const d = new Date(a.date_reunion + 'T12:00:00')
               const key = d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
               const sortKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
               if (!byMonth[key]) byMonth[key] = { sortKey, dates: new Set() }
               byMonth[key].dates.add(a.date_reunion)
+              if (!dateInfo[a.date_reunion]) dateInfo[a.date_reunion] = { is_provisoire: a.is_provisoire, date_import: a.date_import }
             })
             const months = Object.entries(byMonth).sort((a,b) => b[1].sortKey.localeCompare(a[1].sortKey))
 
@@ -677,6 +679,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                     {sortedDates.map(d => {
                       const date = new Date(d + 'T12:00:00')
                       const isActive = archiveDetail === d
+                      const info = dateInfo[d] || {}
+                      const isProvisoire = info.is_provisoire === true
+                      const displayDate = isProvisoire && info.date_import
+                        ? new Date(info.date_import + 'T12:00:00')
+                        : date
                       return (
                         <div key={d} onClick={async () => {
                           if (isActive) { setArchiveDetail(null); setArchiveData([]); return }
@@ -684,14 +691,21 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                           const { data } = await supabase.from('palms_hebdo').select('*, membres(prenom, nom)').eq('date_reunion', d).order('tat', { ascending:false })
                           setArchiveData(data || [])
                         }}
-                          style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
+                          style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : isProvisoire ? '#FFFBEB' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : isProvisoire ? '#F59E0B' : '#E8E6E1'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
                           onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                          <div style={{ width:8, height:8, borderRadius:'50%', background:'#C41E3A' }} />
+                          <div style={{ width:8, height:8, borderRadius:'50%', background: isProvisoire ? '#F59E0B' : '#C41E3A' }} />
                           <div style={{ flex:1 }}>
-                            <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>
-                              {date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })}
+                            <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E', display:'flex', alignItems:'center', gap:6 }}>
+                              {isProvisoire ? (
+                                <>Importé le {displayDate.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}</>
+                              ) : (
+                                date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
+                              )}
+                              {isProvisoire && <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#FEF3C7', color:'#92400E', fontWeight:700, textTransform:'uppercase' }}>Provisoire</span>}
                             </div>
-                            <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#9CA3AF' }}>{isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}</div>
+                            <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#9CA3AF' }}>
+                              {isProvisoire && !isActive ? `Réunion du ${date.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}` : isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}
+                            </div>
                           </div>
                           <div onClick={async (e) => {
                             e.stopPropagation()
@@ -718,8 +732,9 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           {archiveDetail && archiveData.length > 0 && (
             <div style={{ marginTop:16 }}>
               <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>
+                <span style={{ color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:8 }}>
                   Réunion du {new Date(archiveDetail+'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+                  {archiveData[0]?.is_provisoire && <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, background:'#F59E0B', color:'#fff', fontWeight:700 }}>PROVISOIRE</span>}
                 </span>
                 <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{archiveData.filter(d=>d.membre_id).length} membres</span>
               </div>

@@ -300,10 +300,11 @@ export async function fetchMembresForMatch(groupeCode = 'MK-01') {
   return data || []
 }
 
-export async function insertPalmsHebdo(rows, dateReunion, nbReunions = 1, groupeCode = 'MK-01') {
+export async function insertPalmsHebdo(rows, dateReunion, nbReunions = 1, groupeCode = 'MK-01', { isProvisoire = false } = {}) {
   const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) throw new Error(`Groupe ${groupeCode} introuvable`)
-  const records = rows.map(r => ({ ...r, groupe_id: groupeId, date_reunion: dateReunion, nb_reunions: nbReunions }))
+  const dateImport = new Date().toISOString().split('T')[0]
+  const records = rows.map(r => ({ ...r, groupe_id: groupeId, date_reunion: dateReunion, nb_reunions: nbReunions, is_provisoire: isProvisoire, date_import: dateImport }))
   const { data, error } = await supabase.from('palms_hebdo').upsert(records, { onConflict: 'membre_id,date_reunion' })
   if (error) throw error
   return data
