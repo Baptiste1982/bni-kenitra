@@ -448,7 +448,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
-          <div ref={headerBtnsRef} style={{ display:'flex', gap:8 }}>
+          <div ref={headerBtnsRef} style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
             {/* Bouton Import initial */}
             <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false); setShowInsight(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
