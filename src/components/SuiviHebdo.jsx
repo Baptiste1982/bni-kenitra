@@ -456,66 +456,40 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
           <div ref={headerBtnsRef} style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
-            {/* Bouton Import initial */}
+            {/* Bouton Initialisation */}
             <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false); setShowInsight(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Import initial</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{palmsInitExists ? '✅' : '📥'} PALMS Base</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Initialisation</div>
               </div>
             </div>
-            {/* Bouton Archives */}
+            {/* Bouton Archives Hebdo */}
             <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); setShowInsight(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id, is_provisoire, date_import').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>📂 Historique</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Archives Hebdo</div>
               </div>
             </div>
-            {/* Bouton BNI Insight */}
+            {/* Bouton Insight */}
             <div onClick={() => { setShowInsight(!showInsight); if(!showInsight) { setShowImport(false); setShowArchives(false); setShowPalmsInit(false); loadInsightData() } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>BNI Insight</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{insightData.length > 0 ? '✅' : '📥'} CEU · Parr.</div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Insight</div>
               </div>
             </div>
-            {/* Bouton Dernière saisie */}
+            {/* Bouton Saisie Provisoire */}
             <div onClick={() => { setShowImport(!showImport); if(!showImport) { setShowArchives(false); setShowPalmsInit(false); setShowInsight(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernière saisie</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>
-                  {dates.length > 0 ? new Date(dates[dates.length-1]+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '—'}
-                </div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
-                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Saisie Provisoire</div>
               </div>
             </div>
           </div>
