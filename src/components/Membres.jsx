@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01 } from '../lib/bniService'
+import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01, recalculateScores } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { TLBadge, PageHeader, TableWrap, fullName } from './ui'
 import MembreDetail from './MembreDetail'
@@ -215,6 +215,12 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
                       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                       📥 Importer Excel
+                    </div>
+                    <div onClick={async e => { e.stopPropagation(); setShowPalmsMenu(false); try { await recalculateScores(groupeCode); load() } catch(err) { console.error('Recalcul:', err) } }}
+                      style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderTop:'1px solid #F3F2EF' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      🔄 Recalculer les scores
                     </div>
                   </div>
                 )}

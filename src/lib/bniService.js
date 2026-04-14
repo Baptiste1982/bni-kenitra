@@ -202,7 +202,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     .upsert(scored, { onConflict: 'membre_id' })
   if (uErr) throw uErr
 
-  return { count: scored.length, nbSemaines, nbSemainesHebdo, periodeDebut, periodeFin: aujourdHui }
+  return { count: scored.length, nbSemaines, periodeDebut, periodeFin: aujourdHui }
 }
 
 // ─── SCORES ──────────────────────────────────────────────────────────────────
