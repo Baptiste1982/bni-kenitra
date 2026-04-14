@@ -296,7 +296,7 @@ export async function fetchPalmsMK01(groupeCode = 'MK-01') {
 export async function fetchMembresForMatch(groupeCode = 'MK-01') {
   const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) return []
-  const { data } = await supabase.from('membres').select('id, prenom, nom').eq('groupe_id', groupeId).eq('statut', 'actif')
+  const { data } = await supabase.from('membres').select('id, prenom, nom, groupe_id').eq('groupe_id', groupeId).eq('statut', 'actif')
   return data || []
 }
 

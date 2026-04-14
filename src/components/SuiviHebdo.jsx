@@ -255,9 +255,16 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
         if (cols.length <= nameIdx) continue
         const fullNameStr = cols[nameIdx]
         const parts = fullNameStr.trim().split(/\s+/)
-        const nom = parts.pop()
-        const prenom = parts.join(' ')
-        const m = matchMembre(prenom, nom, membres)
+        // Essayer : dernier mot = nom (ex: "Hind ACHKIRE")
+        const nom1 = parts[parts.length - 1]
+        const prenom1 = parts.slice(0, -1).join(' ')
+        let m = matchMembre(prenom1, nom1, membres)
+        // Sinon : premier mot = prenom, reste = nom (ex: "Achraf Alaoui Tahiri")
+        if (!m && parts.length > 2) {
+          const prenom2 = parts[0]
+          const nom2 = parts.slice(1).join(' ')
+          m = matchMembre(prenom2, nom2, membres)
+        }
         if (m) {
           matched++
           rows.push({
