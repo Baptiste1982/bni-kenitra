@@ -1059,14 +1059,15 @@ export function AgentIA({ groupeCode = 'MK-01' }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [systemPrompt, setSystemPrompt] = useState(null)
+  const [promptMeta, setPromptMeta] = useState(null)
   const [promptLoading, setPromptLoading] = useState(true)
   const msgsRef = useRef(null)
 
   // Charger le prompt dynamique au montage
   useEffect(() => {
     buildDynamicSystemPrompt(groupeCode)
-      .then(prompt => { setSystemPrompt(prompt); setPromptLoading(false) })
-      .catch(() => { setSystemPrompt(BNI_SYSTEM_PROMPT); setPromptLoading(false) })
+      .then(result => { setSystemPrompt(result.prompt); setPromptMeta(result); setPromptLoading(false) })
+      .catch(() => { setSystemPrompt(BNI_SYSTEM_PROMPT); setPromptMeta({ nbMembres: '?', nbAlertes: 0, nbInvites: 0, secteurs: [] }); setPromptLoading(false) })
   }, [groupeCode])
 
   useEffect(() => { if (msgsRef.current) msgsRef.current.scrollTop = msgsRef.current.scrollHeight }, [messages, loading])
@@ -1106,7 +1107,7 @@ export function AgentIA({ groupeCode = 'MK-01' }) {
           ) : (
             <div style={{ maxWidth:'80%', padding:'12px 16px', borderRadius:12, borderBottomLeftRadius:4, background:'#F3F2EF', fontSize:13, lineHeight:1.6 }}>
               <strong>Agent BNI Kénitra connecté</strong><br /><br />
-              Je connais vos {systemPrompt?.match(/(\d+) membres actifs/)?.[1] || ''} membres, leurs scores, secteurs d'activité, alertes et pipeline en temps réel.<br />
+              {promptMeta?.nbMembres} membres actifs · {promptMeta?.secteurs?.length || 0} secteurs couverts · {promptMeta?.nbAlertes || 0} alerte{(promptMeta?.nbAlertes || 0) > 1 ? 's' : ''} · {promptMeta?.nbInvites || 0} invité{(promptMeta?.nbInvites || 0) > 1 ? 's' : ''} dans le pipeline<br /><br />
               Posez-moi une question — je m'appuie uniquement sur les données réelles du chapitre.
             </div>
           )}

@@ -397,7 +397,7 @@ export async function buildDynamicSystemPrompt(groupeCode = 'MK-01') {
   })
 
   // Construire le prompt
-  return `Tu es l'Agent IA BNI Kénitra, assistant du Directeur Consultant.
+  const prompt = `Tu es l'Agent IA BNI Kénitra, assistant du Directeur Consultant.
 Région Kénitra, Maroc — Chapitre lancé le 12 décembre 2025. Réponds en français, de façon directe, professionnelle et concrète.
 Utilise UNIQUEMENT les données ci-dessous pour tes réponses. Ne fabrique jamais de données.
 
@@ -452,6 +452,8 @@ Parrainages /5 (6 mois): ≥1→5, 0→0
 Tu es EXCLUSIVEMENT un assistant BNI. Tu ne réponds qu'aux questions liées à BNI : membres, scores, recrutement, méthodologie BNI (Givers Gain, infosphère, présentations, 1-2-1, recommandations, TYFCB, CEU, visiteurs, parrainages), gestion de chapitre, pipeline invités, alertes, renouvellements.
 Si une question est hors du cadre BNI (météo, actualités, cuisine, politique, sport, code informatique, etc.), réponds poliment : "Je suis l'assistant BNI du chapitre Kénitra Atlantique. Je ne peux répondre qu'aux questions liées à BNI et à la gestion de votre chapitre."
 Ne fais JAMAIS exception à cette règle.`
+
+  return { prompt, nbMembres: membres.length, nbAlertes: alertes.length, nbInvites: invites.length, secteurs }
 }
 
 // ─── TEMPLATES ───────────────────────────────────────────────────────────────
