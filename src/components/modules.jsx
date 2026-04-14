@@ -185,15 +185,45 @@ export function Invites({ profil }) {
         imported++
       }
 
-      // Extraire les dates depuis le fichier
-      const depuisMatch = text.match(/Depuis[\s:]*<\/Data>[\s\S]*?<Data[^>]*>(\d{4}-\d{2}-\d{2})/i)
-      const jusquaMatch = text.match(/Jusqu[\s\S]*?au[\s:]*<\/Data>[\s\S]*?<Data[^>]*>(\d{4}-\d{2}-\d{2})/i)
+      // Extraire les dates depuis le fichier (formats: YYYY-MM-DD, DD/MM/YYYY, YYYY-MM-DDT...)
+      const parseMetaDate = (label) => {
+        // Chercher dans le XML : label suivi d'une date dans une cellule adjacente
+        const patterns = [
+          new RegExp(label + '[\\s:]*<\\/Data>[\\s\\S]*?<Data[^>]*>(\\d{4}-\\d{2}-\\d{2})', 'i'),
+          new RegExp(label + '[\\s:]*<\\/Data>[\\s\\S]*?<Data[^>]*>(\\d{4}-\\d{2}-\\d{2})T', 'i'),
+          new RegExp(label + '[\\s:]*<\\/Data>[\\s\\S]*?<Data[^>]*>(\\d{2}/\\d{2}/\\d{4})', 'i'),
+          new RegExp(label + '[^<]*>(\\d{4}-\\d{2}-\\d{2})', 'i'),
+          new RegExp(label + '[^<]*>(\\d{2}/\\d{2}/\\d{4})', 'i'),
+        ]
+        for (const p of patterns) {
+          const m = text.match(p)
+          if (m) {
+            const v = m[1]
+            if (v.includes('/')) { const [d,mo,y] = v.split('/'); return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}` }
+            return v
+          }
+        }
+        return null
+      }
+      let dateDebut = parseMetaDate('Depuis')
+      let dateFin = parseMetaDate("Jusqu.*?au")
+      // Fallback : utiliser min/max des dates de visite importées
+      if (!dateDebut || !dateFin) {
+        const allDates = rows.map(r => {
+          const ds = r[iDate] || ''
+          if (ds.includes('T')) return ds.split('T')[0]
+          if (ds.includes('/')) { const parts = ds.split('/'); return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}` }
+          return ds
+        }).filter(d => d && d.match(/^\d{4}-/)).sort()
+        if (!dateDebut && allDates.length) dateDebut = allDates[0]
+        if (!dateFin && allDates.length) dateFin = allDates[allDates.length - 1]
+      }
       // Archiver l'import
       const { data: { session } } = await supabase.auth.getSession()
       await supabase.from('visitor_imports').insert({
         groupe_id: groupeId,
-        date_debut: depuisMatch?.[1] || null,
-        date_fin: jusquaMatch?.[1] || null,
+        date_debut: dateDebut,
+        date_fin: dateFin,
         nb_invites: imported,
         imported_by: session?.user?.id,
       })
@@ -369,11 +399,10 @@ export function Invites({ profil }) {
                       if (isActive) { setArchiveDetail(null); setArchiveData([]); return }
                       setArchiveDetail(a.id)
                       // Charger les invités de cette période
-                      const { data } = await supabase.from('invites').select('*')
-                        .eq('groupe_id', a.groupe_id)
-                        .gte('date_visite', a.date_debut)
-                        .lte('date_visite', a.date_fin)
-                        .order('date_visite')
+                      let query = supabase.from('invites').select('*').eq('groupe_id', a.groupe_id)
+                      if (a.date_debut) query = query.gte('date_visite', a.date_debut)
+                      if (a.date_fin) query = query.lte('date_visite', a.date_fin)
+                      const { data } = await query.order('date_visite')
                       setArchiveData(data || [])
                     }}
                       style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, cursor:'pointer' }}
