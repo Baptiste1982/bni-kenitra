@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01 } from '../lib/bniService'
+import { supabase } from '../lib/supabase'
 import { TLBadge, PageHeader, TableWrap, fullName } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
@@ -13,6 +14,7 @@ export default function Membres({ profil }) {
   const [showImport, setShowImport] = useState(false)
   const [showPalms, setShowPalms] = useState(false)
   const [showPalmsMenu, setShowPalmsMenu] = useState(false)
+  const [reunionsSaisies, setReunionsSaisies] = useState(0)
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function Membres({ profil }) {
   const now = new Date()
   const mois = now.getMonth() + 1
   const annee = now.getFullYear()
+  const moisLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
   const finMois = new Date(annee, mois, 0)
   const semainesRestantes = Math.max(0, Math.round((finMois - now) / (1000 * 60 * 60 * 24 * 7)))
 
@@ -42,8 +45,18 @@ export default function Membres({ profil }) {
 
   const load = () => {
     setLoading(true)
-    Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee), fetchPalmsMK01()])
-      .then(([scoresData, hebdoData, palmsRaw]) => {
+    Promise.all([fetchScoresMK01(), fetchPalmsHebdoMois(mois, annee), fetchPalmsMK01(), supabase.from('palms_imports').select('periode_debut, created_at').limit(1)])
+      .then(([scoresData, hebdoData, palmsRaw, palmsImportRes]) => {
+        // Réunions saisies
+        const pi = palmsImportRes?.data?.[0]
+        if (pi?.periode_debut && pi?.created_at) {
+          const importDate = new Date(pi.created_at).toISOString().split('T')[0]
+          let count = 0
+          const d = new Date(pi.periode_debut + 'T12:00:00')
+          const end = new Date(importDate + 'T12:00:00')
+          while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
+          setReunionsSaisies(count)
+        } else { setReunionsSaisies(0) }
         // Indexer les PALMS consolidés par membre_id
         const pMap = {}
         palmsRaw.forEach(p => { if (p.membre_id) pMap[p.membre_id] = p })
@@ -266,6 +279,17 @@ export default function Membres({ profil }) {
           </TableWrap>
         </div>
       )}
+
+      {/* Mois en cours */}
+      <div style={{ display:'flex', alignItems:'center', padding: window.innerWidth <= 768 ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap: window.innerWidth <= 768 ? 8 : 16 }}>
+        <div style={{ fontSize: window.innerWidth <= 768 ? 16 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif', textTransform:'capitalize', whiteSpace:'nowrap' }}>{moisLabel}</div>
+        <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, opacity:0.6, whiteSpace:'nowrap' }}>{reunionsSaisies}/{nbJeudis}</div>
+        <div style={{ display:'flex', gap:3 }}>
+          {Array.from({length:nbJeudis}).map((_,i) => (
+            <div key={i} style={{ width: window.innerWidth <= 768 ? 8 : 10, height: window.innerWidth <= 768 ? 8 : 10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+          ))}
+        </div>
+      </div>
 
       {/* Search + filters */}
       <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
