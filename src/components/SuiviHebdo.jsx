@@ -48,6 +48,22 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const [palmsInitData, setPalmsInitData] = useState([])
   const [showPalmsInitData, setShowPalmsInitData] = useState(false)
   const palmsInitFileRef = useRef(null)
+  const palmsInitPanelRef = useRef(null)
+  const archivesPanelRef = useRef(null)
+  const importPanelRef = useRef(null)
+  const headerBtnsRef = useRef(null)
+
+  // Click outside pour replier les accordéons (exclut les boutons header)
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (headerBtnsRef.current && headerBtnsRef.current.contains(e.target)) return
+      if (showPalmsInit && palmsInitPanelRef.current && !palmsInitPanelRef.current.contains(e.target)) setShowPalmsInit(false)
+      if (showArchives && archivesPanelRef.current && !archivesPanelRef.current.contains(e.target)) setShowArchives(false)
+      if (showImport && importPanelRef.current && !importPanelRef.current.contains(e.target)) setShowImport(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showPalmsInit, showArchives, showImport])
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -344,7 +360,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
-          <div style={{ display:'flex', gap:8 }}>
+          <div ref={headerBtnsRef} style={{ display:'flex', gap:8 }}>
             {/* Bouton Import initial */}
             <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
@@ -398,7 +414,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
 
       {/* ─── PALMS BASE : consultation (clic sur bouton header) ─────────── */}
       {showPalmsInit && palmsInitData.length > 0 && (
-        <div style={{ marginBottom:24 }}>
+        <div ref={palmsInitPanelRef} style={{ marginBottom:24 }}>
           <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>
               PALMS Base — 12 déc. 2025 → 31 mars 2026
@@ -406,6 +422,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{palmsInitData.length} membres</span>
               <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'rgba(209,250,229,0.2)', color:'#A7F3D0', fontWeight:600 }}>Consolidé</span>
+              <div onClick={() => setShowPalmsInit(false)}
+                style={{ width:20, height:20, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:14 }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.1)';e.currentTarget.style.color='#fff'}}
+                onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='rgba(255,255,255,0.5)'}}>✕</div>
             </div>
           </div>
           <div style={{ overflowX:'auto', background:'#fff', border:'1px solid #E8E6E1', borderTop:'none' }}>
@@ -467,7 +487,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
 
       {/* PALMS BASE : zone d'import si pas encore de données */}
       {showPalmsInit && palmsInitData.length === 0 && (
-        <Card style={{ marginBottom: 24 }}>
+        <div ref={palmsInitPanelRef}><Card style={{ marginBottom: 24 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
             <SectionTitle>📥 Import PALMS Initial — Base de départ</SectionTitle>
             <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#EDE9FE', color:'#5B21B6', fontWeight:600 }}>Unique · Consolidé</span>
@@ -511,12 +531,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           <div style={{ marginTop:12, fontSize:11, color:'#9CA3AF', lineHeight:1.6 }}>
             💡 Ce rapport sert de base de départ pour les calculs sur 6 mois glissants. Les saisies hebdomadaires viendront se compiler par-dessus.
           </div>
-        </Card>
+        </Card></div>
       )}
 
       {/* ─── ARCHIVES ────────────────────────────────────────────────────── */}
       {showArchives && (
-        <Card style={{ marginBottom: 24 }}>
+        <div ref={archivesPanelRef}><Card style={{ marginBottom: 24 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
             <SectionTitle>📂 Archives des saisies hebdo</SectionTitle>
             <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Texte · Provisoire</span>
@@ -619,11 +639,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               </div>
             </div>
           )}
-        </Card>
+        </Card></div>
       )}
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
-      {showImport && <Card style={{ marginBottom: 24 }}>
+      {showImport && <div ref={importPanelRef}><Card style={{ marginBottom: 24 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:0 }}>
           <SectionTitle>Coller les données PALMS</SectionTitle>
           <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Import texte · Provisoire</span>
@@ -659,7 +679,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           )}
           {result?.error && <span style={{ fontSize: 12, color: '#DC2626' }}>Erreur : {result.error}</span>}
         </div>
-      </Card>}
+      </Card></div>}
 
       {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', marginBottom:0 }}>
