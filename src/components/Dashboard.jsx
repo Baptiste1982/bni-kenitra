@@ -13,6 +13,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
   const [kpis, setKpis] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reunionsSaisies, setReunionsSaisies] = useState(0)
+  const [reunionsProvisoires, setReunionsProvisoires] = useState(0)
   const [cloturing, setCloturing] = useState(false)
   const [clotureMsg, setClotureMsg] = useState('')
   const [greeting, setGreeting] = useState('Bonjour')
@@ -40,9 +41,11 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
       supabase.from('app_settings').select('key, value'),
     ]).then(([data, hebdoRes, settingsRes]) => {
       setKpis(data)
-      // Compter les réunions consolidées (non provisoires) du mois en cours
+      // Compter les réunions consolidées vs provisoires du mois en cours
       const dates = new Set((hebdoRes?.data || []).filter(r => !r.is_provisoire).map(r => r.date_reunion))
+      const datesProv = new Set((hebdoRes?.data || []).filter(r => r.is_provisoire).map(r => r.date_reunion))
       setReunionsSaisies(dates.size)
+      setReunionsProvisoires(datesProv.size)
       // Settings
       const sMap = {}
       ;(settingsRes?.data || []).forEach(s => { sMap[s.key] = s.value })
@@ -138,10 +141,10 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: window.innerWidth <= 768 ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap:12, flexWrap:'wrap' }}>
         <div style={{ display:'flex', alignItems:'center', gap: window.innerWidth <= 768 ? 8 : 16, flex:1, minWidth:0 }}>
           <div style={{ fontSize: window.innerWidth <= 768 ? 16 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif', textTransform:'capitalize', whiteSpace:'nowrap' }}>{moisLabel}</div>
-          <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, opacity:0.6, whiteSpace:'nowrap' }}>{reunionsSaisies}/{nbJeudis}</div>
+          <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, opacity:0.6, whiteSpace:'nowrap' }}>{reunionsSaisies + reunionsProvisoires}/{nbJeudis}</div>
           <div style={{ display:'flex', gap:3 }}>
             {Array.from({length:nbJeudis}).map((_,i) => (
-              <div key={i} style={{ width: window.innerWidth <= 768 ? 8 : 10, height: window.innerWidth <= 768 ? 8 : 10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+              <div key={i} style={{ width: window.innerWidth <= 768 ? 8 : 10, height: window.innerWidth <= 768 ? 8 : 10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : i < reunionsSaisies + reunionsProvisoires ? '#F59E0B' : 'rgba(255,255,255,0.2)' }} />
             ))}
           </div>
         </div>

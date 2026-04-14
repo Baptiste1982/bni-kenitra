@@ -15,6 +15,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
   const [showPalms, setShowPalms] = useState(false)
   const [showPalmsMenu, setShowPalmsMenu] = useState(false)
   const [reunionsSaisies, setReunionsSaisies] = useState(0)
+  const [reunionsProvisoires, setReunionsProvisoires] = useState(0)
   const [hebdoDates, setHebdoDates] = useState([])
   const menuRef = useRef(null)
 
@@ -50,9 +51,11 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
     const dernierJour = finMois.toISOString().split('T')[0]
     Promise.all([fetchScoresMK01(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchPalmsMK01(groupeCode), supabase.from('palms_hebdo').select('date_reunion, is_provisoire').gte('date_reunion', premierJour).lte('date_reunion', dernierJour)])
       .then(([scoresData, hebdoData, palmsRaw, hebdoRes]) => {
-        // Réunions consolidées (non provisoires) du mois en cours
+        // Réunions consolidées vs provisoires du mois en cours
         const datesConsolidees = new Set((hebdoRes?.data || []).filter(r => !r.is_provisoire).map(r => r.date_reunion))
+        const datesProvisoires = new Set((hebdoRes?.data || []).filter(r => r.is_provisoire).map(r => r.date_reunion))
         setReunionsSaisies(datesConsolidees.size)
+        setReunionsProvisoires(datesProvisoires.size)
         // Indexer les PALMS consolidés par membre_id
         const pMap = {}
         palmsRaw.forEach(p => { if (p.membre_id) pMap[p.membre_id] = p })
@@ -340,10 +343,10 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       {/* Mois en cours */}
       <div style={{ display:'flex', alignItems:'center', padding: window.innerWidth <= 768 ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap: window.innerWidth <= 768 ? 8 : 16 }}>
         <div style={{ fontSize: window.innerWidth <= 768 ? 16 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif', textTransform:'capitalize', whiteSpace:'nowrap' }}>{moisLabel}</div>
-        <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, opacity:0.6, whiteSpace:'nowrap' }}>{reunionsSaisies}/{nbJeudis}</div>
+        <div style={{ fontSize: window.innerWidth <= 768 ? 10 : 12, opacity:0.6, whiteSpace:'nowrap' }}>{reunionsSaisies + reunionsProvisoires}/{nbJeudis}</div>
         <div style={{ display:'flex', gap:3 }}>
           {Array.from({length:nbJeudis}).map((_,i) => (
-            <div key={i} style={{ width: window.innerWidth <= 768 ? 8 : 10, height: window.innerWidth <= 768 ? 8 : 10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+            <div key={i} style={{ width: window.innerWidth <= 768 ? 8 : 10, height: window.innerWidth <= 768 ? 8 : 10, borderRadius:'50%', background: i < reunionsSaisies ? '#059669' : i < reunionsSaisies + reunionsProvisoires ? '#F59E0B' : 'rgba(255,255,255,0.2)' }} />
           ))}
         </div>
       </div>
