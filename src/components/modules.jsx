@@ -1068,6 +1068,8 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
   const [simVis, setSimVis] = useState(null)
   const [simTyfcb, setSimTyfcb] = useState(null)
   const [simMode, setSimMode] = useState(false)
+  const [sortBy, setSortBy] = useState('atteinte')
+  const [sortDir, setSortDir] = useState('desc')
 
   const load = async () => {
     setLoading(true)
@@ -1147,7 +1149,17 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
     const nbOk = [okPres, okRefs, okVis, okTyfcb].filter(Boolean).length
     const atteinte = Math.round(((okPres ? 100 : pres / objPres * 100) * 0.3 + (okRefs ? 100 : refs / objRefs * 100) * 0.25 + (okVis ? 100 : vis / objVis * 100) * 0.2 + (okTyfcb ? 100 : tyfcb / objTyfcbMembre * 100) * 0.25))
     return { ...s, pres, refs, vis, tyfcb, okPres, okRefs, okVis, okTyfcb, nbOk, atteinte: Math.min(atteinte, 100) }
-  }).sort((a,b) => b.atteinte - a.atteinte)
+  })
+
+  // Tri dynamique
+  const sortKey = { atteinte:'atteinte', pres:'pres', refs:'refs', vis:'vis', tyfcb:'tyfcb', score:'total_score', nom:'_nom' }[sortBy] || 'atteinte'
+  membresData.sort((a,b) => {
+    let va, vb
+    if (sortBy === 'nom') { va = fullName(a.membres?.prenom, a.membres?.nom); vb = fullName(b.membres?.prenom, b.membres?.nom); return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va) }
+    va = Number(sortBy === 'score' ? a.total_score : a[sortKey]) || 0
+    vb = Number(sortBy === 'score' ? b.total_score : b[sortKey]) || 0
+    return sortDir === 'asc' ? va - vb : vb - va
+  })
 
   // Compteurs pour le résumé
   const countOkPres = membresData.filter(m => m.okPres).length
@@ -1230,21 +1242,26 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
       </div>
 
       {/* Tableau — qui passe, qui passe pas */}
+      {(() => {
+        const toggleSort = (key) => { if (sortBy === key) { setSortDir(d => d === 'desc' ? 'asc' : 'desc') } else { setSortBy(key); setSortDir('desc') } }
+        const arrow = (key) => sortBy === key ? (sortDir === 'desc' ? ' ▼' : ' ▲') : ''
+        const thStyle = (key, align='center') => ({ background: sortBy === key ? '#EDE9E3' : '#F9F8F6', padding:'8px 12px', textAlign:align, fontSize:10, fontWeight:600, color: sortBy === key ? '#1C1C2E' : '#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', cursor:'pointer', userSelect:'none', whiteSpace:'nowrap', transition:'background 0.15s' })
+        return (
       <TableWrap>
         <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <SectionTitle>Détail par membre</SectionTitle>
-          <div style={{ fontSize:10, color:'#9CA3AF' }}>Trié par taux d'atteinte global</div>
+          <div style={{ fontSize:10, color:'#9CA3AF' }}>Cliquez sur un en-tête pour trier</div>
         </div>
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead><tr>
-            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Membre</th>
+            <th onClick={() => toggleSort('nom')} style={thStyle('nom','left')}>Membre{arrow('nom')}</th>
             <th style={{ background:'#F9F8F6', padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>TL</th>
-            <th style={{ background:'#F9F8F6', padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Atteinte</th>
-            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Présence ≥{objPres}%</th>
-            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Recos ≥{objRefs}</th>
-            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Visit. ≥{objVis}</th>
-            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>TYFCB ≥{Math.round(objTyfcbMembre/1000)}K</th>
-            <th style={{ background:'#F9F8F6', padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Score</th>
+            <th onClick={() => toggleSort('atteinte')} style={thStyle('atteinte')}>Atteinte{arrow('atteinte')}</th>
+            <th onClick={() => toggleSort('pres')} style={thStyle('pres')}>Présence ≥{objPres}%{arrow('pres')}</th>
+            <th onClick={() => toggleSort('refs')} style={thStyle('refs')}>Recos ≥{objRefs}{arrow('refs')}</th>
+            <th onClick={() => toggleSort('vis')} style={thStyle('vis')}>Visit. ≥{objVis}{arrow('vis')}</th>
+            <th onClick={() => toggleSort('tyfcb')} style={thStyle('tyfcb')}>TYFCB ≥{Math.round(objTyfcbMembre/1000)}K{arrow('tyfcb')}</th>
+            <th onClick={() => toggleSort('score')} style={thStyle('score')}>Score{arrow('score')}</th>
           </tr></thead>
           <tbody>
             {membresData.map((s, i) => {
@@ -1281,6 +1298,8 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
           </tbody>
         </table>
       </TableWrap>
+        )
+      })()}
     </div>
   )
 }
