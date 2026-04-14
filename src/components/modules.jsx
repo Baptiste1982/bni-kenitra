@@ -92,8 +92,9 @@ export function Invites({ profil }) {
       const rowChunks = text.split(/<Row[^>]*>/i).slice(1)
       let headers = [], headerFound = false, imported = 0, skipped = 0
 
-      // Trouver les headers (ligne contenant "Prénom" ou "First")
+      // Trouver les headers (ligne contenant "Prénom", "Société", "First", etc.)
       const rows = []
+      const allParsedRows = []
       rowChunks.forEach(chunk => {
         const cellMatches = [...chunk.matchAll(/<Cell([^>]*)>[\s\S]*?<Data[^>]*>([\s\S]*?)<\/Data>/g)]
         if (!cellMatches.length) return
@@ -103,28 +104,38 @@ export function Invites({ profil }) {
           if (idxMatch) { while (vals.length < parseInt(idxMatch[1]) - 1) vals.push('') }
           vals.push(m[2].trim())
         })
+        allParsedRows.push(vals)
         if (!headerFound) {
-          if (vals.some(v => v.includes('Prénom') && v.includes('Recherché')) || (vals.includes('Prénom Recherché') && vals.includes('Nom Recherché'))) {
-            // C'est la ligne avant les vrais headers, skip
-          } else if (vals.length >= 10 && (vals.includes('Prénom Recherché') || vals.some(v => v === 'Société'))) {
+          const joined = vals.join(' ').toLowerCase()
+          // Détecter la ligne header : contient prénom/first + nom/last ou société/company
+          if (vals.length >= 5 && (
+            (joined.includes('prénom') && joined.includes('nom')) ||
+            (joined.includes('first') && joined.includes('last')) ||
+            (joined.includes('prénom') && joined.includes('société')) ||
+            vals.some(v => v.toLowerCase().includes('prénom recherché')) ||
+            vals.some(v => v.toLowerCase() === 'société')
+          )) {
             headers = vals
             headerFound = true
           }
           return
         }
-        if (vals.length >= 3 && vals[0]) rows.push(vals)
+        if (vals.length >= 3 && vals.some(v => v)) rows.push(vals)
       })
 
       if (!headerFound || rows.length === 0) {
-        setSyncMsg('Erreur : headers non trouvés dans le fichier')
+        console.log('Toutes les lignes parsées:', allParsedRows.slice(0, 10))
+        setSyncMsg(`Erreur : headers non trouvés (${allParsedRows.length} lignes lues). Vérifiez le format du fichier.`)
         return
       }
 
-      // Mapper les colonnes
-      const colIdx = (name) => headers.findIndex(h => h && h.toLowerCase().includes(name.toLowerCase()))
-      const iPrenom = colIdx('prénom')
-      const iNom = colIdx('nom')
-      const iSociete = colIdx('société') >= 0 ? colIdx('société') : colIdx('societe')
+      // Mapper les colonnes (normalise accents)
+      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const colIdx = (name) => headers.findIndex(h => h && (h.toLowerCase().includes(name.toLowerCase()) || norm(h).includes(norm(name))))
+      console.log('Headers trouvés:', headers)
+      const iPrenom = colIdx('prénom') >= 0 ? colIdx('prénom') : colIdx('prenom') >= 0 ? colIdx('prenom') : colIdx('first')
+      const iNom = colIdx('nom') >= 0 ? colIdx('nom') : colIdx('last')
+      const iSociete = colIdx('société') >= 0 ? colIdx('société') : colIdx('societe') >= 0 ? colIdx('societe') : colIdx('company')
       const iProfession = colIdx('profession')
       const iEmail = colIdx('email')
       const iTel = colIdx('téléphone') >= 0 ? colIdx('téléphone') : colIdx('telephone')
