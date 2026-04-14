@@ -48,10 +48,10 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
     setLoading(true)
     const premierJour = `${annee}-${String(mois).padStart(2,'0')}-01`
     const dernierJour = finMois.toISOString().split('T')[0]
-    Promise.all([fetchScoresMK01(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchPalmsMK01(groupeCode), supabase.from('palms_hebdo').select('date_reunion').gte('date_reunion', premierJour).lte('date_reunion', dernierJour)])
+    Promise.all([fetchScoresMK01(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchPalmsMK01(groupeCode), supabase.from('palms_hebdo').select('date_reunion, is_provisoire').gte('date_reunion', premierJour).lte('date_reunion', dernierJour)])
       .then(([scoresData, hebdoData, palmsRaw, hebdoRes]) => {
-        // Réunions consolidées du mois en cours (dates distinctes dans palms_hebdo)
-        const datesConsolidees = new Set((hebdoRes?.data || []).map(r => r.date_reunion))
+        // Réunions consolidées (non provisoires) du mois en cours
+        const datesConsolidees = new Set((hebdoRes?.data || []).filter(r => !r.is_provisoire).map(r => r.date_reunion))
         setReunionsSaisies(datesConsolidees.size)
         // Indexer les PALMS consolidés par membre_id
         const pMap = {}

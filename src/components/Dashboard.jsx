@@ -36,12 +36,12 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
     const dernierJour = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0]
     Promise.all([
       fetchDashboardKPIs(groupeCode),
-      supabase.from('palms_hebdo').select('date_reunion').gte('date_reunion', premierJour).lte('date_reunion', dernierJour),
+      supabase.from('palms_hebdo').select('date_reunion, is_provisoire').gte('date_reunion', premierJour).lte('date_reunion', dernierJour),
       supabase.from('app_settings').select('key, value'),
     ]).then(([data, hebdoRes, settingsRes]) => {
       setKpis(data)
-      // Compter les réunions consolidées du mois en cours (dates distinctes dans palms_hebdo)
-      const dates = new Set((hebdoRes?.data || []).map(r => r.date_reunion))
+      // Compter les réunions consolidées (non provisoires) du mois en cours
+      const dates = new Set((hebdoRes?.data || []).filter(r => !r.is_provisoire).map(r => r.date_reunion))
       setReunionsSaisies(dates.size)
       // Settings
       const sMap = {}
