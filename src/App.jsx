@@ -4,7 +4,7 @@ import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import Membres from './components/Membres'
 import RealtimeAlerts from './components/RealtimeAlerts'
-import { Invites, Groupes, Reporting, AgentIA } from './components/modules'
+import { Invites, Groupes, Reporting, AgentIA, Objectifs } from './components/modules'
 import SuiviHebdo from './components/SuiviHebdo'
 import AdminUsers from './components/AdminUsers'
 import Alertes from './components/Alertes'
@@ -41,6 +41,7 @@ const ALL_MODULES = [
   { id:'region',    label:'Région',             icon:'◎' },
   { id:'groupes',   label:'Groupes',           icon:'⬟' },
   { id:'reporting', label:'Reporting',         icon:'◫' },
+  { id:'objectifs', label:'Objectifs',          icon:'◎' },
   { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA' },
   { id:'admin',     label:'Admin',             icon:'⚙' },
 ]
@@ -214,6 +215,7 @@ export default function App() {
     region:    <Region />,
     groupes:   <Groupes />,
     reporting: <Reporting groupeCode={groupeCode} />,
+    objectifs: <Objectifs groupeCode={groupeCode} profil={profil} />,
     agent:     <AgentIA groupeCode={groupeCode} />,
     admin:     <AdminUsers />,
   }

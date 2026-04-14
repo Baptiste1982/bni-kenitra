@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet, buildDynamicSystemPrompt } from '../lib/bniService'
+import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchObjectifs, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet, buildDynamicSystemPrompt } from '../lib/bniService'
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
@@ -1049,6 +1049,147 @@ export function Reporting({ groupeCode = 'MK-01' }) {
         </div>
       )}
 
+    </div>
+  )
+}
+
+// ─── OBJECTIFS ──────────────────────────────────────────────────────────────
+export function Objectifs({ groupeCode = 'MK-01', profil }) {
+  const [objectifs, setObjectifs] = useState(null)
+  const [scores, setScores] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({})
+  const isAdmin = ['super_admin','directeur_executif','directrice_consultante'].includes(profil?.role)
+
+  const load = async () => {
+    setLoading(true)
+    const [objData, scoresData] = await Promise.all([
+      fetchObjectifs(groupeCode),
+      fetchScoresMK01(groupeCode),
+    ])
+    setObjectifs(objData)
+    setScores(scoresData)
+    if (objData) setForm(objData)
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [groupeCode])
+
+  const handleSave = async () => {
+    if (!objectifs?.id) return
+    const { error } = await supabase.from('objectifs').update({
+      objectif_membres: Number(form.objectif_membres) || 30,
+      objectif_retention: Number(form.objectif_retention) || 95,
+      objectif_invites_semaine: Number(form.objectif_invites_semaine) || 1,
+      objectif_references_semaine: Number(form.objectif_references_semaine) || 1,
+      objectif_tyfcb: Number(form.objectif_tyfcb) || 500000,
+    }).eq('id', objectifs.id)
+    if (!error) { setEditing(false); load() }
+  }
+
+  if (loading) return <div style={{ padding:'28px 32px', display:'flex', justifyContent:'center' }}><Spinner /></div>
+
+  // Calculer les KPIs actuels
+  const nbMembres = scores.filter(s => s.membre_id).length
+  const avgPresence = scores.length > 0 ? Math.round(scores.reduce((s,r) => s + (Number(r.attendance_rate)||0), 0) / scores.length * 100) : 0
+  const avgRefs = scores.length > 0 ? (scores.reduce((s,r) => s + (Number(r.referrals_given_rate)||0), 0) / scores.length).toFixed(2) : '0'
+  const avgInvites = scores.length > 0 ? (scores.reduce((s,r) => s + (Number(r.visitors)||0), 0) / scores.length).toFixed(1) : '0'
+  const totalTyfcb = scores.reduce((s,r) => s + (Number(r.tyfcb)||0), 0)
+  const obj = objectifs || { objectif_membres:30, objectif_retention:95, objectif_invites_semaine:1, objectif_references_semaine:1, objectif_tyfcb:500000 }
+
+  const kpis = [
+    { label:'Membres actifs', icon:'👥', actuel: nbMembres, objectif: obj.objectif_membres, format: v => v, field:'objectif_membres' },
+    { label:'Taux de présence', icon:'📋', actuel: avgPresence, objectif: Number(obj.objectif_retention), format: v => v + '%', field:'objectif_retention' },
+    { label:'Recos / semaine', icon:'🤝', actuel: Number(avgRefs), objectif: Number(obj.objectif_references_semaine), format: v => Number(v).toFixed(2), field:'objectif_references_semaine' },
+    { label:'Visiteurs / semaine', icon:'🎯', actuel: Number(avgInvites), objectif: Number(obj.objectif_invites_semaine), format: v => Number(v).toFixed(1), field:'objectif_invites_semaine' },
+    { label:'TYFCB total', icon:'💰', actuel: totalTyfcb, objectif: Number(obj.objectif_tyfcb), format: v => Number(v).toLocaleString('fr-FR') + ' MAD', field:'objectif_tyfcb' },
+  ]
+
+  return (
+    <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
+      <PageHeader title="Objectifs du chapitre" sub={`T${obj.trimestre || '?'} ${obj.annee || '2026'} — ${groupeCode}`}
+        right={isAdmin && !editing ? (
+          <button onClick={() => setEditing(true)} style={{ padding:'8px 16px', background:'#1C1C2E', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>Modifier</button>
+        ) : null}
+      />
+
+      {/* Grille des objectifs */}
+      <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : 'repeat(3, 1fr)', gap:16, marginBottom:24 }}>
+        {kpis.map(k => {
+          const pct = k.objectif > 0 ? Math.min(100, Math.round(k.actuel / k.objectif * 100)) : 0
+          const atteint = pct >= 100
+          const enCours = pct >= 60
+          const bgCard = atteint ? '#D1FAE5' : enCours ? '#FEF9C3' : '#FEE2E2'
+          const borderCard = atteint ? '#A7F3D0' : enCours ? '#FDE68A' : '#FECACA'
+          const colorVal = atteint ? '#065F46' : enCours ? '#854D0E' : '#991B1B'
+          const barColor = atteint ? '#059669' : enCours ? '#D97706' : '#DC2626'
+          return (
+            <div key={k.label} style={{ background:bgCard, borderRadius:14, border:`1px solid ${borderCard}`, padding:'20px 22px', position:'relative', overflow:'hidden' }}>
+              <div style={{ fontSize:12, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
+                <span>{k.icon}</span> {k.label}
+              </div>
+              <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:4 }}>
+                <span style={{ fontSize:32, fontWeight:700, color:colorVal, fontFamily:'DM Sans, sans-serif' }}>{k.format(k.actuel)}</span>
+              </div>
+              <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>
+                Objectif : {k.format(k.objectif)} {atteint ? '✅' : `(${pct}%)`}
+              </div>
+              <div style={{ height:6, background:'rgba(255,255,255,0.6)', borderRadius:3 }}>
+                <div style={{ height:6, width:`${pct}%`, background:barColor, borderRadius:3, transition:'width 0.6s ease' }} />
+              </div>
+              {editing && (
+                <div style={{ marginTop:12, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:11, color:'#6B7280' }}>Objectif :</span>
+                  <input type="number" value={form[k.field] || ''} onChange={e => setForm({...form, [k.field]: e.target.value})}
+                    style={{ width:100, padding:'4px 8px', border:'1px solid #E8E6E1', borderRadius:6, fontSize:12 }} />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {editing && (
+        <div style={{ display:'flex', gap:8, marginBottom:24 }}>
+          <button onClick={handleSave} style={{ padding:'10px 24px', background:'#059669', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Enregistrer</button>
+          <button onClick={() => { setEditing(false); setForm(objectifs) }} style={{ padding:'10px 24px', background:'#fff', color:'#6B7280', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, cursor:'pointer' }}>Annuler</button>
+        </div>
+      )}
+
+      {/* Classement individuel vs objectifs */}
+      <TableWrap>
+        <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
+          <SectionTitle>Progression individuelle</SectionTitle>
+        </div>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <thead><tr>{['Membre','Score','Présence','Recos/sem','Visiteurs','TYFCB'].map(h => (
+            <th key={h} style={{ background:'#F9F8F6', padding:'8px 12px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
+          ))}</tr></thead>
+          <tbody>
+            {scores.filter(s => s.membres).sort((a,b) => (Number(b.total_score)||0) - (Number(a.total_score)||0)).map((s, i) => {
+              const pres = Math.round((Number(s.attendance_rate)||0)*100)
+              const presOk = pres >= Number(obj.objectif_retention)
+              const refsRate = Number(s.referrals_given_rate)||0
+              const refsOk = refsRate >= Number(obj.objectif_references_semaine)
+              const visOk = (Number(s.visitors)||0) >= Number(obj.objectif_invites_semaine)
+              const tyfcbVal = Number(s.tyfcb)||0
+              const cellStyle = (ok) => ({ padding:'8px 12px', fontSize:12, textAlign:'center', fontWeight:600, color: ok ? '#065F46' : '#991B1B', background: ok ? '#D1FAE520' : 'transparent' })
+              return (
+                <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={{ padding:'8px 12px', fontSize:12, fontWeight:500 }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
+                  <td style={{ padding:'8px 12px', fontSize:13, textAlign:'center', fontWeight:700, color: Number(s.total_score) >= 70 ? '#065F46' : Number(s.total_score) >= 50 ? '#854D0E' : '#991B1B' }}>{Number(s.total_score||0).toFixed(0)}</td>
+                  <td style={cellStyle(presOk)}>{pres}%</td>
+                  <td style={cellStyle(refsOk)}>{refsRate.toFixed(2)}</td>
+                  <td style={cellStyle(visOk)}>{Number(s.visitors)||0}</td>
+                  <td style={{ padding:'8px 12px', fontSize:12, textAlign:'center', fontWeight:600, color: tyfcbVal > 0 ? '#065F46' : '#9CA3AF' }}>{tyfcbVal.toLocaleString('fr-FR')}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </TableWrap>
     </div>
   )
 }
