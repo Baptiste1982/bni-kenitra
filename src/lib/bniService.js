@@ -56,8 +56,8 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const periodeDebut = palms[0]?.periode_debut
   const periodeFin = palms[0]?.periode_fin
   const aujourdHui = new Date().toISOString().split('T')[0]
-  // La date d'import = dernier jour couvert par le PALMS Excel
-  const palmsImportDate = palms[0]?.created_at ? new Date(palms[0].created_at).toISOString().split('T')[0] : periodeFin
+  // Point de coupure = dernier jour couvert par le PALMS Excel (periode_fin)
+  const palmsImportDate = periodeFin || aujourdHui
 
   // 3. Charger TOUT palms_hebdo après l'import PALMS (données compilées)
   const { data: hebdoData } = await supabase
@@ -168,7 +168,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const refsScore = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
     const visitorScore = visitors >= 5 ? 25 : visitors >= 4 ? 20 : visitors >= 3 ? 15 : visitors >= 2 ? 10 : visitors >= 1 ? 5 : 0
     const tyfcbK = tyfcb / 1000
-    const tyfcbScore = tyfcbK >= 30 ? 5 : tyfcbK >= 15 ? 4 : tyfcbK >= 5 ? 3 : tyfcbK >= 2 ? 2 : tyfcb > 0 ? 1 : 0
+    const tyfcbScore = tyfcbK >= 300 ? 5 : tyfcbK >= 150 ? 4 : tyfcbK >= 50 ? 3 : tyfcbK >= 20 ? 2 : tyfcb > 0 ? 1 : 0
     // CEU /10 (6 mois) : >0.5→10, >0→5, 0→0
     const ceuScore = finalCeuRate > 0.5 ? 10 : finalCeuRate > 0 ? 5 : 0
     // Sponsors /5 (6 mois) : 1+→5, 0→0
