@@ -427,56 +427,37 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
             </div>
           )}
 
-          {/* Tableau de consultation des données importées */}
+          {/* Tableau de consultation des données importées — même structure que les archives */}
           {showPalmsInitData && palmsInitData.length > 0 && (
-            <div style={{ marginBottom:12, border:'1px solid #E8E6E1', borderRadius:10, overflow:'hidden' }}>
-              <div style={{ padding:'10px 16px', background:'#1C1C2E', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>📊 Données PALMS consolidées — 12/12/2025 → 31/03/2026</span>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ padding:'10px 16px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>
+                  PALMS Base — 12 déc. 2025 → 31 mars 2026
+                </span>
                 <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{palmsInitData.length} membres</span>
               </div>
-              <div style={{ overflowX:'auto', background:'#fff' }}>
+              <div style={{ overflowX:'auto', background:'#fff', borderRadius:'0 0 10px 10px', border:'1px solid #E8E6E1', borderTop:'none' }}>
                 <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                  <thead><tr>{['Membre','P','A','L','M','S','RDI','RDE','RRI','RRE','Inv.','TàT','MPB','CEU'].map(h => (
-                    <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', whiteSpace:'nowrap' }}>{h}</th>
+                  <thead><tr>{['Membre','P/A','RDI','RDE','RRI','RRE','Inv.','TàT','MPB','CEU'].map(h => (
+                    <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h==='Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
                   ))}</tr></thead>
                   <tbody>
-                    {palmsInitData.map((d, i) => {
-                      const totalR = (d.presences||0) + (d.absences||0)
-                      const presRate = totalR > 0 ? (d.presences||0) / totalR : 0
-                      const presBg = presRate >= 0.95 ? '#D1FAE5' : presRate >= 0.88 ? '#FEF9C3' : '#FEE2E2'
-                      const presCol = presRate >= 0.95 ? '#065F46' : presRate >= 0.88 ? '#854D0E' : '#991B1B'
-                      return (
+                    {palmsInitData.map((d, i) => (
                         <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
                           onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500, whiteSpace:'nowrap' }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, background:presBg, color:presCol }}>{d.presences||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color: (d.absences||0) > 0 ? '#DC2626' : '#9CA3AF' }}>{d.absences||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{d.late||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{d.makeup||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{d.substitut||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.rdi||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.rde||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.presences||0}/{(d.presences||0)+(d.absences||0)}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rdi||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rde||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rri||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.rre||0}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.invites||0}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(d.tat||0).toFixed(1)}</td>
-                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600, color: Number(d.mpb||0) > 0 ? '#065F46' : '#9CA3AF' }}>{Number(d.mpb||0).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{d.tat||0}</td>
+                          <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(d.mpb||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                           <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{d.ueg||0}</td>
                         </tr>
-                      )
-                    })}
+                    ))}
                   </tbody>
-                  <tfoot>
-                    <tr style={{ borderTop:'2px solid #E8E6E1', background:'#F9F8F6' }}>
-                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:700 }}>Total</td>
-                      {['presences','absences','late','makeup','substitut','rdi','rde','rri','rre','invites'].map(k => (
-                        <td key={k} style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700 }}>{palmsInitData.reduce((s,d) => s + (d[k]||0), 0)}</td>
-                      ))}
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700 }}>{palmsInitData.reduce((s,d) => s + Number(d.tat||0), 0).toFixed(1)}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700, color:'#065F46' }}>{palmsInitData.reduce((s,d) => s + Number(d.mpb||0), 0).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:700 }}>{palmsInitData.reduce((s,d) => s + (d.ueg||0), 0)}</td>
-                    </tr>
-                  </tfoot>
                 </table>
               </div>
             </div>
