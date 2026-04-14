@@ -4,18 +4,15 @@ export const cap = (s) => s ? s.split(' ').map(w => w.charAt(0).toUpperCase() + 
 export const fullName = (prenom, nom) => `${cap(prenom || '')} ${cap(nom || '')}`.trim()
 
 export const TLBadge = ({ tl }) => {
-  if (!tl) return <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:500, padding:'3px 8px', borderRadius:12, background:'#F3F4F6', color:'#4B5563' }}>—</span>
-  const cfg = {
-    vert:   { bg:'#D1FAE5', color:'#065F46', dot:'#059669' },
-    orange: { bg:'#FEF3C7', color:'#92400E', dot:'#D97706' },
-    rouge:  { bg:'#FEE2E2', color:'#991B1B', dot:'#DC2626' },
-    gris:   { bg:'#F3F4F6', color:'#4B5563', dot:'#9CA3AF' },
-  }[tl] || { bg:'#F3F4F6', color:'#4B5563', dot:'#9CA3AF' }
+  if (!tl) return <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:16, height:16, borderRadius:'50%', background:'#E5E7EB' }} />
+  const dot = {
+    vert:   '#059669',
+    orange: '#D97706',
+    rouge:  '#DC2626',
+    gris:   '#9CA3AF',
+  }[tl] || '#9CA3AF'
   return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:500, padding:'3px 8px', borderRadius:12, background:cfg.bg, color:cfg.color }}>
-      <span style={{ width:6, height:6, borderRadius:'50%', background:cfg.dot, display:'inline-block' }} />
-      {tl}
-    </span>
+    <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:16, height:16, borderRadius:'50%', background:dot, boxShadow:`0 0 6px ${dot}55` }} />
   )
 }
 
