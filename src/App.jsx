@@ -34,12 +34,11 @@ const ConnectionToast = ({ name, onDone }) => {
 
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
 const ALL_MODULES = [
-  { id:'alertes',   label:'Alertes',           icon:'🚨' },
   { id:'dashboard', label:'Tableau de bord', icon:'▦' },
   { id:'membres',   label:'Membres',          icon:'◈' },
   { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
   { id:'invites',   label:'Invités',           icon:'◉' },
-  { id:'region',    label:'Région',             icon:'🌍' },
+  { id:'region',    label:'Région',             icon:'◎' },
   { id:'groupes',   label:'Groupes',           icon:'⬟' },
   { id:'reporting', label:'Reporting',         icon:'◫' },
   { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA' },
