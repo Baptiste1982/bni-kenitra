@@ -258,7 +258,7 @@ CONSIGNES:
                         'Recommandations': [{ seuil:'≥ 1.25/sem', pts:25 }, { seuil:'≥ 1', pts:20 }, { seuil:'≥ 0.75', pts:15 }, { seuil:'≥ 0.5', pts:10 }, { seuil:'≥ 0.25', pts:5 }],
                         'Visiteurs': [{ seuil:'5+', pts:25 }, { seuil:'4', pts:20 }, { seuil:'3', pts:15 }, { seuil:'2', pts:10 }, { seuil:'1', pts:5 }],
                         'Parrainages': [{ seuil:'3+', pts:5 }, { seuil:'2', pts:3 }, { seuil:'1', pts:1 }, { seuil:'0', pts:0 }],
-                        'TYFCB': [{ seuil:'≥ 300k', pts:5 }, { seuil:'≥ 150k', pts:4 }, { seuil:'≥ 50k', pts:3 }, { seuil:'≥ 20k', pts:2 }, { seuil:'> 0', pts:1 }],
+                        'TYFCB': [{ seuil:'≥ 30k', pts:5 }, { seuil:'≥ 15k', pts:4 }, { seuil:'≥ 5k', pts:3 }, { seuil:'≥ 2k', pts:2 }, { seuil:'> 0', pts:1 }],
                         'CEU': [{ seuil:'> 0.5/sem', pts:10 }, { seuil:'> 0', pts:5 }, { seuil:'0', pts:0 }],
                       }[c.label] || []
 
