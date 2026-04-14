@@ -363,7 +363,7 @@ CONSIGNES:
                           <div style={{ marginBottom:10 }}>
                             <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', marginBottom:6 }}>Barème BNI — {c.label}</div>
                             <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
-                              {bareme.map((b, j) => (
+                              {[...bareme].reverse().map((b, j) => (
                                 <div key={j} style={{ padding:'3px 8px', borderRadius:6, fontSize:10, fontWeight:600,
                                   background: b.pts === currentPts ? cardBg.bg : '#F9FAFB',
                                   color: b.pts === currentPts ? cardBg.color : '#9CA3AF',
