@@ -9,6 +9,15 @@ const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI'
 
 function normalize(s) { return (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') }
 
+// Snap une date au jeudi de la même semaine (jour de réunion BNI)
+function snapToThursday(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00')
+  const day = d.getDay() // 0=dim, 1=lun, ..., 4=jeu
+  const offset = 4 - day // jours jusqu'au jeudi (négatif = après jeudi)
+  d.setDate(d.getDate() + offset)
+  return d.toISOString().split('T')[0]
+}
+
 function matchMembre(prenom, nom, membres) {
   const p = normalize(prenom), n = normalize(nom)
   return membres.find(m => normalize(m.prenom) === p && normalize(m.nom) === n)
@@ -124,10 +133,19 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
         imported++
       }
 
-      if (rows.length > 0) await insertPalmsHebdo(rows, dateReunion, nbReunions, groupeCode)
-      if (bniRow) await insertPalmsHebdo([bniRow], dateReunion, nbReunions, groupeCode)
+      // Snap au jeudi de la semaine pour éviter les doublons
+      const jeudiDate = snapToThursday(dateReunion)
 
-      setResult({ imported, skipped, bni: !!bniRow })
+      // Supprimer les anciennes données de ce jeudi avant d'insérer (écrasement)
+      const { data: groupeData } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
+      if (groupeData?.id) {
+        await supabase.from('palms_hebdo').delete().eq('groupe_id', groupeData.id).eq('date_reunion', jeudiDate)
+      }
+
+      if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode)
+      if (bniRow) await insertPalmsHebdo([bniRow], jeudiDate, nbReunions, groupeCode)
+
+      setResult({ imported, skipped, bni: !!bniRow, jeudiDate, snapped: jeudiDate !== dateReunion })
       setRawText('')
       await loadMonth()
     } catch (err) {
@@ -283,12 +301,24 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                           style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : '#E8E6E1'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
                           onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
                           <div style={{ width:8, height:8, borderRadius:'50%', background:'#C41E3A' }} />
-                          <div>
+                          <div style={{ flex:1 }}>
                             <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E' }}>
                               {date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })}
                             </div>
                             <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#9CA3AF' }}>{isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}</div>
                           </div>
+                          <div onClick={async (e) => {
+                            e.stopPropagation()
+                            if (!window.confirm(`Supprimer la saisie du ${date.toLocaleDateString('fr-FR')} ?`)) return
+                            await supabase.from('palms_hebdo').delete().eq('date_reunion', d)
+                            setArchives(prev => prev.filter(a => a.date_reunion !== d))
+                            if (archiveDetail === d) { setArchiveDetail(null); setArchiveData([]) }
+                            loadMonth()
+                          }}
+                            style={{ width:18, height:18, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'#DC2626', cursor:'pointer', flexShrink:0 }}
+                            onMouseEnter={e => e.currentTarget.style.background='#FEE2E2'}
+                            onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                            title="Supprimer cette saisie">✕</div>
                         </div>
                       )
                     })}
@@ -368,6 +398,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           {result && !result.error && (
             <span style={{ fontSize: 12, color: '#059669', fontWeight: 500 }}>
               {result.imported} membres importés{result.skipped > 0 ? `, ${result.skipped} ignorés` : ''}{result.bni ? ' + contribution BNI' : ''}
+              {result.snapped && <span style={{ color:'#D97706' }}> · Recalé au jeudi {new Date(result.jeudiDate+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}</span>}
             </span>
           )}
           {result?.error && <span style={{ fontSize: 12, color: '#DC2626' }}>Erreur : {result.error}</span>}

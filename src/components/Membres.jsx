@@ -15,6 +15,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
   const [showPalms, setShowPalms] = useState(false)
   const [showPalmsMenu, setShowPalmsMenu] = useState(false)
   const [reunionsSaisies, setReunionsSaisies] = useState(0)
+  const [hebdoDates, setHebdoDates] = useState([])
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -203,7 +204,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                 </div>
                 {showPalmsMenu && (
                   <div style={{ position:'absolute', right:0, top:28, background:'#fff', border:'1px solid #E8E6E1', borderRadius:8, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', zIndex:10, minWidth:160, overflow:'hidden' }}>
-                    <div onClick={e => { e.stopPropagation(); setShowPalms(!showPalms); setShowImport(false); setShowPalmsMenu(false) }}
+                    <div onClick={async e => { e.stopPropagation(); setShowPalms(!showPalms); setShowImport(false); setShowPalmsMenu(false); if (!showPalms) { const { data } = await supabase.from('palms_hebdo').select('date_reunion, groupe_id').order('date_reunion', { ascending:false }); const seen = new Set(); setHebdoDates((data||[]).filter(d => { if (seen.has(d.date_reunion)) return false; seen.add(d.date_reunion); return true })) } }}
                       style={{ padding:'10px 14px', fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
                       onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'}
                       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
@@ -231,56 +232,108 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
         </div>
       )}
 
-      {/* PALMS Consultation */}
-      {showPalms && Object.keys(palmsData).length > 0 && (
-        <div style={{ marginBottom:20 }}>
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+      {/* PALMS Consultation — vue combinée définitif | provisoire */}
+      {showPalms && (
+        <div style={{ marginBottom:20, display:'flex', gap:0, border:'1px solid #E8E6E1', borderRadius:12, overflow:'hidden', background:'#fff' }}>
+          {/* Colonne gauche : Import Excel (Définitif) */}
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ padding:'12px 16px', background:'#F9F8F6', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span style={{ fontSize:13, fontWeight:600 }}>📊 PALMS Consolidé</span>
-                <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Excel · Définitif</span>
+                <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Définitif</span>
               </div>
-              {(() => {
-                const first = Object.values(palmsData)[0]
-                if (!first?.periode_debut || !first?.periode_fin) return null
-                const countJ = (from, to) => { let c=0; const d=new Date(from+'T12:00:00'), e=new Date(to+'T12:00:00'); while(d<=e){if(d.getDay()===4)c++;d.setDate(d.getDate()+1)} return c }
-                const totalJ = countJ(first.periode_debut, first.periode_fin)
+              {Object.keys(palmsData).length > 0 && (
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  {(() => {
+                    const first = Object.values(palmsData)[0]
+                    if (!first?.periode_debut) return null
+                    return <span style={{ fontSize:10, color:'#6B7280' }}>{new Date(first.periode_debut).toLocaleDateString('fr-FR')} → {new Date(first.periode_fin).toLocaleDateString('fr-FR')}</span>
+                  })()}
+                  <div onClick={async () => {
+                    if (!window.confirm('Supprimer les données PALMS consolidées ?')) return
+                    const grpId = Object.values(palmsData)[0]?.groupe_id
+                    if (grpId) { await supabase.from('palms_imports').delete().eq('groupe_id', grpId); load() }
+                  }}
+                    style={{ fontSize:10, color:'#DC2626', cursor:'pointer', padding:'2px 6px', borderRadius:4 }}
+                    onMouseEnter={e => e.currentTarget.style.background='#FEE2E2'}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                    title="Supprimer cet import">🗑</div>
+                </div>
+              )}
+            </div>
+            {Object.keys(palmsData).length > 0 ? (
+              <div style={{ overflowX:'auto', maxHeight:400, overflowY:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead><tr>{['Membre','P','A','RDI','RDE','RRI','RRE','Inv.','TàT','MPB'].map(h => (
+                    <th key={h} style={{ background:'#F9F8F6', padding:'6px 8px', textAlign: h === 'Membre' ? 'left' : 'center', fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', position:'sticky', top:0 }}>{h}</th>
+                  ))}</tr></thead>
+                  <tbody>
+                    {Object.values(palmsData).sort((a, b) => (b.tat || 0) - (a.tat || 0)).map((p, i) => (
+                      <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
+                        onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
+                        onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ padding:'6px 8px', fontSize:11, fontWeight:500, whiteSpace:'nowrap' }}>{fullName(p.membres?.prenom, p.membres?.nom)}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center', color:'#059669', fontWeight:600 }}>{p.presences||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center', color: p.absences > 0 ? '#DC2626' : '#9CA3AF' }}>{p.absences||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center' }}>{p.rdi||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center' }}>{p.rde||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center' }}>{p.rri||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center' }}>{p.rre||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center' }}>{p.invites||0}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center', fontWeight:600 }}>{Number(p.tat||0)}</td>
+                        <td style={{ padding:'6px 8px', fontSize:11, textAlign:'center', fontWeight:600 }}>{Number(p.mpb||0).toLocaleString('de-DE')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding:24, textAlign:'center', color:'#9CA3AF', fontSize:12 }}>Aucun import Excel</div>
+            )}
+          </div>
+
+          {/* Trait vertical séparateur */}
+          <div style={{ width:3, background:'linear-gradient(to bottom, #D1FAE5, #E8E6E1 30%, #E8E6E1 70%, #FEF3C7)', flexShrink:0 }} />
+
+          {/* Colonne droite : Saisies Hebdo (Provisoire) */}
+          <div style={{ width:280, flexShrink:0, display:'flex', flexDirection:'column' }}>
+            <div style={{ padding:'12px 16px', background:'#F9F8F6', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:13, fontWeight:600 }}>📝 Saisies Hebdo</span>
+              <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Provisoire</span>
+            </div>
+            <div style={{ flex:1, padding:12, overflowY:'auto', maxHeight:400 }}>
+              {hebdoDates.length === 0 ? (
+                <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:12 }}>Aucune saisie hebdo</div>
+              ) : hebdoDates.map(h => {
+                const date = new Date(h.date_reunion + 'T12:00:00')
+                const isThursday = date.getDay() === 4
                 return (
-                  <div style={{ fontSize:11, color:'#6B7280' }}>
-                    Période : {new Date(first.periode_debut).toLocaleDateString('fr-FR')} → {new Date(first.periode_fin).toLocaleDateString('fr-FR')} · {totalJ} jeudis
+                  <div key={h.date_reunion} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', marginBottom:6, borderRadius:8, background:'#FFFBEB', border:'1px solid #FEF3C7' }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background:'#D97706', flexShrink:0 }} />
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#1C1C2E' }}>
+                        {date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })}
+                      </div>
+                      <div style={{ fontSize:9, color:'#92400E' }}>
+                        {isThursday ? 'Jeudi · Réunion' : '⚠ Pas un jeudi'}
+                      </div>
+                    </div>
+                    <div onClick={async (e) => {
+                      e.stopPropagation()
+                      if (!window.confirm(`Supprimer la saisie du ${date.toLocaleDateString('fr-FR')} ?`)) return
+                      await supabase.from('palms_hebdo').delete().eq('date_reunion', h.date_reunion)
+                      setHebdoDates(prev => prev.filter(d => d.date_reunion !== h.date_reunion))
+                      load()
+                    }}
+                      style={{ width:22, height:22, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#DC2626', cursor:'pointer', flexShrink:0 }}
+                      onMouseEnter={e => e.currentTarget.style.background='#FEE2E2'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                      title="Supprimer cette saisie">🗑</div>
                   </div>
                 )
-              })()}
+              })}
             </div>
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead><tr>{['Membre','P','A','L','M','S','RDI','RDE','RRI','RRE','Inv.','TàT','MPB'].map(h => (
-                  <th key={h} style={{ background:'#F9F8F6', padding:'8px 10px', textAlign: h === 'Membre' ? 'left' : 'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
-                ))}</tr></thead>
-                <tbody>
-                  {Object.values(palmsData).sort((a, b) => (b.tat || 0) - (a.tat || 0)).map((p, i) => (
-                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
-                      onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
-                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                      <td style={{ padding:'8px 10px', fontSize:12, fontWeight:500 }}>{fullName(p.membres?.prenom, p.membres?.nom)}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#059669', fontWeight:600 }}>{p.presences || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color: p.absences > 0 ? '#DC2626' : '#9CA3AF', fontWeight:600 }}>{p.absences || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.late || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.makeup || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', color:'#9CA3AF' }}>{p.substitut || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{p.rdi || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{p.rde || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.rri || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.rre || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center' }}>{p.invites || 0}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.tat || 0)}</td>
-                      <td style={{ padding:'8px 10px', fontSize:12, textAlign:'center', fontWeight:600 }}>{Number(p.mpb || 0).toLocaleString('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 })}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TableWrap>
+          </div>
         </div>
       )}
 
