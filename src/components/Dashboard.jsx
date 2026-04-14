@@ -15,6 +15,14 @@ export default function Dashboard({ onNavigate, profil }) {
   const [reunionsSaisies, setReunionsSaisies] = useState(0)
   const [cloturing, setCloturing] = useState(false)
   const [clotureMsg, setClotureMsg] = useState('')
+  const [greeting, setGreeting] = useState('Bonjour')
+  const [greetingSub, setGreetingSub] = useState('MK-01 Kénitra Atlantique · Données en temps réel')
+  const [greetingLogo, setGreetingLogo] = useState('')
+  const [editGreeting, setEditGreeting] = useState(false)
+  const [editGreetingText, setEditGreetingText] = useState('')
+  const [editGreetingSub, setEditGreetingSub] = useState('')
+  const [editGreetingLogo, setEditGreetingLogo] = useState('')
+  const isAdmin = ['super_admin','directeur_executif'].includes(profil?.role)
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -26,8 +34,9 @@ export default function Dashboard({ onNavigate, profil }) {
   useEffect(() => {
     Promise.all([
       fetchDashboardKPIs(),
-      supabase.from('palms_imports').select('periode_debut, created_at').limit(1)
-    ]).then(([data, palmsRes]) => {
+      supabase.from('palms_imports').select('periode_debut, created_at').limit(1),
+      supabase.from('app_settings').select('key, value'),
+    ]).then(([data, palmsRes, settingsRes]) => {
       setKpis(data)
       // Compter les jeudis clôturés = jeudis entre periode_debut et date d'import
       const pi = palmsRes?.data?.[0]
@@ -39,6 +48,12 @@ export default function Dashboard({ onNavigate, profil }) {
         while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
         setReunionsSaisies(count)
       } else { setReunionsSaisies(0) }
+      // Settings
+      const sMap = {}
+      ;(settingsRes?.data || []).forEach(s => { sMap[s.key] = s.value })
+      if (sMap.greeting) setGreeting(sMap.greeting)
+      if (sMap.greeting_sub) setGreetingSub(sMap.greeting_sub)
+      if (sMap.greeting_logo) setGreetingLogo(sMap.greeting_logo)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
@@ -52,6 +67,18 @@ export default function Dashboard({ onNavigate, profil }) {
       setClotureMsg(`Mois clôturé — ${result.count} membres sauvegardés`)
     } catch(e) { setClotureMsg('Erreur : ' + e.message) }
     setCloturing(false)
+  }
+
+  const saveGreeting = async () => {
+    await Promise.all([
+      supabase.from('app_settings').update({ value: editGreetingText }).eq('key', 'greeting'),
+      supabase.from('app_settings').update({ value: editGreetingSub }).eq('key', 'greeting_sub'),
+      supabase.from('app_settings').update({ value: editGreetingLogo }).eq('key', 'greeting_logo'),
+    ])
+    setGreeting(editGreetingText)
+    setGreetingSub(editGreetingSub)
+    setGreetingLogo(editGreetingLogo)
+    setEditGreeting(false)
   }
 
   const hover = e => { e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'; e.currentTarget.style.transform='translateY(-1px)' }
@@ -72,16 +99,45 @@ export default function Dashboard({ onNavigate, profil }) {
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader
-        title={`Bonjour, ${profil?.prenom || 'Jean Baptiste'} 👋`}
-        sub="MK-01 Kénitra Atlantique · Données en temps réel"
-        right={
+      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:24 }}>
+        {greetingLogo && <img src={greetingLogo} alt="" style={{ width:48, height:48, borderRadius:'50%', objectFit:'cover', boxShadow:'0 2px 8px rgba(0,0,0,0.1)', flexShrink:0 }} />}
+        <div style={{ flex:1 }}>
+          <h1 style={{ fontFamily:'DM Sans, sans-serif', fontSize:24, fontWeight:700, color:'#1C1C2E' }}>{greeting}, {profil?.prenom || 'Jean Baptiste'} 👋</h1>
+          <p style={{ color:'#6B7280', fontSize:13, marginTop:3 }}>{greetingSub}</p>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {isAdmin && <button onClick={() => { setEditGreetingText(greeting); setEditGreetingSub(greetingSub); setEditGreetingLogo(greetingLogo); setEditGreeting(!editGreeting) }}
+            style={{ background:'none', border:'1px solid #E8E6E1', borderRadius:8, padding:'5px 8px', cursor:'pointer', fontSize:12, color:'#6B7280' }} title="Personnaliser">✏️</button>}
           <div style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:10, padding:'10px 16px', textAlign:'right' }}>
             <div style={{ fontSize:11, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>Lancé le</div>
             <div style={{ fontSize:13, fontWeight:600 }}>12 déc 2025</div>
           </div>
-        }
-      />
+        </div>
+      </div>
+      {editGreeting && (
+        <div style={{ background:'#fff', borderRadius:12, padding:'16px 20px', border:'1px solid #E8E6E1', marginBottom:16, animation:'fadeIn 0.2s ease' }}>
+          <div style={{ fontSize:12, fontWeight:600, color:'#1C1C2E', marginBottom:12 }}>✏️ Personnaliser le message d'accueil</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+            <div>
+              <label style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', display:'block', marginBottom:4 }}>Message d'accueil</label>
+              <input value={editGreetingText} onChange={e => setEditGreetingText(e.target.value)} placeholder="Bonjour" style={{ width:'100%', padding:'8px 12px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', boxSizing:'border-box' }} />
+            </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', display:'block', marginBottom:4 }}>Sous-titre</label>
+              <input value={editGreetingSub} onChange={e => setEditGreetingSub(e.target.value)} placeholder="MK-01 Kénitra..." style={{ width:'100%', padding:'8px 12px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', boxSizing:'border-box' }} />
+            </div>
+          </div>
+          <div style={{ marginBottom:12 }}>
+            <label style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', display:'block', marginBottom:4 }}>URL du logo (laisser vide = pas de logo)</label>
+            <input value={editGreetingLogo} onChange={e => setEditGreetingLogo(e.target.value)} placeholder="https://exemple.com/logo.png" style={{ width:'100%', padding:'8px 12px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', boxSizing:'border-box' }} />
+          </div>
+          {editGreetingLogo && <div style={{ marginBottom:12 }}><img src={editGreetingLogo} alt="Aperçu" style={{ width:48, height:48, borderRadius:'50%', objectFit:'cover', border:'1px solid #E8E6E1' }} onError={e => e.target.style.display='none'} /></div>}
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={saveGreeting} style={{ padding:'7px 16px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>Enregistrer</button>
+            <button onClick={() => setEditGreeting(false)} style={{ padding:'7px 16px', background:'#F3F4F6', color:'#6B7280', border:'none', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>Annuler</button>
+          </div>
+        </div>
+      )}
 
       {/* Mois en cours */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: window.innerWidth <= 768 ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap:12, flexWrap:'wrap' }}>
