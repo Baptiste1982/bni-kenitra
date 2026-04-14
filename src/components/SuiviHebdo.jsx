@@ -338,18 +338,20 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
           <div style={{ display:'flex', gap:8 }}>
+            {/* Bouton Import initial */}
             <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false) } }}
-              style={{ background: palmsInitExists ? '#D1FAE5' : '#FEF3C7', border:`1px solid ${palmsInitExists ? '#A7F3D0' : '#FDE68A'}`, borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
               <div>
                 <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Import initial</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{palmsInitExists ? '✅ PALMS Base' : '📥 PALMS Base'}</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{palmsInitExists ? '✅' : '📥'} PALMS Base</div>
               </div>
               <div style={{ fontSize:9, padding:'2px 6px', borderRadius:6, background: palmsInitExists ? '#065F46' : '#92400E', color:'#fff', fontWeight:600 }}>
                 {palmsInitExists ? 'OK' : 'Requis'}
               </div>
             </div>
+            {/* Bouton Archives */}
             <div onClick={() => { setShowArchives(!showArchives); if(!showArchives) { setShowImport(false); setShowPalmsInit(false); supabase.from('palms_hebdo').select('date_reunion, nb_reunions, groupe_id').order('date_reunion',{ascending:false}).then(({data}) => { setArchives(data||[]) }) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
@@ -364,6 +366,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                 <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
+            {/* Bouton Dernière saisie */}
             <div onClick={() => { setShowImport(!showImport); if(!showImport) { setShowArchives(false); setShowPalmsInit(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
