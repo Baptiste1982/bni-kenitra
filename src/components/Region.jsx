@@ -115,7 +115,12 @@ export default function Region() {
   )
 
   return (
-    <div style={{ padding: isMobile ? '20px 16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
+    <div style={{ padding: isMobile ? '20px 16px' : '28px 32px', animation:'fadeIn 0.25s ease', minHeight:'100%', background:'linear-gradient(135deg, #F7F6F3 0%, #EDF1F5 40%, #F0EDE8 100%)', position:'relative' }}>
+      {/* Subtle radial glow */}
+      <div style={{ position:'absolute', top:0, right:0, width:'50%', height:400, background:'radial-gradient(ellipse at top right, rgba(196,30,58,0.04) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }} />
+      <div style={{ position:'absolute', bottom:0, left:0, width:'40%', height:300, background:'radial-gradient(ellipse at bottom left, rgba(59,130,246,0.03) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }} />
+
+      <div style={{ position:'relative', zIndex:1 }}>
       <PageHeader
         title="Suivi Régional"
         sub="Vue consolidée de tous les groupes BNI Kénitra"
@@ -235,6 +240,8 @@ export default function Region() {
         <TopTable title="Top TaT" icon="☕" items={data.topTaTRegion} valueLabel="Total" />
         <TopTable title="Top invités" icon="🎯" items={data.topInvitesRegion} valueLabel="Total" />
       </div>
+
+      </div>{/* /zIndex wrapper */}
 
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
