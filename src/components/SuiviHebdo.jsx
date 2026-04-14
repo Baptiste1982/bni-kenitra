@@ -162,7 +162,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           mpb: parseFloat(row['MPB'] || 0),
           ueg: parseInt(row['UEG'] || 0),
           periode_debut: '2025-12-12',
-          periode_fin: '2026-02-28',
+          periode_fin: '2026-03-31',
         }
         const { error } = await supabase.from('palms_imports').upsert(palmsRow, { onConflict: 'membre_id,periode_debut' })
         if (error) { skipped++; continue }
@@ -399,7 +399,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           <div style={{ padding:'12px 16px', background:'#F9F8F6', borderRadius:8, marginBottom:16, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ fontSize:11, color:'#6B7280' }}>Période :</span>
-              <span style={{ fontSize:13, fontWeight:700, color:'#1C1C2E' }}>12 déc. 2025 → 28 fév. 2026</span>
+              <span style={{ fontSize:13, fontWeight:700, color:'#1C1C2E' }}>12 déc. 2025 → 31 mars 2026</span>
             </div>
             <div style={{ fontSize:10, color:'#9CA3AF' }}>Rapport PALMS depuis le lancement du groupe jusqu'avant mars</div>
           </div>
@@ -429,7 +429,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               <>
                 <div style={{ fontSize:28, marginBottom:6 }}>📊</div>
                 <div style={{ fontSize:13, fontWeight:600, color:'#1C1C2E', marginBottom:4 }}>Glisser le fichier PALMS ici</div>
-                <div style={{ fontSize:11, color:'#9CA3AF' }}>Export BNI Connect · XLS · Période déc 2025 → fév 2026</div>
+                <div style={{ fontSize:11, color:'#9CA3AF' }}>Export BNI Connect · XLS · Période déc 2025 → mars 2026</div>
               </>
             )}
             <input ref={palmsInitFileRef} type="file" accept=".xls,.xlsx" style={{ display:'none' }}
@@ -446,7 +446,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               <div style={{ fontSize:12, color:'#059669' }}>
                 {palmsInitResult.imported} membres importés · {palmsInitResult.skipped > 0 ? `${palmsInitResult.skipped} non trouvés · ` : ''}{palmsInitResult.total} lignes traitées
               </div>
-              <div style={{ fontSize:11, color:'#065F46', marginTop:4 }}>Période : 12/12/2025 → 28/02/2026</div>
+              <div style={{ fontSize:11, color:'#065F46', marginTop:4 }}>Période : 12/12/2025 → 31/03/2026</div>
               {palmsInitResult.scoreResult && (
                 <div style={{ fontSize:11, color:'#065F46', marginTop:4, padding:'4px 8px', background:'rgba(255,255,255,0.5)', borderRadius:4 }}>
                   📊 Scores recalculés : {palmsInitResult.scoreResult.count} membres
