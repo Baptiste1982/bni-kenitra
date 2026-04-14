@@ -1062,6 +1062,13 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
   const [form, setForm] = useState({})
   const isAdmin = ['super_admin','directeur_executif','directrice_consultante'].includes(profil?.role)
 
+  // Sliders simulation — valeurs locales modifiables en temps réel
+  const [simPres, setSimPres] = useState(null)
+  const [simRefs, setSimRefs] = useState(null)
+  const [simVis, setSimVis] = useState(null)
+  const [simTyfcb, setSimTyfcb] = useState(null)
+  const [simMode, setSimMode] = useState(false)
+
   const load = async () => {
     setLoading(true)
     const [objData, scoresData] = await Promise.all([
@@ -1070,7 +1077,13 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
     ])
     setObjectifs(objData)
     setScores(scoresData)
-    if (objData) setForm(objData)
+    if (objData) {
+      setForm(objData)
+      setSimPres(Number(objData.objectif_retention) || 95)
+      setSimRefs(Number(objData.objectif_references_semaine) || 1)
+      setSimVis(Number(objData.objectif_invites_semaine) || 1)
+      setSimTyfcb(Number(objData.objectif_tyfcb) || 500000)
+    }
     setLoading(false)
   }
 
@@ -1088,174 +1101,186 @@ export function Objectifs({ groupeCode = 'MK-01', profil }) {
     if (!error) { setEditing(false); load() }
   }
 
+  // Sauvegarder les objectifs simulés comme officiels
+  const handleApplySimulation = async () => {
+    if (!objectifs?.id) return
+    const { error } = await supabase.from('objectifs').update({
+      objectif_retention: simPres,
+      objectif_references_semaine: simRefs,
+      objectif_invites_semaine: simVis,
+      objectif_tyfcb: simTyfcb,
+    }).eq('id', objectifs.id)
+    if (!error) { setSimMode(false); load() }
+  }
+
+  const resetSim = () => {
+    if (!objectifs) return
+    setSimPres(Number(objectifs.objectif_retention) || 95)
+    setSimRefs(Number(objectifs.objectif_references_semaine) || 1)
+    setSimVis(Number(objectifs.objectif_invites_semaine) || 1)
+    setSimTyfcb(Number(objectifs.objectif_tyfcb) || 500000)
+    setSimMode(false)
+  }
+
   if (loading) return <div style={{ padding:'28px 32px', textAlign:'center', color:'#9CA3AF' }}>Chargement...</div>
 
-  // Calculer les KPIs actuels
   const nbMembres = scores.filter(s => s.membre_id).length
-  const avgPresence = scores.length > 0 ? Math.round(scores.reduce((s,r) => s + (Number(r.attendance_rate)||0), 0) / scores.length * 100) : 0
-  const avgRefs = scores.length > 0 ? (scores.reduce((s,r) => s + (Number(r.referrals_given_rate)||0), 0) / scores.length).toFixed(2) : '0'
-  const avgInvites = scores.length > 0 ? (scores.reduce((s,r) => s + (Number(r.visitors)||0), 0) / scores.length).toFixed(1) : '0'
-  const totalTyfcb = scores.reduce((s,r) => s + (Number(r.tyfcb)||0), 0)
   const obj = objectifs || { objectif_membres:30, objectif_retention:95, objectif_invites_semaine:1, objectif_references_semaine:1, objectif_tyfcb:500000 }
 
-  const kpis = [
-    { label:'Membres actifs', icon:'👥', actuel: nbMembres, objectif: obj.objectif_membres, format: v => v, field:'objectif_membres' },
-    { label:'Taux de présence', icon:'📋', actuel: avgPresence, objectif: Number(obj.objectif_retention), format: v => v + '%', field:'objectif_retention' },
-    { label:'Recos / semaine', icon:'🤝', actuel: Number(avgRefs), objectif: Number(obj.objectif_references_semaine), format: v => Number(v).toFixed(2), field:'objectif_references_semaine' },
-    { label:'Visiteurs / semaine', icon:'🎯', actuel: Number(avgInvites), objectif: Number(obj.objectif_invites_semaine), format: v => Number(v).toFixed(1), field:'objectif_invites_semaine' },
-    { label:'TYFCB total', icon:'💰', actuel: totalTyfcb, objectif: Number(obj.objectif_tyfcb), format: v => Number(v).toLocaleString('fr-FR') + ' MAD', field:'objectif_tyfcb' },
-  ]
+  // Utiliser les valeurs simulation (ou les objectifs réels si pas de sim)
+  const objPres = simPres ?? Number(obj.objectif_retention)
+  const objRefs = simRefs ?? Number(obj.objectif_references_semaine)
+  const objVis = simVis ?? Number(obj.objectif_invites_semaine)
+  const objTyfcbTotal = simTyfcb ?? Number(obj.objectif_tyfcb)
+  const objTyfcbMembre = nbMembres > 0 ? objTyfcbTotal / nbMembres : 20000
+
+  // Calculer les données membres avec les seuils courants
+  const membresData = scores.filter(s => s.membres).map(s => {
+    const pres = Math.round((Number(s.attendance_rate)||0)*100)
+    const refs = Number(s.referrals_given_rate)||0
+    const vis = Number(s.visitors)||0
+    const tyfcb = Number(s.tyfcb)||0
+    const okPres = pres >= objPres
+    const okRefs = refs >= objRefs
+    const okVis = vis >= objVis
+    const okTyfcb = tyfcb >= objTyfcbMembre
+    const nbOk = [okPres, okRefs, okVis, okTyfcb].filter(Boolean).length
+    const atteinte = Math.round(((okPres ? 100 : pres / objPres * 100) * 0.3 + (okRefs ? 100 : refs / objRefs * 100) * 0.25 + (okVis ? 100 : vis / objVis * 100) * 0.2 + (okTyfcb ? 100 : tyfcb / objTyfcbMembre * 100) * 0.25))
+    return { ...s, pres, refs, vis, tyfcb, okPres, okRefs, okVis, okTyfcb, nbOk, atteinte: Math.min(atteinte, 100) }
+  }).sort((a,b) => b.atteinte - a.atteinte)
+
+  // Compteurs pour le résumé
+  const countOkPres = membresData.filter(m => m.okPres).length
+  const countOkRefs = membresData.filter(m => m.okRefs).length
+  const countOkVis = membresData.filter(m => m.okVis).length
+  const countOkTyfcb = membresData.filter(m => m.okTyfcb).length
+  const count4sur4 = membresData.filter(m => m.nbOk === 4).length
+  const count0sur4 = membresData.filter(m => m.nbOk === 0).length
+
+  const tlColor = { vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' }
+  const atteinteColor = (v) => v >= 80 ? '#059669' : v >= 50 ? '#D97706' : '#DC2626'
+  const okBadge = (ok) => ok
+    ? { bg:'#D1FAE5', color:'#065F46', label:'✓' }
+    : { bg:'#FEE2E2', color:'#991B1B', label:'✗' }
+
+  // Vérifier si la simulation a changé par rapport aux objectifs sauvegardés
+  const simChanged = simPres !== Number(obj.objectif_retention) || simRefs !== Number(obj.objectif_references_semaine) || simVis !== Number(obj.objectif_invites_semaine) || simTyfcb !== Number(obj.objectif_tyfcb)
+
+  const SliderKpi = ({ label, value, onChange, min, max, step, unit, countOk, total, icon }) => (
+    <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', padding:'16px 20px' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+        <span style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>{icon} {label}</span>
+        <span style={{ fontSize:18, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>{typeof value === 'number' && value >= 1000 ? value.toLocaleString('fr-FR') : value}{unit}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => { onChange(Number(e.target.value)); if (!simMode) setSimMode(true) }}
+        style={{ width:'100%', height:6, appearance:'none', background:`linear-gradient(to right, #C41E3A ${((value-min)/(max-min))*100}%, #F3F2EF ${((value-min)/(max-min))*100}%)`, borderRadius:3, outline:'none', cursor:'pointer' }} />
+      <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
+        <span style={{ fontSize:10, color:'#9CA3AF' }}>{typeof min === 'number' && min >= 1000 ? min.toLocaleString('fr-FR') : min}{unit}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <span style={{ fontSize:12, fontWeight:700, color: countOk === total ? '#059669' : countOk >= total * 0.6 ? '#D97706' : '#DC2626' }}>{countOk}/{total}</span>
+          <span style={{ fontSize:10, color:'#9CA3AF' }}>atteignent</span>
+        </div>
+        <span style={{ fontSize:10, color:'#9CA3AF' }}>{typeof max === 'number' && max >= 1000 ? max.toLocaleString('fr-FR') : max}{unit}</span>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title="Objectifs du chapitre" sub={`T${obj.trimestre || '?'} ${obj.annee || '2026'} — ${groupeCode}`}
-        right={isAdmin && !editing ? (
-          <button onClick={() => setEditing(true)} style={{ padding:'8px 16px', background:'#1C1C2E', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>Modifier</button>
+      <PageHeader title="Objectifs & Simulation" sub={`T${obj.trimestre || '?'} ${obj.annee || '2026'} — ${groupeCode} — ${nbMembres} membres`}
+        right={simChanged ? (
+          <div style={{ display:'flex', gap:8 }}>
+            {isAdmin && <button onClick={handleApplySimulation} style={{ padding:'8px 16px', background:'#059669', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>Appliquer comme objectif</button>}
+            <button onClick={resetSim} style={{ padding:'8px 16px', background:'#fff', color:'#6B7280', border:'1px solid #E8E6E1', borderRadius:8, fontSize:12, cursor:'pointer' }}>Réinitialiser</button>
+          </div>
         ) : null}
       />
 
-      {/* Grille des objectifs */}
-      <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : 'repeat(3, 1fr)', gap:16, marginBottom:24 }}>
-        {kpis.map(k => {
-          const pct = k.objectif > 0 ? Math.min(100, Math.round(k.actuel / k.objectif * 100)) : 0
-          const atteint = pct >= 100
-          const enCours = pct >= 60
-          const bgCard = atteint ? '#D1FAE5' : enCours ? '#FEF9C3' : '#FEE2E2'
-          const borderCard = atteint ? '#A7F3D0' : enCours ? '#FDE68A' : '#FECACA'
-          const colorVal = atteint ? '#065F46' : enCours ? '#854D0E' : '#991B1B'
-          const barColor = atteint ? '#059669' : enCours ? '#D97706' : '#DC2626'
-          return (
-            <div key={k.label} style={{ background:bgCard, borderRadius:14, border:`1px solid ${borderCard}`, padding:'20px 22px', position:'relative', overflow:'hidden' }}>
-              <div style={{ fontSize:12, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
-                <span>{k.icon}</span> {k.label}
-              </div>
-              <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:4 }}>
-                <span style={{ fontSize:32, fontWeight:700, color:colorVal, fontFamily:'DM Sans, sans-serif' }}>{k.format(k.actuel)}</span>
-              </div>
-              <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>
-                Objectif : {k.format(k.objectif)} {atteint ? '✅' : `(${pct}%)`}
-              </div>
-              <div style={{ height:6, background:'rgba(255,255,255,0.6)', borderRadius:3 }}>
-                <div style={{ height:6, width:`${pct}%`, background:barColor, borderRadius:3, transition:'width 0.6s ease' }} />
-              </div>
-              {editing && (
-                <div style={{ marginTop:12, display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontSize:11, color:'#6B7280' }}>Objectif :</span>
-                  <input type="number" value={form[k.field] || ''} onChange={e => setForm({...form, [k.field]: e.target.value})}
-                    style={{ width:100, padding:'4px 8px', border:'1px solid #E8E6E1', borderRadius:6, fontSize:12 }} />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {editing && (
-        <div style={{ display:'flex', gap:8, marginBottom:24 }}>
-          <button onClick={handleSave} style={{ padding:'10px 24px', background:'#059669', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Enregistrer</button>
-          <button onClick={() => { setEditing(false); setForm(objectifs) }} style={{ padding:'10px 24px', background:'#fff', color:'#6B7280', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, cursor:'pointer' }}>Annuler</button>
+      {/* Bandeau simulation active */}
+      {simChanged && (
+        <div style={{ background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#92400E' }}>
+          <span style={{ fontSize:14 }}>⚡</span>
+          <strong>Mode simulation actif</strong> — Ajustez les curseurs pour voir l'impact en temps réel. Les changements ne sont pas sauvegardés.
         </div>
       )}
 
-      {/* Progression individuelle vs objectifs */}
-      {(() => {
-        const MiniBar = ({ value, max, color }) => {
-          const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0
-          return (
-            <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
-              <div style={{ flex:1, height:6, background:'#F3F2EF', borderRadius:3, minWidth:40 }}>
-                <div style={{ height:6, width:`${pct}%`, background:color, borderRadius:3, transition:'width 0.4s ease' }} />
-              </div>
-              <span style={{ fontSize:10, color:'#6B7280', whiteSpace:'nowrap', minWidth:28, textAlign:'right' }}>{pct}%</span>
-            </div>
-          )
-        }
-        const tlColor = { vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' }
-        const tlLabel = { vert:'Vert', orange:'Orange', rouge:'Rouge', gris:'Gris' }
-        const objPres = Number(obj.objectif_retention)
-        const objRefs = Number(obj.objectif_references_semaine)
-        const objVis = Number(obj.objectif_invites_semaine)
-        // TYFCB objectif par membre = total / nb membres
-        const objTyfcbMembre = nbMembres > 0 ? Number(obj.objectif_tyfcb) / nbMembres : 20000
+      {/* Résumé rapide */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12, marginBottom:20 }}>
+        <div style={{ background:'#D1FAE5', borderRadius:10, padding:'14px 18px', border:'1px solid #A7F3D0' }}>
+          <div style={{ fontSize:28, fontWeight:700, color:'#065F46', fontFamily:'DM Sans, sans-serif' }}>{count4sur4}</div>
+          <div style={{ fontSize:11, color:'#065F46', fontWeight:500 }}>membres atteignent 4/4 objectifs</div>
+        </div>
+        <div style={{ background:'#FEF9C3', borderRadius:10, padding:'14px 18px', border:'1px solid #FDE68A' }}>
+          <div style={{ fontSize:28, fontWeight:700, color:'#854D0E', fontFamily:'DM Sans, sans-serif' }}>{nbMembres - count4sur4 - count0sur4}</div>
+          <div style={{ fontSize:11, color:'#854D0E', fontWeight:500 }}>membres partiellement atteints</div>
+        </div>
+        <div style={{ background:'#FEE2E2', borderRadius:10, padding:'14px 18px', border:'1px solid #FECACA' }}>
+          <div style={{ fontSize:28, fontWeight:700, color:'#991B1B', fontFamily:'DM Sans, sans-serif' }}>{count0sur4}</div>
+          <div style={{ fontSize:11, color:'#991B1B', fontWeight:500 }}>membres à 0/4 objectifs</div>
+        </div>
+      </div>
 
-        const membresData = scores.filter(s => s.membres).map(s => {
-          const pres = Math.round((Number(s.attendance_rate)||0)*100)
-          const refs = Number(s.referrals_given_rate)||0
-          const vis = Number(s.visitors)||0
-          const tyfcb = Number(s.tyfcb)||0
-          // Score d'atteinte : moyenne pondérée des 4 KPIs (capped à 100%)
-          const pctPres = objPres > 0 ? Math.min(100, pres / objPres * 100) : 100
-          const pctRefs = objRefs > 0 ? Math.min(100, refs / objRefs * 100) : 100
-          const pctVis = objVis > 0 ? Math.min(100, vis / objVis * 100) : 100
-          const pctTyfcb = objTyfcbMembre > 0 ? Math.min(100, tyfcb / objTyfcbMembre * 100) : 100
-          const atteinte = Math.round((pctPres * 0.3 + pctRefs * 0.25 + pctVis * 0.2 + pctTyfcb * 0.25))
-          return { ...s, pres, refs, vis, tyfcb, pctPres, pctRefs, pctVis, pctTyfcb, atteinte }
-        }).sort((a,b) => b.atteinte - a.atteinte)
+      {/* Sliders interactifs */}
+      <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap:12, marginBottom:24 }}>
+        <SliderKpi label="Présence" icon="📋" value={objPres} onChange={setSimPres} min={50} max={100} step={5} unit="%" countOk={countOkPres} total={nbMembres} />
+        <SliderKpi label="Recos / semaine" icon="🤝" value={objRefs} onChange={setSimRefs} min={0} max={5} step={0.25} unit="/sem" countOk={countOkRefs} total={nbMembres} />
+        <SliderKpi label="Visiteurs / semaine" icon="🎯" value={objVis} onChange={setSimVis} min={0} max={5} step={0.5} unit="/sem" countOk={countOkVis} total={nbMembres} />
+        <SliderKpi label="TYFCB total chapitre" icon="💰" value={objTyfcbTotal} onChange={setSimTyfcb} min={100000} max={2000000} step={50000} unit=" MAD" countOk={countOkTyfcb} total={nbMembres} />
+      </div>
 
-        const atteinteColor = (v) => v >= 80 ? '#059669' : v >= 50 ? '#D97706' : '#DC2626'
-
-        return (
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <SectionTitle>Progression individuelle vs objectifs</SectionTitle>
-              <div style={{ display:'flex', gap:12, fontSize:10, color:'#9CA3AF' }}>
-                <span>Présence ≥{objPres}%</span>
-                <span>Recos ≥{objRefs}/sem</span>
-                <span>Visiteurs ≥{objVis}/sem</span>
-                <span>TYFCB ≥{Math.round(objTyfcbMembre).toLocaleString('fr-FR')}/mb</span>
-              </div>
-            </div>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead><tr>
-                <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width:'18%' }}>Membre</th>
-                <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'7%' }}>TL</th>
-                <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'8%' }}>Atteinte</th>
-                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>Présence</th>
-                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>Recos/sem</th>
-                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>Visiteurs</th>
-                <th style={{ background:'#F9F8F6', padding:'8px 14px', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1', width:'17%' }}>TYFCB</th>
-              </tr></thead>
-              <tbody>
-                {membresData.map((s, i) => {
-                  const barPres = s.pctPres >= 100 ? '#059669' : s.pctPres >= 60 ? '#D97706' : '#DC2626'
-                  const barRefs = s.pctRefs >= 100 ? '#059669' : s.pctRefs >= 60 ? '#D97706' : '#DC2626'
-                  const barVis = s.pctVis >= 100 ? '#059669' : s.pctVis >= 60 ? '#D97706' : '#DC2626'
-                  const barTyfcb = s.pctTyfcb >= 100 ? '#059669' : s.pctTyfcb >= 30 ? '#D97706' : '#DC2626'
-                  const tl = s.traffic_light || 'gris'
-                  return (
-                    <tr key={i} style={{ borderBottom:'1px solid #F3F2EF' }}
-                      onMouseEnter={e=>e.currentTarget.style.background='#FAFAF8'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                      <td style={{ padding:'8px 12px', fontSize:12, fontWeight:500 }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
-                      <td style={{ padding:'8px 12px', textAlign:'center' }}>
-                        <div style={{ width:10, height:10, borderRadius:'50%', background:tlColor[tl], margin:'0 auto' }} title={tlLabel[tl]} />
-                      </td>
-                      <td style={{ padding:'8px 12px', textAlign:'center' }}>
-                        <span style={{ fontSize:13, fontWeight:700, color:atteinteColor(s.atteinte) }}>{s.atteinte}%</span>
-                      </td>
-                      <td style={{ padding:'8px 14px' }}>
-                        <div style={{ fontSize:11, fontWeight:600, color: barPres, marginBottom:3 }}>{s.pres}%</div>
-                        <MiniBar value={s.pres} max={objPres} color={barPres} />
-                      </td>
-                      <td style={{ padding:'8px 14px' }}>
-                        <div style={{ fontSize:11, fontWeight:600, color: barRefs, marginBottom:3 }}>{s.refs.toFixed(2)}</div>
-                        <MiniBar value={s.refs} max={objRefs} color={barRefs} />
-                      </td>
-                      <td style={{ padding:'8px 14px' }}>
-                        <div style={{ fontSize:11, fontWeight:600, color: barVis, marginBottom:3 }}>{s.vis}</div>
-                        <MiniBar value={s.vis} max={objVis} color={barVis} />
-                      </td>
-                      <td style={{ padding:'8px 14px' }}>
-                        <div style={{ fontSize:11, fontWeight:600, color: barTyfcb, marginBottom:3 }}>{s.tyfcb.toLocaleString('fr-FR')}</div>
-                        <MiniBar value={s.tyfcb} max={objTyfcbMembre} color={barTyfcb} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </TableWrap>
-        )
-      })()}
+      {/* Tableau — qui passe, qui passe pas */}
+      <TableWrap>
+        <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <SectionTitle>Détail par membre</SectionTitle>
+          <div style={{ fontSize:10, color:'#9CA3AF' }}>Trié par taux d'atteinte global</div>
+        </div>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <thead><tr>
+            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Membre</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>TL</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Atteinte</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Présence ≥{objPres}%</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Recos ≥{objRefs}</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Visit. ≥{objVis}</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 12px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>TYFCB ≥{Math.round(objTyfcbMembre/1000)}K</th>
+            <th style={{ background:'#F9F8F6', padding:'8px 8px', textAlign:'center', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', borderBottom:'1px solid #E8E6E1' }}>Score</th>
+          </tr></thead>
+          <tbody>
+            {membresData.map((s, i) => {
+              const tl = s.traffic_light || 'gris'
+              const renderCell = (ok, value, fmt) => {
+                const b = okBadge(ok)
+                return (
+                  <td style={{ padding:'6px 12px', textAlign:'center' }}>
+                    <div style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:20, background:b.bg, fontSize:11, fontWeight:600, color:b.color }}>
+                      <span>{b.label}</span>
+                      <span style={{ opacity:0.7 }}>{fmt}</span>
+                    </div>
+                  </td>
+                )
+              }
+              return (
+                <tr key={i} style={{ borderBottom:'1px solid #F3F2EF', background: s.nbOk === 4 ? '#F0FDF4' : s.nbOk === 0 ? '#FEF2F2' : 'transparent' }}
+                  onMouseEnter={e=>e.currentTarget.style.opacity='0.85'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                  <td style={{ padding:'8px 12px', fontSize:12, fontWeight:500 }}>{fullName(s.membres?.prenom, s.membres?.nom)}</td>
+                  <td style={{ padding:'6px 8px', textAlign:'center' }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background:tlColor[tl], margin:'0 auto' }} />
+                  </td>
+                  <td style={{ padding:'6px 8px', textAlign:'center' }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:atteinteColor(s.atteinte) }}>{s.nbOk}/4</span>
+                  </td>
+                  {renderCell(s.okPres, s.pres, `${s.pres}%`)}
+                  {renderCell(s.okRefs, s.refs, s.refs.toFixed(2))}
+                  {renderCell(s.okVis, s.vis, String(s.vis))}
+                  {renderCell(s.okTyfcb, s.tyfcb, `${(s.tyfcb/1000).toFixed(0)}K`)}
+                  <td style={{ padding:'6px 8px', textAlign:'center', fontSize:12, fontWeight:700, color: Number(s.total_score) >= 70 ? '#065F46' : Number(s.total_score) >= 50 ? '#854D0E' : '#991B1B' }}>{Number(s.total_score||0).toFixed(0)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </TableWrap>
     </div>
   )
 }

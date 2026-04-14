@@ -380,6 +380,9 @@ export default function App() {
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        input[type="range"] { -webkit-appearance:none; appearance:none; height:6px; border-radius:3px; outline:none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#C41E3A; cursor:pointer; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
+        input[type="range"]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#C41E3A; cursor:pointer; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
         @keyframes spin { to{transform:rotate(360deg)} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @media (max-width: 768px) {
