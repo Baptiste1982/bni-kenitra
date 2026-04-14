@@ -59,43 +59,51 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   // La date d'import = dernier jour couvert par le PALMS Excel
   const palmsImportDate = palms[0]?.created_at ? new Date(palms[0].created_at).toISOString().split('T')[0] : periodeFin
 
-  // 3. Charger palms_hebdo APRÈS la date d'import PALMS (données compilées qui s'ajoutent)
+  // 3. Charger TOUT palms_hebdo après l'import PALMS (données compilées)
   const { data: hebdoData } = await supabase
     .from('palms_hebdo')
     .select('membre_id, palms, rdi, rde, rri, rre, invites, tat, mpb, ueg, nb_reunions, date_reunion')
     .eq('groupe_id', groupeId)
     .gt('date_reunion', palmsImportDate)
 
-  // Agréger hebdo par membre
+  // Déterminer le mois en cours pour séparer hebdo MENSUEL vs 6 MOIS
+  const moisActuel = new Date(aujourdHui + 'T12:00:00')
+  const premierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth(), 1).toISOString().split('T')[0]
+  const dernierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth() + 1, 0)
+  const nbJeudisMois = countJeudis(premierJourMois, dernierJourMois.toISOString().split('T')[0]) || 1
+
+  // Agréger hebdo par membre avec DEUX cumuls :
+  //   - moisCourant : TàT et Refs du mois en cours uniquement (MENSUEL)
+  //   - total6m     : tous les hebdo post-PALMS pour les indicateurs 6 mois
   const hebdoAgg = {}
   ;(hebdoData || []).forEach(h => {
     if (!h.membre_id) return
-    if (!hebdoAgg[h.membre_id]) hebdoAgg[h.membre_id] = { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, invites:0, mpb:0, ueg:0, reunions:0 }
+    if (!hebdoAgg[h.membre_id]) hebdoAgg[h.membre_id] = {
+      // 6 mois glissants (tous les hebdo post-PALMS)
+      total6m: { presences:0, absences:0, invites:0, mpb:0, ueg:0, reunions:0 },
+      // Mois en cours uniquement (pour TàT et Refs)
+      moisCourant: { tat:0, rdi:0, rde:0 },
+    }
     const a = hebdoAgg[h.membre_id]
     const nb = h.nb_reunions || 1
-    if (h.palms === 'P') a.presences += nb
-    else if (h.palms === 'A') a.absences += nb
-    a.tat += h.tat || 0
-    a.rdi += h.rdi || 0
-    a.rde += h.rde || 0
-    a.rri += h.rri || 0
-    a.rre += h.rre || 0
-    a.mpb += Number(h.mpb) || 0
-    a.invites += h.invites || 0
-    a.ueg += h.ueg || 0
-    a.reunions += nb
+    // 6 mois : tous les hebdo
+    if (h.palms === 'P') a.total6m.presences += nb
+    else if (h.palms === 'A') a.total6m.absences += nb
+    a.total6m.invites += h.invites || 0
+    a.total6m.mpb += Number(h.mpb) || 0
+    a.total6m.ueg += h.ueg || 0
+    a.total6m.reunions += nb
+    // Mois courant : seulement les réunions du mois en cours
+    if (h.date_reunion >= premierJourMois) {
+      a.moisCourant.tat += h.tat || 0
+      a.moisCourant.rdi += h.rdi || 0
+      a.moisCourant.rde += h.rde || 0
+    }
   })
 
-  // Nombre total de jeudis : du début PALMS jusqu'à aujourd'hui (pour CEU, attendance = 6 mois)
+  // Nombre total de jeudis depuis le lancement → aujourd'hui (dénominateur CEU 6 mois)
   const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
-  const nbSemainesPalms = countJeudis(periodeDebut, periodeFin) || 1
-  const nbSemainesHebdo = Object.values(hebdoAgg).length > 0 ? countJeudis(palmsImportDate, aujourdHui) : 0
-  // Nombre total de jeudis dans le MOIS en cours (pour TàT et Refs = mensuel)
-  const moisActuel = new Date(aujourdHui + 'T12:00:00')
-  const dernierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth() + 1, 0)
-  const premierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth(), 1)
-  const nbJeudisMois = countJeudis(premierJourMois.toISOString().split('T')[0], dernierJourMois.toISOString().split('T')[0]) || 1
-  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis 6m, ${nbJeudisMois} jeudis/mois, PALMS importé le ${palmsImportDate}, ${nbSemainesHebdo} hebdo compilés)`)
+  console.log(`[recalculateScores] Période 6m: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis), Mois: ${premierJourMois} (${nbJeudisMois} jeudis), PALMS importé le ${palmsImportDate}`)
 
   // 4. Charger scores existants pour récupérer sponsors
   const { data: existingScores } = await supabase
@@ -114,28 +122,35 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   // 6. Visiteurs : PALMS base (invites) + hebdo compilé (invites)
   //    Même logique d'addition que TàT, Refs, MPB, etc.
 
-  // 7. Calculer les scores : PALMS base + hebdo compilé
+  // 7. Calculer les scores selon le barème BNI officiel
+  //    ┌─────────────┬──────────────────────────────────────────────────┐
+  //    │ MENSUEL     │ TàT, Refs → mois courant UNIQUEMENT (hebdo)    │
+  //    │             │ Dénominateur = nb jeudis du mois                │
+  //    ├─────────────┼──────────────────────────────────────────────────┤
+  //    │ 6 MOIS      │ Présence, Visiteurs, TYFCB, CEU, Sponsors      │
+  //    │ GLISSANTS   │ = PALMS base + TOUS les hebdo post-import      │
+  //    └─────────────┴──────────────────────────────────────────────────┘
   const scored = palms.map(p => {
-    const h = hebdoAgg[p.membre_id] || { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, invites:0, mpb:0, ueg:0 }
+    const h = hebdoAgg[p.membre_id] || {
+      total6m: { presences:0, absences:0, invites:0, mpb:0, ueg:0, reunions:0 },
+      moisCourant: { tat:0, rdi:0, rde:0 },
+    }
 
-    // Cumuler PALMS + hebdo (addition simple de tous les indicateurs)
-    const presences = (p.presences || 0) + h.presences
-    const absences = (p.absences || 0) + h.absences
+    // ── INDICATEURS 6 MOIS GLISSANTS : PALMS base + tous hebdo ──
+    const presences = (p.presences || 0) + h.total6m.presences
+    const absences = (p.absences || 0) + h.total6m.absences
     const totalReunions = presences + absences
-    const tat = (Number(p.tat) || 0) + h.tat
-    const refsGiven = (p.rdi || 0) + (p.rde || 0) + h.rdi + h.rde
-    const tyfcb = (Number(p.mpb) || 0) + h.mpb
-    const ueg = (p.ueg || 0) + h.ueg
-    // Visiteurs : PALMS base + hebdo compilé (même addition que les autres)
-    const visitors = (p.invites || 0) + h.invites
-
-    // Taux sur la période totale combinée
+    const visitors = (p.invites || 0) + h.total6m.invites
+    const tyfcb = (Number(p.mpb) || 0) + h.total6m.mpb
+    const ueg = (p.ueg || 0) + h.total6m.ueg
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
-    // TàT et Refs : taux PAR SEMAINE sur le mois complet (total / nb jeudis du mois)
-    const rateTat = tat / nbJeudisMois
-    const rateRefs = refsGiven / nbJeudisMois
-    // CEU : taux par semaine sur 6 mois
     const rateUeg = ueg / nbSemaines
+
+    // ── INDICATEURS MENSUELS : mois courant UNIQUEMENT (hebdo) ──
+    const tatMois = h.moisCourant.tat
+    const refsMois = h.moisCourant.rdi + h.moisCourant.rde
+    const rateTat = tatMois / nbJeudisMois
+    const rateRefs = refsMois / nbJeudisMois
 
     // Barème BNI officiel
     // Attendance /10 (6 mois) : >=95%→10, >=88%→5, <88%→0
