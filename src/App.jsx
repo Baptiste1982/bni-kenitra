@@ -214,7 +214,7 @@ export default function App() {
     region:    <Region />,
     groupes:   <Groupes />,
     reporting: <Reporting groupeCode={groupeCode} />,
-    agent:     <AgentIA />,
+    agent:     <AgentIA groupeCode={groupeCode} />,
     admin:     <AdminUsers />,
   }
 

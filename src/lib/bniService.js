@@ -340,6 +340,115 @@ export async function fetchObjectifs(groupeCode = 'MK-01') {
   return data?.[0] || null
 }
 
+// ─── PROMPT IA DYNAMIQUE ─────────────────────────────────────────────────────
+export async function buildDynamicSystemPrompt(groupeCode = 'MK-01') {
+  const groupeId = await getGroupeId(groupeCode)
+  if (!groupeId) return 'Erreur : groupe introuvable.'
+
+  const [membresRes, scoresRes, alertesRes, invitesRes] = await Promise.all([
+    supabase.from('membres').select('id, prenom, nom, societe, secteur_activite, specialite, statut, date_renouvellement').eq('groupe_id', groupeId).eq('statut', 'actif'),
+    supabase.from('scores_bni').select('membre_id, total_score, traffic_light, rank, tyfcb, attendance_rate, rate_121, referrals_given_rate, visitors, sponsors, ceu_rate, tyfcb_score, attendance_score, score_121, referrals_given_score, visitor_score, sponsor_score, ceu_score').eq('groupe_id', groupeId),
+    supabase.from('alertes').select('niveau, titre, message, date_echeance').eq('lue', false),
+    supabase.from('invites').select('prenom, nom, profession, societe, statut, date_visite').eq('groupe_id', groupeId),
+  ])
+
+  const membres = membresRes.data || []
+  const scores = scoresRes.data || []
+  const alertes = alertesRes.data || []
+  const invites = invitesRes.data || []
+  const scoresMap = {}
+  scores.forEach(s => { scoresMap[s.membre_id] = s })
+
+  // Membres enrichis avec scores
+  const membresEnrichis = membres.map(m => {
+    const s = scoresMap[m.id] || {}
+    return { ...m, ...s }
+  }).sort((a, b) => (b.total_score || 0) - (a.total_score || 0))
+
+  // Traffic lights
+  const tl = { vert: [], orange: [], rouge: [], gris: [] }
+  membresEnrichis.forEach(m => {
+    const cat = m.traffic_light || 'gris'
+    if (tl[cat]) tl[cat].push(m)
+  })
+
+  // Secteurs pris
+  const secteurs = [...new Set(membres.map(m => m.secteur_activite).filter(Boolean))]
+  const specialites = [...new Set(membres.map(m => m.specialite).filter(Boolean))]
+
+  // Renouvellements proches (< 90 jours)
+  const now = new Date()
+  const renouv = membres.filter(m => {
+    if (!m.date_renouvellement) return false
+    const d = new Date(m.date_renouvellement)
+    const diff = (d - now) / (1000 * 60 * 60 * 24)
+    return diff > 0 && diff < 90
+  })
+
+  // TYFCB total
+  const tyfcbTotal = scores.reduce((s, r) => s + (Number(r.tyfcb) || 0), 0)
+
+  // Invités par statut
+  const invByStatut = {}
+  invites.forEach(inv => {
+    const st = inv.statut || 'Inconnu'
+    if (!invByStatut[st]) invByStatut[st] = []
+    invByStatut[st].push(inv)
+  })
+
+  // Construire le prompt
+  return `Tu es l'Agent IA BNI Kénitra, assistant du Directeur Consultant.
+Région Kénitra, Maroc — Chapitre lancé le 12 décembre 2025. Réponds en français, de façon directe, professionnelle et concrète.
+Utilise UNIQUEMENT les données ci-dessous pour tes réponses. Ne fabrique jamais de données.
+
+═══ GROUPE ${groupeCode} — ${membres.length} membres actifs ═══
+
+CLASSEMENT & SCORES (objectif BNI = 70 pts):
+${membresEnrichis.map((m, i) => {
+  const renDate = m.date_renouvellement ? new Date(m.date_renouvellement).toLocaleDateString('fr-FR') : '—'
+  return `${i + 1}. ${m.prenom} ${m.nom} | ${m.societe || '—'} | ${m.secteur_activite || '—'}${m.specialite ? ' · ' + m.specialite : ''} | Score: ${m.total_score ?? '—'}/100 (${m.traffic_light || 'sans score'}) | Présence: ${m.attendance_rate ? Math.round(m.attendance_rate * 100) + '%' : '—'} | 1-2-1: ${m.rate_121 != null ? Number(m.rate_121).toFixed(2) + '/sem' : '—'} | Recos: ${m.referrals_given_rate != null ? Number(m.referrals_given_rate).toFixed(2) + '/sem' : '—'} | Visiteurs: ${m.visitors ?? 0} | TYFCB: ${Number(m.tyfcb || 0).toLocaleString('fr-FR')} MAD | CEU: ${m.ceu_rate != null ? Number(m.ceu_rate).toFixed(2) : '0'}/sem | Sponsors: ${m.sponsors ?? 0} | Renouvellement: ${renDate}`
+}).join('\n')}
+
+DISTRIBUTION FEUX:
+🟢 Verts (≥70): ${tl.vert.length} ${tl.vert.length > 0 ? '(' + tl.vert.map(m => m.prenom).join(', ') + ')' : ''}
+🟠 Oranges (50-69): ${tl.orange.length} ${tl.orange.length > 0 ? '(' + tl.orange.map(m => m.prenom + ' ' + (m.total_score || 0)).join(', ') + ')' : ''}
+🔴 Rouges (30-49): ${tl.rouge.length} ${tl.rouge.length > 0 ? '(' + tl.rouge.map(m => m.prenom + ' ' + (m.total_score || 0)).join(', ') + ')' : ''}
+⚪ Gris (<30): ${tl.gris.length}
+
+TYFCB TOTAL GROUPE: ${tyfcbTotal.toLocaleString('fr-FR')} MAD
+
+═══ CLAUSE D'EXCLUSIVITÉ — SECTEURS PRÉSENTS ═══
+${secteurs.sort().join(', ')}
+${specialites.length > 0 ? '\nSpécialités : ' + specialites.join(', ') : ''}
+⚠️ IMPORTANT: Ne recommande JAMAIS de recruter un métier déjà présent dans cette liste. Propose uniquement des métiers ABSENTS du chapitre.
+
+═══ RENOUVELLEMENTS PROCHES (<90 jours) ═══
+${renouv.length > 0 ? renouv.map(m => `⚠️ ${m.prenom} ${m.nom} — ${new Date(m.date_renouvellement).toLocaleDateString('fr-FR')}`).join('\n') : 'Aucun renouvellement urgent.'}
+
+═══ ALERTES ACTIVES (${alertes.length}) ═══
+${alertes.length > 0 ? alertes.map((a, i) => `${i + 1}. [${a.niveau?.toUpperCase()}] ${a.titre} — ${a.message}`).join('\n') : 'Aucune alerte.'}
+
+═══ PIPELINE INVITÉS (${invites.length} total) ═══
+${Object.entries(invByStatut).map(([st, list]) => `${st}: ${list.length} (${list.map(i => i.prenom + ' ' + i.nom + (i.profession ? ' · ' + i.profession : '')).join(', ')})`).join('\n')}
+
+═══ BARÈMES BNI (sur 100 pts) ═══
+Présence /10: ≥95%→10, ≥88%→5, <88%→0
+1-2-1s /20 (par semaine, mois courant): ≥1→20, ≥0.75→15, ≥0.5→10, ≥0.25→5
+Recommandations /25 (par semaine, mois courant): ≥1.25→25, ≥1→20, ≥0.75→15, ≥0.50→10, ≥0.25→5
+Visiteurs /25 (6 mois): 5+→25, 4→20, 3→15, 2→10, 1→5
+TYFCB /5 (6 mois, en MAD): ≥300k→5, ≥150k→4, ≥50k→3, ≥20k→2, >0→1
+CEU /10 (par semaine, 6 mois): >0.5→10, >0→5, 0→0
+Parrainages /5 (6 mois): ≥1→5, 0→0
+
+═══ TES CAPACITÉS ═══
+- Analyser la situation d'un membre et proposer un plan d'action concret
+- Identifier les axes d'amélioration prioritaires (quel KPI travailler en premier)
+- Générer des emails/messages personnalisés (relance, félicitations, renouvellement)
+- Recommander des métiers à recruter (UNIQUEMENT ceux ABSENTS du chapitre)
+- Prioriser les actions hebdomadaires du directeur
+- Calculer des projections si un membre améliore un KPI spécifique`
+}
+
 // ─── TEMPLATES ───────────────────────────────────────────────────────────────
 export async function fetchTemplates() {
   const { data, error } = await supabase.from('templates_messages').select('*').eq('actif', true)

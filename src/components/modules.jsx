@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet } from '../lib/bniService'
+import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet, buildDynamicSystemPrompt } from '../lib/bniService'
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
@@ -1054,24 +1054,33 @@ export function Reporting({ groupeCode = 'MK-01' }) {
 }
 
 // ─── AGENT IA ────────────────────────────────────────────────────────────────
-export function AgentIA() {
+export function AgentIA({ groupeCode = 'MK-01' }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [systemPrompt, setSystemPrompt] = useState(null)
+  const [promptLoading, setPromptLoading] = useState(true)
   const msgsRef = useRef(null)
+
+  // Charger le prompt dynamique au montage
+  useEffect(() => {
+    buildDynamicSystemPrompt(groupeCode)
+      .then(prompt => { setSystemPrompt(prompt); setPromptLoading(false) })
+      .catch(() => { setSystemPrompt(BNI_SYSTEM_PROMPT); setPromptLoading(false) })
+  }, [groupeCode])
 
   useEffect(() => { if (msgsRef.current) msgsRef.current.scrollTop = msgsRef.current.scrollHeight }, [messages, loading])
 
   const send = async (text) => {
     const content = text || input.trim()
-    if (!content || loading) return
+    if (!content || loading || !systemPrompt) return
     setInput('')
     const newMessages = [...messages, { role:'user', content }]
     setMessages(newMessages)
     setLoading(true)
     try {
       const { data, error } = await supabase.functions.invoke('generate-email', {
-        body: { system: BNI_SYSTEM_PROMPT, max_tokens: 1000, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }
+        body: { system: systemPrompt, max_tokens: 1500, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }
       })
       if (error) throw error
       setMessages([...newMessages, { role:'assistant', content:data.content?.[0]?.text || 'Désolé, erreur.' }])
@@ -1079,30 +1088,41 @@ export function AgentIA() {
     setLoading(false)
   }
 
-  const QUICK = ['Qui sont mes membres à risque ?','Génère un email pour Zaynab','Actions prioritaires cette semaine ?','Analyse le pipeline invités']
+  const QUICK = [
+    'Quels membres sont en danger ?',
+    'Quels métiers recruter en priorité ?',
+    'Actions prioritaires cette semaine ?',
+    'Analyse le pipeline invités',
+    'Comment aider les membres gris ?',
+  ]
 
   return (
     <div style={{ padding:'28px 32px 0', height:'100%', display:'flex', flexDirection:'column', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title={<>Agent IA <span style={{ fontSize:16, fontFamily:'DM Sans, sans-serif', fontWeight:400, color:'#C9A84C' }}>· Conseiller BNI</span></>} sub="Analyse · Rédaction · Plans d'action" />
+      <PageHeader title={<>Agent IA <span style={{ fontSize:16, fontFamily:'DM Sans, sans-serif', fontWeight:400, color:'#C9A84C' }}>· Conseiller BNI</span></>} sub="Données en temps réel · Analyse · Plans d'action" />
       <div style={{ flex:1, display:'flex', flexDirection:'column', background:'#fff', borderRadius:14, border:'1px solid #E8E6E1', overflow:'hidden', minHeight:0 }}>
         <div ref={msgsRef} style={{ flex:1, overflowY:'auto', padding:20, display:'flex', flexDirection:'column', gap:14 }}>
-          <div style={{ maxWidth:'80%', padding:'12px 16px', borderRadius:12, borderBottomLeftRadius:4, background:'#F3F2EF', fontSize:13, lineHeight:1.6 }}>
-            <strong>👋 Agent BNI Kénitra actif</strong><br /><br />
-            Je connais vos membres, scores, alertes et pipeline en temps réel. Comment puis-je vous aider ?
-          </div>
+          {promptLoading ? (
+            <div style={{ padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Chargement des données du chapitre...</div>
+          ) : (
+            <div style={{ maxWidth:'80%', padding:'12px 16px', borderRadius:12, borderBottomLeftRadius:4, background:'#F3F2EF', fontSize:13, lineHeight:1.6 }}>
+              <strong>Agent BNI Kénitra connecté</strong><br /><br />
+              Je connais vos {systemPrompt?.match(/(\d+) membres actifs/)?.[1] || ''} membres, leurs scores, secteurs d'activité, alertes et pipeline en temps réel.<br />
+              Posez-moi une question — je m'appuie uniquement sur les données réelles du chapitre.
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i} style={{ maxWidth:'80%', padding:'12px 16px', borderRadius:12, fontSize:13, lineHeight:1.6, whiteSpace:'pre-wrap', alignSelf:m.role==='user'?'flex-end':'flex-start', borderBottomRightRadius:m.role==='user'?4:12, borderBottomLeftRadius:m.role==='user'?12:4, background:m.role==='user'?'#C41E3A':'#F3F2EF', color:m.role==='user'?'#fff':'#1C1C2E' }}>
               {m.content}
             </div>
           ))}
-          {loading && <div style={{ maxWidth:'80%', padding:'12px 16px', borderRadius:12, borderBottomLeftRadius:4, background:'#F3F2EF', fontSize:13, color:'#9CA3AF' }}>L'agent réfléchit...</div>}
+          {loading && <div style={{ maxWidth:'80%', padding:'12px 16px', borderRadius:12, borderBottomLeftRadius:4, background:'#F3F2EF', fontSize:13, color:'#9CA3AF' }}>L'agent analyse vos données...</div>}
         </div>
         <div style={{ padding:'0 16px 10px', display:'flex', gap:8, flexWrap:'wrap' }}>
-          {QUICK.map(q => <button key={q} onClick={() => send(q)} style={{ padding:'6px 12px', border:'1px solid #E8E6E1', borderRadius:20, fontSize:12, background:'#fff', color:'#6B7280', cursor:'pointer' }}>{q}</button>)}
+          {QUICK.map(q => <button key={q} onClick={() => send(q)} disabled={promptLoading} style={{ padding:'6px 12px', border:'1px solid #E8E6E1', borderRadius:20, fontSize:11, background:'#fff', color:'#6B7280', cursor: promptLoading ? 'not-allowed' : 'pointer', opacity: promptLoading ? 0.5 : 1 }}>{q}</button>)}
         </div>
         <div style={{ padding:16, borderTop:'1px solid #E8E6E1', display:'flex', gap:10 }}>
           <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}} placeholder="Posez votre question..." rows={2} style={{ flex:1, padding:'11px 16px', border:'1px solid #E8E6E1', borderRadius:10, fontSize:13, fontFamily:'DM Sans, sans-serif', resize:'none', outline:'none' }} />
-          <button onClick={() => send()} disabled={loading||!input.trim()} style={{ padding:'11px 20px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:loading||!input.trim()?'not-allowed':'pointer', opacity:loading||!input.trim()?0.5:1 }}>Envoyer</button>
+          <button onClick={() => send()} disabled={loading||promptLoading||!input.trim()} style={{ padding:'11px 20px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:loading||promptLoading||!input.trim()?'not-allowed':'pointer', opacity:loading||promptLoading||!input.trim()?0.5:1 }}>Envoyer</button>
         </div>
       </div>
     </div>
