@@ -256,7 +256,7 @@ export default function App() {
 
       {/* Main */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        <div style={{ display:'none', background:'#1C1C2E', padding:'12px 16px', alignItems:'center', gap:12, flexShrink:0 }} className="mobile-topbar">
+        <div style={{ display:'none', background:'#1C1C2E', padding:'12px 16px', alignItems:'center', gap:12, flexShrink:0, position:'sticky', top:0, zIndex:100 }} className="mobile-topbar">
           <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:'2px 4px' }}>☰</button>
           <img src="/logo-bni-kenitra.png" alt="BNI" style={{ width:32, height:32, borderRadius:'50%', objectFit:'cover' }} />
           <div style={{ color:'#fff', fontWeight:600, fontSize:14 }}>BNI Kénitra</div>
