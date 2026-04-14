@@ -213,6 +213,160 @@ export async function fetchDashboardKPIs(groupeCode = 'MK-01') {
   }
 }
 
+// ─── REGION KPIs ────────────────────────────────────────────────────────────
+export async function fetchRegionKPIs() {
+  // Charger tous les groupes
+  const { data: groupes } = await supabase.from('groupes').select('id, code, nom').order('code')
+  if (!groupes?.length) return null
+
+  const groupeIds = groupes.map(g => g.id)
+  const troisMoisAvant = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0]
+
+  const [membresRes, scoresRes, palmsRes, invitesRes, hebdoRes] = await Promise.all([
+    supabase.from('membres').select('id, groupe_id, statut, prenom, nom, created_at').in('groupe_id', groupeIds).eq('statut', 'actif'),
+    supabase.from('scores_bni').select('groupe_id, total_score, traffic_light, tyfcb, attendance_rate, rate_121, referrals_given_rate, visitors, sponsors, ceu_rate, membres(prenom, nom)').in('groupe_id', groupeIds),
+    supabase.from('palms_imports').select('groupe_id, presences, absences, rdi, rde, rri, rre, tat, mpb, invites, membre_id').in('groupe_id', groupeIds),
+    supabase.from('invites').select('id, groupe_id, statut').in('groupe_id', groupeIds),
+    supabase.from('palms_hebdo').select('groupe_id, tat, rdi, rde, invites, mpb, membre_id').in('groupe_id', groupeIds),
+  ])
+
+  const membres = membresRes.data || []
+  const scores = scoresRes.data || []
+  const palms = palmsRes.data || []
+  const invites = invitesRes.data || []
+
+  const CONVERTIS_STATUTS = ['Devenu Membre']
+  const MEMBRES_BNI_STATUTS = ['Membre BNI']
+  const INACTIFS_STATUTS = ['Pas intéressé pour le moment', 'Injoignable', 'Pas de budget pour le moment', 'absente']
+
+  const byGroupe = {}
+  groupes.forEach(g => {
+    const gMembres = membres.filter(m => m.groupe_id === g.id)
+    const gScores = scores.filter(s => s.groupe_id === g.id)
+    const gPalms = palms.filter(p => p.groupe_id === g.id)
+    const gInvites = invites.filter(i => i.groupe_id === g.id)
+
+    const presTotal = gPalms.reduce((s, r) => s + (r.presences || 0), 0)
+    const absTotal = gPalms.reduce((s, r) => s + (r.absences || 0), 0)
+    const pRate = presTotal + absTotal > 0 ? Math.round(presTotal / (presTotal + absTotal) * 100) : 0
+
+    const tyfcb = gScores.reduce((s, r) => s + (Number(r.tyfcb) || 0), 0)
+    const totalRDI = gPalms.reduce((s, r) => s + (r.rdi || 0), 0)
+    const totalRDE = gPalms.reduce((s, r) => s + (r.rde || 0), 0)
+    const totalRRI = gPalms.reduce((s, r) => s + (r.rri || 0), 0)
+    const totalRRE = gPalms.reduce((s, r) => s + (r.rre || 0), 0)
+    const totalTaT = gPalms.reduce((s, r) => s + (Number(r.tat) || 0), 0)
+    const totalMPB = gPalms.reduce((s, r) => s + (Number(r.mpb) || 0), 0)
+    const totalInvites = gPalms.reduce((s, r) => s + (r.invites || 0), 0)
+
+    const tlCounts = { vert: 0, orange: 0, rouge: 0, gris: 0 }
+    gScores.forEach(s => { if (s.traffic_light && tlCounts[s.traffic_light] !== undefined) tlCounts[s.traffic_light]++ })
+
+    const scoreMoyen = gScores.length > 0 ? Math.round(gScores.reduce((s, r) => s + (Number(r.total_score) || 0), 0) / gScores.length) : 0
+    const zoneRouge = gScores.filter(s => s.traffic_light === 'rouge').length
+
+    const invitesConvertis = gInvites.filter(i => CONVERTIS_STATUTS.includes(i.statut)).length
+    const invitesEnCours = gInvites.filter(i => i.statut && !CONVERTIS_STATUTS.includes(i.statut) && !MEMBRES_BNI_STATUTS.includes(i.statut) && !INACTIFS_STATUTS.includes(i.statut)).length
+
+    byGroupe[g.code] = {
+      code: g.code, nom: g.nom,
+      membresActifs: gMembres.length,
+      pRate, tyfcb,
+      totalRDI, totalRDE, totalRRI, totalRRE,
+      totalRecos: totalRDI + totalRDE + totalRRI + totalRRE,
+      recosParMembre: gMembres.length > 0 ? ((totalRDI + totalRDE + totalRRI + totalRRE) / gMembres.length).toFixed(1) : '0',
+      totalTaT, totalMPB, totalInvites,
+      invitesParMembre: gMembres.length > 0 ? (totalInvites / gMembres.length).toFixed(1) : '0',
+      tlCounts, scoreMoyen, zoneRouge,
+      invitesConvertis, invitesEnCours, invitesTotal: gInvites.length,
+      scores: gScores,
+    }
+  })
+
+  // Totaux régionaux
+  const totalMembres = membres.length
+  const presTotal = palms.reduce((s, r) => s + (r.presences || 0), 0)
+  const absTotal = palms.reduce((s, r) => s + (r.absences || 0), 0)
+  const pRateRegion = presTotal + absTotal > 0 ? Math.round(presTotal / (presTotal + absTotal) * 100) : 0
+  const tyfcbRegion = scores.reduce((s, r) => s + (Number(r.tyfcb) || 0), 0)
+  const totalRecosRegion = palms.reduce((s, r) => s + (r.rdi||0) + (r.rde||0) + (r.rri||0) + (r.rre||0), 0)
+  const totalTaTRegion = palms.reduce((s, r) => s + (Number(r.tat) || 0), 0)
+  const totalMPBRegion = palms.reduce((s, r) => s + (Number(r.mpb) || 0), 0)
+  const totalInvitesRegion = palms.reduce((s, r) => s + (r.invites || 0), 0)
+  const scoreMoyenRegion = scores.length > 0 ? Math.round(scores.reduce((s, r) => s + (Number(r.total_score) || 0), 0) / scores.length) : 0
+  const zoneRougeRegion = scores.filter(s => s.traffic_light === 'rouge').length
+
+  const tlCountsRegion = { vert: 0, orange: 0, rouge: 0, gris: 0 }
+  scores.forEach(s => { if (s.traffic_light && tlCountsRegion[s.traffic_light] !== undefined) tlCountsRegion[s.traffic_light]++ })
+
+  const invitesConvertisRegion = invites.filter(i => CONVERTIS_STATUTS.includes(i.statut)).length
+  const invitesEnCoursRegion = invites.filter(i => i.statut && !CONVERTIS_STATUTS.includes(i.statut) && !MEMBRES_BNI_STATUTS.includes(i.statut) && !INACTIFS_STATUTS.includes(i.statut)).length
+
+  // Top 5 membres région par score
+  const topScoresRegion = [...scores].filter(s => s.total_score).sort((a,b) => Number(b.total_score) - Number(a.total_score)).slice(0, 5).map((s, i) => ({
+    ...s, rank: i + 1,
+    groupeCode: groupes.find(g => g.id === s.groupe_id)?.code || '?'
+  }))
+
+  // Top 5 TYFCB
+  const topTyfcbRegion = [...scores].filter(s => Number(s.tyfcb) > 0).sort((a,b) => Number(b.tyfcb) - Number(a.tyfcb)).slice(0, 5).map(s => ({
+    ...s, groupeCode: groupes.find(g => g.id === s.groupe_id)?.code || '?'
+  }))
+
+  // Top recos (from palms)
+  const recosByMembre = {}
+  palms.forEach(p => {
+    if (!recosByMembre[p.membre_id]) recosByMembre[p.membre_id] = { total: 0, groupe_id: p.groupe_id }
+    recosByMembre[p.membre_id].total += (p.rdi||0) + (p.rde||0) + (p.rri||0) + (p.rre||0)
+  })
+  const topRecosRegion = Object.entries(recosByMembre)
+    .sort((a,b) => b[1].total - a[1].total)
+    .slice(0, 5)
+    .map(([mid, d]) => {
+      const m = membres.find(m => m.id === mid)
+      return { membre_id: mid, prenom: m?.prenom, nom: m?.nom, total: d.total, groupeCode: groupes.find(g => g.id === d.groupe_id)?.code || '?' }
+    })
+
+  // Top TaT
+  const tatByMembre = {}
+  palms.forEach(p => {
+    if (!tatByMembre[p.membre_id]) tatByMembre[p.membre_id] = { total: 0, groupe_id: p.groupe_id }
+    tatByMembre[p.membre_id].total += Number(p.tat) || 0
+  })
+  const topTaTRegion = Object.entries(tatByMembre)
+    .sort((a,b) => b[1].total - a[1].total)
+    .slice(0, 5)
+    .map(([mid, d]) => {
+      const m = membres.find(m => m.id === mid)
+      return { membre_id: mid, prenom: m?.prenom, nom: m?.nom, total: d.total, groupeCode: groupes.find(g => g.id === d.groupe_id)?.code || '?' }
+    })
+
+  // Top invités
+  const invByMembre = {}
+  palms.forEach(p => {
+    if (!invByMembre[p.membre_id]) invByMembre[p.membre_id] = { total: 0, groupe_id: p.groupe_id }
+    invByMembre[p.membre_id].total += p.invites || 0
+  })
+  const topInvitesRegion = Object.entries(invByMembre)
+    .sort((a,b) => b[1].total - a[1].total)
+    .slice(0, 5)
+    .map(([mid, d]) => {
+      const m = membres.find(m => m.id === mid)
+      return { membre_id: mid, prenom: m?.prenom, nom: m?.nom, total: d.total, groupeCode: groupes.find(g => g.id === d.groupe_id)?.code || '?' }
+    })
+
+  return {
+    groupes, byGroupe,
+    totalMembres, pRateRegion, tyfcbRegion,
+    totalRecosRegion, totalTaTRegion, totalMPBRegion, totalInvitesRegion,
+    scoreMoyenRegion, zoneRougeRegion, tlCountsRegion,
+    invitesConvertisRegion, invitesEnCoursRegion, invitesTotalRegion: invites.length,
+    topScoresRegion, topTyfcbRegion, topRecosRegion, topTaTRegion, topInvitesRegion,
+    recosParMembreRegion: totalMembres > 0 ? (totalRecosRegion / totalMembres).toFixed(1) : '0',
+    invitesParMembreRegion: totalMembres > 0 ? (totalInvitesRegion / totalMembres).toFixed(1) : '0',
+  }
+}
+
 // ─── ADMIN USERS ────────────────────────────────────────────────────────────
 export async function fetchUsers() {
   const { data, error } = await supabase

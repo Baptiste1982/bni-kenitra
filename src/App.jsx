@@ -8,6 +8,7 @@ import { Invites, Groupes, Reporting, AgentIA } from './components/modules'
 import SuiviHebdo from './components/SuiviHebdo'
 import AdminUsers from './components/AdminUsers'
 import Alertes from './components/Alertes'
+import Region from './components/Region'
 import TeamChat from './components/TeamChat'
 
 const SidebarClock = () => {
@@ -38,6 +39,7 @@ const ALL_MODULES = [
   { id:'membres',   label:'Membres',          icon:'◈' },
   { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
   { id:'invites',   label:'Invités',           icon:'◉' },
+  { id:'region',    label:'Région',             icon:'🌍' },
   { id:'groupes',   label:'Groupes',           icon:'⬟' },
   { id:'reporting', label:'Reporting',         icon:'◫' },
   { id:'agent',     label:'Agent IA',          icon:'◊', badge:'IA' },
@@ -210,6 +212,7 @@ export default function App() {
     membres:   <Membres profil={profil} groupeCode={groupeCode} />,
     hebdo:     <SuiviHebdo groupeCode={groupeCode} />,
     invites:   <Invites profil={profil} groupeCode={groupeCode} />,
+    region:    <Region />,
     groupes:   <Groupes />,
     reporting: <Reporting groupeCode={groupeCode} />,
     agent:     <AgentIA />,
