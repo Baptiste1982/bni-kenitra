@@ -32,22 +32,17 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
   const canCloture = ['super_admin','directeur_executif','directrice_consultante','vice_president'].includes(profil?.role)
 
   useEffect(() => {
+    const premierJour = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
+    const dernierJour = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0]
     Promise.all([
       fetchDashboardKPIs(groupeCode),
-      supabase.from('palms_imports').select('periode_debut, created_at').limit(1),
+      supabase.from('palms_hebdo').select('date_reunion').gte('date_reunion', premierJour).lte('date_reunion', dernierJour),
       supabase.from('app_settings').select('key, value'),
-    ]).then(([data, palmsRes, settingsRes]) => {
+    ]).then(([data, hebdoRes, settingsRes]) => {
       setKpis(data)
-      // Compter les jeudis clôturés = jeudis entre periode_debut et date d'import
-      const pi = palmsRes?.data?.[0]
-      if (pi?.periode_debut && pi?.created_at) {
-        const importDate = new Date(pi.created_at).toISOString().split('T')[0]
-        let count = 0
-        const d = new Date(pi.periode_debut + 'T12:00:00')
-        const end = new Date(importDate + 'T12:00:00')
-        while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
-        setReunionsSaisies(count)
-      } else { setReunionsSaisies(0) }
+      // Compter les réunions consolidées du mois en cours (dates distinctes dans palms_hebdo)
+      const dates = new Set((hebdoRes?.data || []).map(r => r.date_reunion))
+      setReunionsSaisies(dates.size)
       // Settings
       const sMap = {}
       ;(settingsRes?.data || []).forEach(s => { sMap[s.key] = s.value })
