@@ -157,13 +157,22 @@ export default function Alertes() {
       await supabase.from('invites').update({ statut: 'Traité' }).eq('id', alerte.inviteId)
     }
 
-    // 3. Supprimer immédiatement de la liste
+    // 3. Supprimer immédiatement de la liste (sans re-fetch)
     setAlertes(prev => prev.filter(a => a.alerteKey !== alerte.alerteKey))
     setResolvedKeys(prev => new Set([...prev, alerte.alerteKey]))
 
-    // 4. Recharger les archives
-    const { data } = await supabase.from('alertes_resolues').select('*').order('resolved_at', { ascending: false })
-    setArchives(data || [])
+    // 4. Ajouter à l'archive locale (sans recharger la page)
+    const now = new Date()
+    setArchives(prev => [{
+      alerte_key: alerte.alerteKey,
+      titre: alerte.titre,
+      message: alerte.message,
+      niveau: alerte.niveau,
+      categorie: alerte.categorie,
+      source: alerte.source,
+      resolved_at: now.toISOString(),
+      resolved_date: now.toISOString().split('T')[0],
+    }, ...prev])
   }
 
   // Filtrage
