@@ -254,28 +254,48 @@ export function Invites({ profil }) {
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader title="Pipeline Invités" sub={`MK-01 · ${invites.length} invités depuis déc 2025`}
         right={
-          <div style={{ display:'flex', gap: isMobile ? 6 : 8, alignItems:'center', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap: isMobile ? 6 : 10, alignItems:'center', flexWrap:'wrap' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
             {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
-              <button onClick={() => { setShowVisitorArchives(!showVisitorArchives); if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false); supabase.from('visitor_imports').select('*').order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[])) } }}
-                style={{ background: showVisitorArchives ? '#1C1C2E' : '#fff', color: showVisitorArchives ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor:'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
-                📂 Archives
-              </button>}
+              <div onClick={() => { setShowVisitorArchives(!showVisitorArchives); if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false); supabase.from('visitor_imports').select('*').order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[])) } }}
+                style={{ background: showVisitorArchives ? '#1C1C2E' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:10 }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:600, color: showVisitorArchives ? 'rgba(255,255,255,0.5)' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color: showVisitorArchives ? '#fff' : '#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>📂 Historique</div>
+                </div>
+              </div>}
             {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
-              <button onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
-                style={{ background: showVisitorImport ? '#1C1C2E' : '#fff', color: showVisitorImport ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor:'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
-                📥 Import
-              </button>}
+              <div onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
+                style={{ background: showVisitorImport ? '#1C1C2E' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:10 }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:600, color: showVisitorImport ? 'rgba(255,255,255,0.5)' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Importer</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color: showVisitorImport ? '#fff' : '#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>📥 Fichier XLS</div>
+                </div>
+              </div>}
             {canConfigAccess &&
-              <button onClick={() => setShowAccessConfig(!showAccessConfig)}
-                style={{ background: showAccessConfig ? '#1C1C2E' : '#fff', color: showAccessConfig ? '#fff' : '#1C1C2E', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor:'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
-                🔒 Accès
-              </button>}
+              <div onClick={() => setShowAccessConfig(!showAccessConfig)}
+                style={{ background: showAccessConfig ? '#1C1C2E' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:10 }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:600, color: showAccessConfig ? 'rgba(255,255,255,0.5)' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Paramètres</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color: showAccessConfig ? '#fff' : '#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔒 Accès</div>
+                </div>
+              </div>}
             {profil?.role === 'super_admin' &&
-              <button onClick={syncing ? undefined : handleSync}
-                style={{ background: syncing ? '#E8E6E1' : '#fff', border:'1px solid #E8E6E1', borderRadius:8, padding: isMobile ? '6px 10px' : '8px 14px', cursor: syncing ? 'not-allowed' : 'pointer', fontSize: isMobile ? 11 : 12, fontWeight:600, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif', opacity: syncing ? 0.6 : 1 }}>
-                🔄 {syncing ? '...' : 'Sync'}
-              </button>}
+              <div onClick={syncing ? undefined : handleSync}
+                style={{ background: syncing ? '#E8E6E1' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor: syncing ? 'not-allowed' : 'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:10, opacity: syncing ? 0.6 : 1 }}
+                onMouseEnter={e=>{if(!syncing){e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Google Sheets</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔄 {syncing ? 'Sync...' : 'Sync'}</div>
+                </div>
+              </div>}
           </div>
         }
       />
