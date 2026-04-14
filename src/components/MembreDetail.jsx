@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { TLBadge, fullName } from './ui'
 import { MembreRadarChart } from './ScoresChart'
-import { BNI_SYSTEM_PROMPT } from '../data/bniData'
+import { buildDynamicSystemPrompt } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 
 export default function MembreDetail({ membre, score, profil, onClose }) {
@@ -142,8 +142,9 @@ CONSIGNES:
 - Signe avec:\n${signature}`
     }
     try {
+      const { prompt: dynamicPrompt } = await buildDynamicSystemPrompt()
       const { data, error } = await supabase.functions.invoke('generate-email', {
-        body: { system: BNI_SYSTEM_PROMPT, max_tokens: 800, messages: [{ role: 'user', content: prompts[emailType] }] }
+        body: { system: dynamicPrompt, max_tokens: 800, messages: [{ role: 'user', content: prompts[emailType] }] }
       })
       if (error) throw error
       setEmailContent(data.content?.[0]?.text || '')

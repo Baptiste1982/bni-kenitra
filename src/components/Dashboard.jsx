@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { fetchDashboardKPIs, cloturerMois } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { TLBadge, SectionTitle, PageHeader, TableWrap, fullName } from './ui'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
 
 const scoreBg = (score) => score >= 70 ? { bg:'#D1FAE5', color:'#065F46' } : score >= 50 ? { bg:'#FEF9C3', color:'#854D0E' } : score >= 30 ? { bg:'#FEE2E2', color:'#991B1B' } : { bg:'#F3F4F6', color:'#4B5563' }
 const tlBg = (tl) => ({ vert:{bg:'#D1FAE5',color:'#065F46'}, orange:{bg:'#FEF9C3',color:'#854D0E'}, rouge:{bg:'#FEE2E2',color:'#991B1B'}, gris:{bg:'#F3F4F6',color:'#4B5563'} }[tl] || {bg:'#F3F4F6',color:'#4B5563'})
@@ -23,6 +24,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
   const [editGreetingText, setEditGreetingText] = useState('')
   const [editGreetingSub, setEditGreetingSub] = useState('')
   const [editGreetingLogo, setEditGreetingLogo] = useState('')
+  const [trendData, setTrendData] = useState([])
   const isAdmin = ['super_admin','directeur_executif'].includes(profil?.role)
 
   const now = new Date()
@@ -54,6 +56,30 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
       if (sMap.greeting_logo) setGreetingLogo(sMap.greeting_logo)
       setLoading(false)
     }).catch(() => setLoading(false))
+
+    // Charger les tendances hebdo (toutes les réunions)
+    supabase.from('palms_hebdo').select('date_reunion, tat, rdi, rde, invites, mpb, palms')
+      .order('date_reunion')
+      .then(({ data: hd }) => {
+        if (!hd || hd.length === 0) return
+        const byDate = {}
+        hd.forEach(h => {
+          if (!byDate[h.date_reunion]) byDate[h.date_reunion] = { date: h.date_reunion, tat:0, refs:0, invites:0, mpb:0, presents:0, total:0 }
+          const d = byDate[h.date_reunion]
+          d.tat += h.tat || 0
+          d.refs += (h.rdi||0) + (h.rde||0)
+          d.invites += h.invites || 0
+          d.mpb += Number(h.mpb) || 0
+          if (h.palms === 'P') d.presents++
+          d.total++
+        })
+        const trend = Object.values(byDate).sort((a,b) => a.date.localeCompare(b.date)).map(d => ({
+          ...d,
+          label: new Date(d.date+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' }),
+          presence: d.total > 0 ? Math.round(d.presents / d.total * 100) : 0,
+        }))
+        setTrendData(trend)
+      })
   }, [groupeCode])
 
   const handleCloture = async () => {
@@ -191,6 +217,49 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
           </div>
         ))}
       </div>
+
+      {/* Tendances hebdo */}
+      {trendData.length > 1 && (
+        <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap:16, marginBottom:24 }}>
+          {/* TYFCB par réunion */}
+          <TableWrap>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
+              <SectionTitle>💰 TYFCB par réunion</SectionTitle>
+            </div>
+            <div style={{ padding:'12px 8px 4px', height:200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
+                  <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />
+                  <YAxis tick={{ fontSize:10, fill:'#9CA3AF' }} />
+                  <Tooltip formatter={(v) => [`${Number(v).toLocaleString('fr-FR')} MAD`, 'TYFCB']} labelStyle={{ fontWeight:700 }} contentStyle={{ borderRadius:8, border:'1px solid #E8E6E1', fontSize:12 }} />
+                  <Bar dataKey="mpb" fill="#C41E3A" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </TableWrap>
+
+          {/* Activité : TàT + Recos */}
+          <TableWrap>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
+              <SectionTitle>📊 Activité hebdo</SectionTitle>
+            </div>
+            <div style={{ padding:'12px 8px 4px', height:200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
+                  <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />
+                  <YAxis tick={{ fontSize:10, fill:'#9CA3AF' }} />
+                  <Tooltip contentStyle={{ borderRadius:8, border:'1px solid #E8E6E1', fontSize:12 }} />
+                  <Line type="monotone" dataKey="tat" name="1-2-1s" stroke="#3B82F6" strokeWidth={2} dot={{ r:4 }} />
+                  <Line type="monotone" dataKey="refs" name="Recos" stroke="#059669" strokeWidth={2} dot={{ r:4 }} />
+                  <Line type="monotone" dataKey="invites" name="Visiteurs" stroke="#D97706" strokeWidth={2} dot={{ r:4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </TableWrap>
+        </div>
+      )}
 
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16, marginBottom:16 }}>
         {/* Alertes live — catégorisées */}
