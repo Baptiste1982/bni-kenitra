@@ -347,8 +347,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                 <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Import initial</div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>{palmsInitExists ? '✅' : '📥'} PALMS Base</div>
               </div>
-              <div style={{ fontSize:9, padding:'2px 6px', borderRadius:6, background: palmsInitExists ? '#065F46' : '#92400E', color:'#fff', fontWeight:600 }}>
-                {palmsInitExists ? 'OK' : 'Requis'}
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
               </div>
             </div>
             {/* Bouton Archives */}
