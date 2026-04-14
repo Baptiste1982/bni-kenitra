@@ -51,6 +51,24 @@ export function Invites({ profil }) {
 
   useEffect(() => { load() }, [])
 
+  // Replier tous les mois sauf le mois en cours
+  useEffect(() => {
+    if (!invites.length) return
+    const now = new Date()
+    const currentMonth = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
+    const allMonths = {}
+    invites.forEach(inv => {
+      const d = inv.date_visite ? new Date(inv.date_visite + 'T12:00:00') : null
+      const key = d ? d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' }) : 'Sans date'
+      if (key !== currentMonth) allMonths[key] = true
+    })
+    setCollapsedMonths(prev => {
+      // Ne pas écraser si déjà initialisé
+      if (Object.keys(prev).length > 0) return prev
+      return allMonths
+    })
+  }, [invites])
+
   const COULEURS = {
     vert: { bg:'#D1FAE5', color:'#065F46', badge:'#A7F3D0', label:'Vert' },
     bleu: { bg:'#DBEAFE', color:'#1E40AF', badge:'#BFDBFE', label:'Bleu' },
