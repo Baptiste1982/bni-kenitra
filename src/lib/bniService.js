@@ -85,11 +85,16 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     a.reunions += nb
   })
 
-  // Nombre total de jeudis : du début PALMS jusqu'à aujourd'hui (période combinée)
+  // Nombre total de jeudis : du début PALMS jusqu'à aujourd'hui (pour CEU, attendance = 6 mois)
   const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
   const nbSemainesPalms = countJeudis(periodeDebut, periodeFin) || 1
   const nbSemainesHebdo = Object.values(hebdoAgg).length > 0 ? countJeudis(palmsImportDate, aujourdHui) : 0
-  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis, PALMS importé le ${palmsImportDate}, ${nbSemainesHebdo} jeudis hebdo compilés)`)
+  // Nombre total de jeudis dans le MOIS en cours (pour TàT et Refs = mensuel)
+  const moisActuel = new Date(aujourdHui + 'T12:00:00')
+  const dernierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth() + 1, 0)
+  const premierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth(), 1)
+  const nbJeudisMois = countJeudis(premierJourMois.toISOString().split('T')[0], dernierJourMois.toISOString().split('T')[0]) || 1
+  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis 6m, ${nbJeudisMois} jeudis/mois, PALMS importé le ${palmsImportDate}, ${nbSemainesHebdo} hebdo compilés)`)
 
   // 4. Charger scores existants pour récupérer sponsors
   const { data: existingScores } = await supabase
@@ -149,9 +154,9 @@ export async function recalculateScores(groupeCode = 'MK-01') {
 
     // Taux sur la période totale combinée
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
-    // TàT et Refs : taux PAR SEMAINE (total du mois / nb semaines du mois)
-    const rateTat = tat / nbSemaines
-    const rateRefs = refsGiven / nbSemaines
+    // TàT et Refs : taux PAR SEMAINE sur le mois complet (total / nb jeudis du mois)
+    const rateTat = tat / nbJeudisMois
+    const rateRefs = refsGiven / nbJeudisMois
     // CEU : taux par semaine sur 6 mois
     const rateUeg = ueg / nbSemaines
     // Visiteurs : 6 mois glissants depuis table invites
