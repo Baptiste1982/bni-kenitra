@@ -6,6 +6,12 @@ const GROUP_COLORS = { 'MK-01': '#C41E3A', 'MK-02': '#3B82F6' }
 const fmtMAD = v => Math.round(v).toLocaleString('de-DE') + ' MAD'
 const fmtNum = v => Number(v).toLocaleString('de-DE')
 
+// Même logique de couleurs conditionnelles que Dashboard
+const kpiBg = (good, mid, val, threshGood, threshMid) =>
+  val >= threshGood ? { bg:'#D1FAE5', topBg:'#A7F3D0', color:'#065F46' }
+  : val >= threshMid ? { bg:'#FEF9C3', topBg:'#FDE68A', color:'#854D0E' }
+  : { bg:'#FEE2E2', topBg:'#FECACA', color:'#991B1B' }
+
 export default function Region() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -52,40 +58,11 @@ export default function Region() {
     )
   }
 
-  // Card KPI principal
-  const RegionKPI = ({ label, value, sub, icon, accent = '#1C1C2E' }) => (
-    <div onMouseEnter={hover} onMouseLeave={unhover}
-      style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden', transition:'box-shadow 0.15s, transform 0.15s' }}>
-      <div style={{ background:'#1C1C2E', padding: isMobile ? '8px 12px' : '10px 16px', display:'flex', alignItems:'center', gap:8 }}>
-        <span style={{ fontSize:14 }}>{icon}</span>
-        <span style={{ fontSize:10, fontWeight:600, color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.06em' }}>{label}</span>
-      </div>
-      <div style={{ padding: isMobile ? '10px 12px' : '14px 16px' }}>
-        <div style={{ fontSize: isMobile ? 22 : 28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:accent }}>{value}</div>
-        {sub && <div style={{ fontSize:11, color:'#6B7280', marginTop:3 }}>{sub}</div>}
-        <div style={{ display:'flex', gap:6, marginTop:8 }}>
-          {groupeCodes.map(code => (
-            <span key={code} style={{ fontSize:10, padding:'2px 8px', borderRadius:8, background: GROUP_COLORS[code] + '15', color: GROUP_COLORS[code], fontWeight:600 }}>
-              {code}: {label.includes('présence') ? data.byGroupe[code].pRate + '%'
-                : label.includes('TYFCB') ? fmtMAD(data.byGroupe[code].tyfcb)
-                : label.includes('Membres') ? data.byGroupe[code].membresActifs
-                : label.includes('PALMS') ? data.byGroupe[code].scoreMoyen
-                : label.includes('ecos') ? data.byGroupe[code].totalRecos
-                : label.includes('zone') ? data.byGroupe[code].zoneRouge
-                : ''}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-
-  // Top table
+  // Top table — même style que Dashboard
   const TopTable = ({ title, icon, items, valueLabel, formatFn = fmtNum }) => (
     <TableWrap>
-      <div style={{ padding:'12px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', gap:8 }}>
-        <span style={{ fontSize:14 }}>{icon}</span>
-        <SectionTitle>{title}</SectionTitle>
+      <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <SectionTitle>{icon} {title}</SectionTitle>
       </div>
       <table style={{ width:'100%', borderCollapse:'collapse' }}>
         <thead><tr>
@@ -95,7 +72,8 @@ export default function Region() {
         </tr></thead>
         <tbody>
           {items.map((item, i) => (
-            <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
+            <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)' }}
+              onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
               <td style={{ padding:'8px 12px', color:'#9CA3AF', fontSize:12, width:30 }}>{i + 1}</td>
               <td style={{ padding:'8px 12px', fontWeight:600, fontSize:13, color:'#1C1C2E' }}>
                 {item.membres ? fullName(item.membres.prenom, item.membres.nom) : fullName(item.prenom, item.nom)}
@@ -114,39 +92,79 @@ export default function Region() {
     </TableWrap>
   )
 
+  // KPI cards data — même esthétique que Dashboard
+  const objRegional = groupeCodes.length * 30
+  const kpiCards = [
+    { label:'Membres actifs', value: data.totalMembres, sub:`Objectif régional : ${objRegional}`,
+      ...kpiBg(null,null, data.totalMembres, objRegional*0.83, objRegional*0.66),
+      prog: data.totalMembres / objRegional * 100,
+      detail: groupeCodes.map(c => `${c}: ${data.byGroupe[c].membresActifs}`) },
+    { label:'Taux de présence', value: data.pRateRegion + '%', sub:'Moyenne pondérée région',
+      ...kpiBg(null,null, data.pRateRegion, 95, 88),
+      detail: groupeCodes.map(c => `${c}: ${data.byGroupe[c].pRate}%`) },
+    { label:'TYFCB généré', value: fmtMAD(data.tyfcbRegion), sub:'Business total référencé',
+      ...kpiBg(null,null, data.tyfcbRegion, 500000, 100000),
+      detail: groupeCodes.map(c => `${c}: ${fmtMAD(data.byGroupe[c].tyfcb)}`) },
+    { label:'Recommandations', value: fmtNum(data.totalRecosRegion), sub:`${data.recosParMembreRegion} par membre`,
+      ...kpiBg(null,null, data.totalRecosRegion, 80, 30),
+      detail: groupeCodes.map(c => `${c}: ${data.byGroupe[c].totalRecos}`) },
+    { label:'Score PALMS moyen', value: data.scoreMoyenRegion, sub:'Moyenne régionale',
+      ...kpiBg(null,null, data.scoreMoyenRegion, 70, 50),
+      detail: groupeCodes.map(c => `${c}: ${data.byGroupe[c].scoreMoyen}`) },
+    { label:'Membres zone rouge', value: data.zoneRougeRegion, sub:'Sous les seuils BNI',
+      bg: data.zoneRougeRegion <= 2 ? '#D1FAE5' : data.zoneRougeRegion <= 5 ? '#FEF9C3' : '#FEE2E2',
+      topBg: data.zoneRougeRegion <= 2 ? '#A7F3D0' : data.zoneRougeRegion <= 5 ? '#FDE68A' : '#FECACA',
+      color: data.zoneRougeRegion <= 2 ? '#065F46' : data.zoneRougeRegion <= 5 ? '#854D0E' : '#991B1B',
+      detail: groupeCodes.map(c => `${c}: ${data.byGroupe[c].zoneRouge}`) },
+  ]
+
   return (
-    <div style={{ padding: isMobile ? '20px 16px' : '28px 32px', animation:'fadeIn 0.25s ease', minHeight:'100%' }}>
+    <div style={{ padding: isMobile ? '20px 16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
       <PageHeader
         title="Suivi Régional"
         sub="Vue consolidée de tous les groupes BNI Kénitra"
       />
 
-      {/* Bandeau résumé */}
-      <div style={{ display:'flex', alignItems:'center', padding: isMobile ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap: isMobile ? 10 : 20, flexWrap:'wrap' }}>
-        <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>Région Kénitra</div>
-        <div style={{ display:'flex', gap:8 }}>
-          {groupeCodes.map(code => (
-            <span key={code} style={{ fontSize:11, padding:'4px 12px', borderRadius:8, background: GROUP_COLORS[code], color:'#fff', fontWeight:600 }}>{code}</span>
-          ))}
+      {/* Bandeau résumé — même style que Dashboard mois en cours */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: isMobile ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap:12, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', alignItems:'center', gap: isMobile ? 8 : 16, flex:1, minWidth:0 }}>
+          <div style={{ fontSize: isMobile ? 16 : 22, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>Région Kénitra</div>
+          <div style={{ display:'flex', gap:6 }}>
+            {groupeCodes.map(code => (
+              <span key={code} style={{ fontSize:10, padding:'3px 10px', borderRadius:8, background: GROUP_COLORS[code], color:'#fff', fontWeight:600 }}>{code}</span>
+            ))}
+          </div>
         </div>
-        <div style={{ fontSize:12, opacity:0.6, marginLeft:'auto' }}>{data.totalMembres} membres actifs</div>
+        <div style={{ fontSize:12, opacity:0.6 }}>{data.totalMembres} membres actifs</div>
       </div>
 
-      {/* KPIs principaux */}
+      {/* KPI cards — même esthétique que Dashboard */}
       <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: isMobile ? 10 : 16, marginBottom:24 }}>
-        <RegionKPI icon="👥" label="Membres actifs" value={data.totalMembres} sub={`Objectif régional : ${groupeCodes.length * 30}`} />
-        <RegionKPI icon="📊" label="Taux de présence" value={data.pRateRegion + '%'} accent={data.pRateRegion >= 95 ? '#065F46' : data.pRateRegion >= 88 ? '#854D0E' : '#991B1B'} sub="Moyenne pondérée région" />
-        <RegionKPI icon="💰" label="TYFCB généré" value={fmtMAD(data.tyfcbRegion)} accent={data.tyfcbRegion >= 500000 ? '#065F46' : '#854D0E'} sub="Business total référencé" />
-        <RegionKPI icon="🤝" label="Recommandations" value={fmtNum(data.totalRecosRegion)} sub={`${data.recosParMembreRegion} par membre`} />
-        <RegionKPI icon="⭐" label="Score PALMS moyen" value={data.scoreMoyenRegion} accent={data.scoreMoyenRegion >= 70 ? '#065F46' : data.scoreMoyenRegion >= 50 ? '#854D0E' : '#991B1B'} sub="Moyenne régionale" />
-        <RegionKPI icon="🔴" label="Membres en zone rouge" value={data.zoneRougeRegion} accent={data.zoneRougeRegion > 5 ? '#991B1B' : data.zoneRougeRegion > 2 ? '#854D0E' : '#065F46'} sub="Sous les seuils BNI" />
+        {kpiCards.map(c => (
+          <div key={c.label} onMouseEnter={hover} onMouseLeave={unhover}
+            style={{ background:c.bg, borderRadius:12, border:'1px solid rgba(0,0,0,0.06)', overflow:'hidden', cursor:'default', transition:'box-shadow 0.15s, transform 0.15s' }}>
+            <div style={{ background:c.topBg, padding: isMobile ? '6px 12px' : '10px 20px' }}>
+              <div style={{ fontSize: isMobile ? 9 : 11, fontWeight:600, color:c.color, textTransform:'uppercase', letterSpacing:'0.07em', opacity:0.8 }}>{c.label}</div>
+            </div>
+            <div style={{ padding: isMobile ? '8px 12px 12px' : '14px 20px 18px' }}>
+              <div style={{ fontSize: isMobile ? 18 : 28, fontWeight:700, fontFamily:'DM Sans, sans-serif', color:c.color }}>{c.value}</div>
+              <div style={{ fontSize: isMobile ? 10 : 12, color:'#6B7280', marginTop:4 }}>{c.sub}</div>
+              {c.prog !== undefined && <div style={{ height:4, background:'rgba(255,255,255,0.5)', borderRadius:2, marginTop:10 }}><div style={{ height:4, width:`${Math.min(100,c.prog)}%`, background:c.color, borderRadius:2, opacity:0.5 }} /></div>}
+              <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
+                {c.detail.map((d, i) => (
+                  <span key={i} style={{ fontSize:10, padding:'2px 8px', borderRadius:8, background:'rgba(255,255,255,0.6)', color:c.color, fontWeight:600 }}>{d}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Comparatif détaillé */}
-      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:16, marginBottom:24 }}>
+      {/* Comparatif + Traffic Light + Pipeline — même layout 2 colonnes que Dashboard */}
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap:16, marginBottom:24 }}>
         {/* Barres comparatives */}
         <TableWrap>
-          <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
+          <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <SectionTitle>📊 Comparatif groupes</SectionTitle>
           </div>
           <div style={{ padding:16 }}>
@@ -162,69 +180,64 @@ export default function Region() {
           </div>
         </TableWrap>
 
-        {/* Traffic Light + Pipeline */}
+        {/* Colonne droite — même layout que Dashboard */}
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
           {/* Traffic Light régional */}
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
-              <SectionTitle>🚦 Traffic Light régional</SectionTitle>
+          <div onMouseEnter={hover} onMouseLeave={unhover}
+            style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', transition:'box-shadow 0.15s, transform 0.15s' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+              <SectionTitle>Traffic Light</SectionTitle>
             </div>
-            <div style={{ padding:16 }}>
-              {[['vert', '#059669', '#D1FAE5'], ['orange', '#D97706', '#FEF9C3'], ['rouge', '#DC2626', '#FEE2E2'], ['gris', '#9CA3AF', '#E5E7EB']].map(([tl, dot, bg]) => (
-                <div key={tl} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, padding:'8px 12px', borderRadius:8, background:bg }}>
-                  <div style={{ width:10, height:10, borderRadius:'50%', background:dot, flexShrink:0 }} />
-                  <span style={{ fontSize:12, width:50, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{tl}</span>
-                  <span style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', marginLeft:'auto' }}>{data.tlCountsRegion[tl]}</span>
-                  <div style={{ display:'flex', gap:4, marginLeft:8 }}>
-                    {groupeCodes.map(c => (
-                      <span key={c} style={{ fontSize:9, padding:'1px 6px', borderRadius:6, background:GROUP_COLORS[c] + '18', color:GROUP_COLORS[c], fontWeight:600 }}>
-                        {c.split('-')[1]}: {data.byGroupe[c].tlCounts[tl]}
-                      </span>
-                    ))}
-                  </div>
+            {[['vert', data.tlCountsRegion.vert, '#059669', '#D1FAE5'], ['orange', data.tlCountsRegion.orange, '#854D0E', '#FEF9C3'], ['rouge', data.tlCountsRegion.rouge, '#991B1B', '#FEE2E2'], ['gris', data.tlCountsRegion.gris, '#4B5563', '#E5E7EB']].map(([t, n, col, bg]) => (
+              <div key={t} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, padding:'8px 12px', borderRadius:8, background:bg }}>
+                <div style={{ width:10, height:10, borderRadius:'50%', background:({ vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' })[t], flexShrink:0 }} />
+                <span style={{ fontSize:12, width:50, fontWeight:700, color:col }}>{t}</span>
+                <div style={{ flex:1, background:'rgba(255,255,255,0.6)', height:8, borderRadius:4 }}>
+                  <div style={{ width:`${(n || 0) / Math.max(data.totalMembres, 1) * 100}%`, height:8, borderRadius:4, background:({ vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' })[t], transition:'width 0.6s ease' }} />
+                </div>
+                <span style={{ fontSize:16, fontWeight:700, width:28, textAlign:'right', color:col }}>{n || 0}</span>
+              </div>
+            ))}
+            <div style={{ display:'flex', gap:4, marginTop:10, flexWrap:'wrap' }}>
+              {groupeCodes.map(c => (
+                <div key={c} style={{ fontSize:9, padding:'3px 8px', borderRadius:6, background:GROUP_COLORS[c] + '12', color:GROUP_COLORS[c], fontWeight:600 }}>
+                  {c}: {Object.entries(data.byGroupe[c].tlCounts).map(([k,v]) => `${v}${k[0]}`).join(' ')}
                 </div>
               ))}
             </div>
-          </TableWrap>
+          </div>
 
           {/* Pipeline invités */}
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
-              <SectionTitle>◉ Pipeline invités régional</SectionTitle>
+          <div onMouseEnter={hover} onMouseLeave={unhover}
+            style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', transition:'box-shadow 0.15s, transform 0.15s' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+              <SectionTitle>Pipeline invités</SectionTitle>
             </div>
-            <div style={{ padding:16 }}>
-              {[
-                ['Total invités', data.invitesTotalRegion, '#1C1C2E'],
-                ['Devenus membres', data.invitesConvertisRegion, '#059669'],
-                ['En cours', data.invitesEnCoursRegion, '#D97706'],
-              ].map(([label, val, col]) => (
-                <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                  <span style={{ fontSize:12, color:'#6B7280' }}>{label}</span>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:14, fontWeight:700, color:col }}>{val}</span>
-                    <div style={{ display:'flex', gap:3 }}>
-                      {groupeCodes.map(c => (
-                        <span key={c} style={{ fontSize:9, padding:'1px 6px', borderRadius:6, background:GROUP_COLORS[c] + '18', color:GROUP_COLORS[c], fontWeight:600 }}>
-                          {label.includes('Total') ? data.byGroupe[c].invitesTotal
-                            : label.includes('Devenus') ? data.byGroupe[c].invitesConvertis
-                            : data.byGroupe[c].invitesEnCours}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+            {[
+              ['Total', data.invitesTotalRegion, '#1C1C2E'],
+              ['Devenus membres', data.invitesConvertisRegion, '#059669'],
+              ['En cours', data.invitesEnCoursRegion, '#D97706'],
+            ].map(([l, v, col]) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                <span style={{ fontSize:12, color:'#6B7280' }}>{l}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:col }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ marginTop:8, padding:'6px 10px', background:'#F9F8F6', borderRadius:6, fontSize:11, color:'#6B7280' }}>
+              Conversion : <strong style={{ color:'#065F46' }}>{data.invitesTotalRegion > 0 ? Math.round(data.invitesConvertisRegion / data.invitesTotalRegion * 100) : 0}%</strong>
+            </div>
+            <div style={{ display:'flex', gap:4, marginTop:8, flexWrap:'wrap' }}>
+              {groupeCodes.map(c => (
+                <span key={c} style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:GROUP_COLORS[c] + '12', color:GROUP_COLORS[c], fontWeight:600 }}>
+                  {c}: {data.byGroupe[c].invitesTotal} inv.
+                </span>
               ))}
-              {data.totalMembres > 0 && (
-                <div style={{ marginTop:8, padding:'8px 12px', background:'#F9F8F6', borderRadius:8, fontSize:11, color:'#6B7280' }}>
-                  Taux de conversion : <strong style={{ color:'#065F46' }}>{data.invitesTotalRegion > 0 ? Math.round(data.invitesConvertisRegion / data.invitesTotalRegion * 100) : 0}%</strong>
-                </div>
-              )}
             </div>
-          </TableWrap>
+          </div>
         </div>
       </div>
 
-      {/* Top classements régionaux */}
+      {/* Top classements — même style tables que Dashboard */}
       <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap:16, marginBottom:24 }}>
         <TopTable title="Top scores région" icon="🏆" items={data.topScoresRegion} valueLabel="Score" formatFn={v => Number(v).toFixed(0)} />
         <TopTable title="Top TYFCB région" icon="💰" items={data.topTyfcbRegion} valueLabel="TYFCB" formatFn={fmtMAD} />
