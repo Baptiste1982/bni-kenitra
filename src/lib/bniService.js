@@ -17,27 +17,13 @@ export async function fetchGroupes() {
 }
 
 // ─── RECALCUL SCORES BNI ────────────────────────────────────────────────────
-// Recalcule scores_bni à partir de palms_imports (données Excel définitives)
+// Recalcule scores_bni : PALMS Excel (base) + palms_hebdo post-période (compilation)
+// Visiteurs : table invites sur 6 mois glissants
 // Applique le barème BNI officiel
 export async function recalculateScores(groupeCode = 'MK-01') {
   const groupeId = await getGroupeId(groupeCode)
   if (!groupeId) throw new Error('Groupe introuvable')
 
-  // 1. Charger palms_imports pour ce groupe
-  const { data: palms, error: pErr } = await supabase
-    .from('palms_imports')
-    .select('*')
-    .eq('groupe_id', groupeId)
-  if (pErr) throw pErr
-  if (!palms?.length) throw new Error('Aucune donnée PALMS importée')
-
-  // 2. Déterminer la période et le nombre de semaines (jeudis)
-  const periodeDebut = palms[0]?.periode_debut
-  const periodeFin = palms[0]?.periode_fin
-  const importDate = palms[0]?.created_at ? new Date(palms[0].created_at).toISOString().split('T')[0] : periodeFin
-
-  // Compter les jeudis entre debut et min(import_date, aujourd'hui)
-  const endDate = importDate < periodeFin ? importDate : periodeFin
   const countJeudis = (from, to) => {
     let count = 0
     const d = new Date(from + 'T12:00:00')
@@ -45,9 +31,53 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     while (d <= end) { if (d.getDay() === 4) count++; d.setDate(d.getDate() + 1) }
     return count
   }
-  const nbSemaines = countJeudis(periodeDebut, endDate) || 1
 
-  // 3. Charger scores existants pour récupérer sponsors (non présent dans palms_imports)
+  // 1. Charger palms_imports (base Excel) pour ce groupe
+  const { data: palms, error: pErr } = await supabase
+    .from('palms_imports')
+    .select('*')
+    .eq('groupe_id', groupeId)
+  if (pErr) throw pErr
+  if (!palms?.length) throw new Error('Aucune donnée PALMS importée')
+
+  // 2. Déterminer la période PALMS et la date de fin effective
+  const periodeDebut = palms[0]?.periode_debut
+  const periodeFin = palms[0]?.periode_fin
+  const aujourdHui = new Date().toISOString().split('T')[0]
+
+  // 3. Charger palms_hebdo APRÈS la période PALMS (données compilées mois suivants)
+  const { data: hebdoData } = await supabase
+    .from('palms_hebdo')
+    .select('membre_id, palms, rdi, rde, rri, rre, invites, tat, mpb, ueg, nb_reunions, date_reunion')
+    .eq('groupe_id', groupeId)
+    .gt('date_reunion', periodeFin)
+
+  // Agréger hebdo par membre
+  const hebdoAgg = {}
+  ;(hebdoData || []).forEach(h => {
+    if (!h.membre_id) return
+    if (!hebdoAgg[h.membre_id]) hebdoAgg[h.membre_id] = { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, mpb:0, ueg:0, reunions:0 }
+    const a = hebdoAgg[h.membre_id]
+    const nb = h.nb_reunions || 1
+    if (h.palms === 'P') a.presences += nb
+    else if (h.palms === 'A') a.absences += nb
+    a.tat += h.tat || 0
+    a.rdi += h.rdi || 0
+    a.rde += h.rde || 0
+    a.rri += h.rri || 0
+    a.rre += h.rre || 0
+    a.mpb += Number(h.mpb) || 0
+    a.ueg += h.ueg || 0
+    a.reunions += nb
+  })
+
+  // Nombre total de jeudis : du début PALMS jusqu'à aujourd'hui (période combinée)
+  const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
+  const nbSemainesPalms = countJeudis(periodeDebut, periodeFin) || 1
+  const nbSemainesHebdo = Object.values(hebdoAgg).length > 0 ? countJeudis(periodeFin, aujourdHui) : 0
+  console.log(`[recalculateScores] Période: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis = ${nbSemainesPalms} PALMS + ${nbSemainesHebdo} hebdo)`)
+
+  // 4. Charger scores existants pour récupérer sponsors
   const { data: existingScores } = await supabase
     .from('scores_bni')
     .select('membre_id, sponsors, sponsor_score')
@@ -55,13 +85,13 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const sponsorMap = {}
   ;(existingScores || []).forEach(s => { sponsorMap[s.membre_id] = { sponsors: s.sponsors || 0, score: Number(s.sponsor_score) || 0 } })
 
-  // 3b. Charger les membres pour matcher invite_par_nom → membre_id
+  // 5. Charger les membres pour matcher invite_par_nom → membre_id
   const { data: membres } = await supabase
     .from('membres')
     .select('id, prenom, nom')
     .eq('groupe_id', groupeId)
 
-  // 3c. Charger les visiteurs sur 6 mois glissants depuis la table invites
+  // 6. Visiteurs : 6 mois glissants depuis la table invites
   const sixMoisAvant = new Date()
   sixMoisAvant.setMonth(sixMoisAvant.getMonth() - 6)
   const sixMoisStr = sixMoisAvant.toISOString().split('T')[0]
@@ -71,19 +101,16 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     .eq('groupe_id', groupeId)
     .gte('date_visite', sixMoisStr)
 
-  // Matcher invite_par_nom aux membres (matching normalisé, insensible casse/accents)
   const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
   const visitorsPerMembre = {}
   ;(invitesData || []).forEach(inv => {
     if (!inv.invite_par_nom) return
     const invNorm = norm(inv.invite_par_nom)
-    // Matcher : exact "Prénom NOM" / "NOM Prénom", ou nom contenu + prénom partiel (3 chars min)
     const membre = (membres || []).find(m => {
       const mPrenom = norm(m.prenom), mNom = norm(m.nom)
       const fullA = `${mPrenom} ${mNom}`, fullB = `${mNom} ${mPrenom}`
       if (invNorm === fullA || invNorm === fullB) return true
       if (invNorm.includes(mNom) && invNorm.includes(mPrenom)) return true
-      // Matching souple : nom exact + début du prénom (gère Mohammed/Mohamed, Oumaoma/Oumaima)
       if (mPrenom.length >= 3 && invNorm.includes(mNom) && invNorm.includes(mPrenom.slice(0, 3))) return true
       return false
     })
@@ -93,39 +120,35 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   })
   console.log('[recalculateScores] Visiteurs 6 mois glissants:', visitorsPerMembre)
 
-  // 4. Calculer les scores pour chaque membre
+  // 7. Calculer les scores : PALMS base + hebdo compilé
   const scored = palms.map(p => {
-    const presences = p.presences || 0
-    const absences = p.absences || 0
-    const totalReunions = presences + absences
+    const h = hebdoAgg[p.membre_id] || { presences:0, absences:0, tat:0, rdi:0, rde:0, rri:0, rre:0, mpb:0, ueg:0 }
 
-    // Taux
+    // Cumuler PALMS + hebdo
+    const presences = (p.presences || 0) + h.presences
+    const absences = (p.absences || 0) + h.absences
+    const totalReunions = presences + absences
+    const tat = (Number(p.tat) || 0) + h.tat
+    const refsGiven = (p.rdi || 0) + (p.rde || 0) + h.rdi + h.rde
+    const tyfcb = (Number(p.mpb) || 0) + h.mpb
+    const ueg = (p.ueg || 0) + h.ueg
+
+    // Taux sur la période totale combinée
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
-    const tat = Number(p.tat) || 0
-    const refsGiven = (p.rdi || 0) + (p.rde || 0)
     const rateTat = tat / nbSemaines
     const rateRefs = refsGiven / nbSemaines
-    // Visiteurs : 6 mois glissants depuis table invites (pas palms_imports)
-    const visitors = visitorsPerMembre[p.membre_id] || 0
-    const tyfcb = Number(p.mpb) || 0
-    const ueg = p.ueg || 0
     const rateUeg = ueg / nbSemaines
+    // Visiteurs : 6 mois glissants depuis table invites
+    const visitors = visitorsPerMembre[p.membre_id] || 0
 
     // Barème BNI
-    // Attendance /10
     const attendanceScore = attendanceRate >= 0.95 ? 10 : attendanceRate >= 0.88 ? 5 : 0
-    // 1-2-1 (TàT) /20
     const score121 = rateTat >= 1 ? 20 : rateTat >= 0.75 ? 15 : rateTat >= 0.5 ? 10 : rateTat >= 0.25 ? 5 : 0
-    // Referrals Given /25
     const refsScore = rateRefs >= 1.25 ? 25 : rateRefs >= 1 ? 20 : rateRefs >= 0.75 ? 15 : rateRefs >= 0.50 ? 10 : rateRefs >= 0.25 ? 5 : 0
-    // Visitors /25 (6 mois glissants depuis table invites)
     const visitorScore = visitors >= 5 ? 25 : visitors >= 4 ? 20 : visitors >= 3 ? 15 : visitors >= 2 ? 10 : visitors >= 1 ? 5 : 0
-    // TYFCB /5 (en milliers MAD)
     const tyfcbK = tyfcb / 1000
     const tyfcbScore = tyfcbK >= 30 ? 5 : tyfcbK >= 15 ? 4 : tyfcbK >= 5 ? 3 : tyfcbK >= 2 ? 2 : tyfcb > 0 ? 1 : 0
-    // CEU /10
     const ceuScore = rateUeg > 0.5 ? 10 : rateUeg > 0 ? 5 : 0
-    // Sponsors /5 (récupéré des scores existants si dispo)
     const sp = sponsorMap[p.membre_id] || { sponsors: 0, score: 0 }
 
     const totalScore = attendanceScore + score121 + refsScore + visitorScore + tyfcbScore + ceuScore + sp.score
@@ -151,21 +174,21 @@ export async function recalculateScores(groupeCode = 'MK-01') {
       sponsors: sp.sponsors,
       sponsor_score: sp.score,
       periode_debut: periodeDebut,
-      periode_fin: periodeFin,
+      periode_fin: aujourdHui,
     }
   })
 
-  // 5. Trier par score et attribuer les rangs
+  // 8. Trier par score et attribuer les rangs
   scored.sort((a, b) => b.total_score - a.total_score || a.attendance_rate - b.attendance_rate)
   scored.forEach((s, i) => { s.rank = i + 1 })
 
-  // 6. Upsert dans scores_bni
+  // 9. Upsert dans scores_bni
   const { error: uErr } = await supabase
     .from('scores_bni')
     .upsert(scored, { onConflict: 'membre_id' })
   if (uErr) throw uErr
 
-  return { count: scored.length, nbSemaines, periodeDebut, periodeFin }
+  return { count: scored.length, nbSemaines, nbSemainesHebdo, periodeDebut, periodeFin: aujourdHui }
 }
 
 // ─── SCORES ──────────────────────────────────────────────────────────────────

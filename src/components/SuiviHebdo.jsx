@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois } from '../lib/bniService'
+import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois, recalculateScores } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, Card, Spinner, fullName } from './ui'
 
@@ -145,7 +145,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
       if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode)
       if (bniRow) await insertPalmsHebdo([bniRow], jeudiDate, nbReunions, groupeCode)
 
-      setResult({ imported, skipped, bni: !!bniRow, jeudiDate, snapped: jeudiDate !== dateReunion })
+      // Recalculer les scores BNI (PALMS base + hebdo compilé)
+      let scoreResult = null
+      try { scoreResult = await recalculateScores(groupeCode) } catch (e) { console.error('[Hebdo] Erreur recalcul scores:', e) }
+
+      setResult({ imported, skipped, bni: !!bniRow, jeudiDate, snapped: jeudiDate !== dateReunion, scoreResult })
       setRawText('')
       await loadMonth()
     } catch (err) {
