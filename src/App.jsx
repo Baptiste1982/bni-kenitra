@@ -33,6 +33,8 @@ const ConnectionToast = ({ name, onDone }) => {
 }
 
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
+// Agent IA réservé à SA (super_admin) et DC (directrice_consultante)
+const AGENT_IA_ROLES = ['super_admin', 'directrice_consultante']
 const ALL_MODULES = [
   { id:'dashboard', label:'Tableau de bord', icon:'▦' },
   { id:'membres',   label:'Membres',          icon:'◈' },
@@ -216,14 +218,19 @@ export default function App() {
     groupes:   <Groupes />,
     reporting: <Reporting groupeCode={groupeCode} />,
     objectifs: <Objectifs groupeCode={groupeCode} profil={profil} />,
-    agent:     <AgentIA groupeCode={groupeCode} />,
+    agent:     AGENT_IA_ROLES.includes(profil?.role) ? <AgentIA groupeCode={groupeCode} /> : <Dashboard onNavigate={navigate} profil={profil} groupeCode={groupeCode} />,
     admin:     <AdminUsers />,
   }
 
   const userRole = profil?.role || 'lecture'
   // Accès modules : si modules_access est défini, l'utiliser, sinon admin voit tout
   const userModules = profil?.modules_access || (ADMIN_ROLES.includes(userRole) ? ALL_MODULES.map(m => m.id) : ['dashboard', 'membres'])
-  const NAV = ALL_MODULES.filter(m => userModules.includes(m.id))
+  const NAV = ALL_MODULES.filter(m => {
+    if (!userModules.includes(m.id)) return false
+    // Agent IA : visible uniquement pour SA et DC, indépendamment de modules_access
+    if (m.id === 'agent' && !AGENT_IA_ROLES.includes(userRole)) return false
+    return true
+  })
 
   const Sidebar = () => (
     <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%', overflowY:'auto', overflowX:'hidden' }}>
