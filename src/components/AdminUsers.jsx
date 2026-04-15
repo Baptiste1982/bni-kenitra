@@ -18,19 +18,21 @@ const MODULES = [
   { id: 'membres', label: 'Membres' },
   { id: 'hebdo', label: 'Suivi Hebdo' },
   { id: 'invites', label: 'Invités' },
+  { id: 'region', label: 'Région' },
   { id: 'groupes', label: 'Groupes' },
   { id: 'reporting', label: 'Reporting' },
+  { id: 'objectifs', label: 'Objectifs' },
   { id: 'agent', label: 'Agent IA' },
   { id: 'admin', label: 'Admin' },
 ]
 
 // Accès par défaut selon le rôle
 const DEFAULT_ACCESS = {
-  super_admin: ['dashboard', 'membres', 'hebdo', 'invites', 'groupes', 'reporting', 'agent', 'admin'],
-  directeur_executif: ['dashboard', 'membres', 'hebdo', 'invites', 'groupes', 'reporting', 'agent', 'admin'],
-  directrice_consultante: ['dashboard', 'membres', 'hebdo', 'invites', 'groupes', 'reporting', 'agent'],
-  president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting'],
-  vice_president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting'],
+  super_admin: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'groupes', 'reporting', 'objectifs', 'agent', 'admin'],
+  directeur_executif: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'groupes', 'reporting', 'objectifs', 'agent', 'admin'],
+  directrice_consultante: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'groupes', 'reporting', 'objectifs', 'agent'],
+  president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting', 'objectifs'],
+  vice_president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting', 'objectifs'],
   secretaire_tresorier: ['dashboard', 'membres', 'invites', 'reporting'],
   lecture: ['dashboard', 'membres'],
 }
