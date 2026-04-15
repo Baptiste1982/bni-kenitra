@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois, recalculateScores } from '../lib/bniService'
+import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois, recalculateScores, fetchScoresMK01 } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, Card, Spinner, fullName } from './ui'
+import MembreDetail from './MembreDetail'
 
 const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre', 'Inv.': 'invites', 'TàT': 'tat', 'MPB': 'mpb', 'UEG': 'ueg' }
 
@@ -26,7 +27,7 @@ function matchMembre(prenom, nom, membres) {
     || null
 }
 
-export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
+export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [rawText, setRawText] = useState('')
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
   const [nbReunions, setNbReunions] = useState(1)
@@ -40,6 +41,8 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const [result, setResult] = useState(null)
   const [monthData, setMonthData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [scoresMap, setScoresMap] = useState({})
+  const [selectedMembre, setSelectedMembre] = useState(null)
   const [showPalmsInit, setShowPalmsInit] = useState(false)
   const [palmsInitLoading, setPalmsInitLoading] = useState(false)
   const [palmsInitResult, setPalmsInitResult] = useState(null)
@@ -96,8 +99,14 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
 
   const loadMonth = async () => {
     setLoading(true)
-    const data = await fetchPalmsHebdoMois(mois, annee, groupeCode)
+    const [data, scores] = await Promise.all([
+      fetchPalmsHebdoMois(mois, annee, groupeCode),
+      fetchScoresMK01(groupeCode).catch(() => []),
+    ])
     setMonthData(data)
+    const sMap = {}
+    ;(scores || []).forEach(s => { if (s.membre_id) sMap[s.membre_id] = s })
+    setScoresMap(sMap)
     setLoading(false)
   }
 
@@ -402,11 +411,18 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
         return acc
       }, {})))
     : 0
+  // Découpage consolidé (import PALMS, vert) vs provisoire (saisies hebdo, orange)
+  const datesConsolidees = new Set(memberRows.filter(r => !r.is_provisoire).map(r => r.date_reunion))
+  const datesProvisoires = new Set(memberRows.filter(r => r.is_provisoire).map(r => r.date_reunion))
+  const reunionsConsolidees = datesConsolidees.size
+  const reunionsProvisoires = datesProvisoires.size
 
   memberRows.forEach(r => {
     const key = r.membre_id
     if (!membresMap[key]) {
       membresMap[key] = {
+        id: r.membre_id,
+        membre: r.membres || null,
         prenom: r.membres?.prenom || '?', nom: r.membres?.nom || '?',
         cumul: { tat: 0, refs: 0, invites: 0, mpb: 0, ueg: 0, presences: 0, absences: 0 },
         derniere: { tat: 0, refs: 0, invites: 0, mpb: 0, ueg: 0 },
@@ -450,6 +466,8 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
   const th = { padding: '8px 10px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', whiteSpace: 'nowrap' }
   const td = { padding: '8px 10px', fontSize: 12, textAlign: 'center', borderBottom: '1px solid #F3F2EF' }
   const tdName = { ...td, textAlign: 'left', fontWeight: 500, color: '#1C1C2E' }
+  // Séparateur vertical entre groupes de colonnes
+  const sep = { borderLeft: '2px solid #E5E7EB' }
 
   return (
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
@@ -863,7 +881,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
           <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{totalReunionsSaisies}/{nbJeudis} réunions</span>
           <div style={{ display:'flex', gap:3 }}>
             {Array.from({length:nbJeudis}).map((_,i) => (
-              <div key={i} style={{ width:8, height:8, borderRadius:'50%', background: i < totalReunionsSaisies ? '#059669' : 'rgba(255,255,255,0.2)' }} />
+              <div key={i} style={{ width:8, height:8, borderRadius:'50%', background: i < reunionsConsolidees ? '#059669' : i < reunionsConsolidees + reunionsProvisoires ? '#F59E0B' : 'rgba(255,255,255,0.2)' }} />
             ))}
           </div>
         </div>
@@ -885,25 +903,25 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               <thead>
                 <tr style={{ borderBottom: '2px solid #E8E6E1' }}>
                   <th style={{ ...th, textAlign: 'left', minWidth: 140 }}>Membre</th>
-                  <th style={{ ...th, background: '#F7F6F3' }}>Prés.</th>
-                  <th style={th} colSpan={3}>Tête-à-tête</th>
-                  <th style={th} colSpan={3}>Recommandations données</th>
-                  <th style={th}>Visiteurs</th>
-                  <th style={th}>TYFCB</th>
-                  <th style={th}>CEU</th>
+                  <th style={{ ...th, ...sep, background: '#F7F6F3' }}>Prés.</th>
+                  <th style={{ ...th, ...sep }} colSpan={3}>Tête-à-tête</th>
+                  <th style={{ ...th, ...sep }} colSpan={3}>Recommandations données</th>
+                  <th style={{ ...th, ...sep }}>Visiteurs</th>
+                  <th style={{ ...th, ...sep }}>TYFCB</th>
+                  <th style={{ ...th, ...sep }}>CEU</th>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #E8E6E1' }}>
                   <th style={th}></th>
-                  <th style={{ ...th, background: '#F7F6F3', fontSize: 9 }}>mois</th>
-                  <th style={{ ...th, fontSize: 9 }}>mois</th>
-                  <th style={{ ...th, fontSize: 9, color: '#C41E3A' }}>sem.</th>
-                  <th style={{ ...th, fontSize: 9, color: '#DC2626' }}>manque</th>
-                  <th style={{ ...th, fontSize: 9 }}>mois</th>
-                  <th style={{ ...th, fontSize: 9, color: '#C41E3A' }}>sem.</th>
-                  <th style={{ ...th, fontSize: 9, color: '#DC2626' }}>manque</th>
-                  <th style={{ ...th, fontSize: 9 }}>mois</th>
-                  <th style={{ ...th, fontSize: 9 }}>mois</th>
-                  <th style={{ ...th, fontSize: 9 }}>mois</th>
+                  <th style={{ ...th, ...sep, background: '#F7F6F3', fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                  <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>
+                  <th style={{ ...th, fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
+                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                  <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>
+                  <th style={{ ...th, fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
+                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
                 </tr>
               </thead>
               <tbody>
@@ -924,19 +942,25 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                   // Couleur Reco
                   const refsBg = mRefs === 0 ? '#D1FAE5' : mRefs <= 2 ? '#FEF9C3' : '#FEE2E2'
                   const refsCol = mRefs === 0 ? '#065F46' : mRefs <= 2 ? '#854D0E' : '#991B1B'
+                  const score = scoresMap[m.id]
+                  const canOpen = !!score
                   return (
-                    <tr key={i} style={{ background: rowBg }} onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                    <tr key={i}
+                      style={{ background: rowBg, cursor: canOpen ? 'pointer' : 'default' }}
+                      onClick={() => { if (canOpen) setSelectedMembre(score) }}
+                      onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
+                      onMouseLeave={e => e.currentTarget.style.opacity='1'}>
                       <td style={{ ...tdName, color: nameCol, fontWeight: 600 }}>{fullName(m.prenom, m.nom)}</td>
-                      <td style={{ ...td, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>{m.cumul.tat}</td>
+                      <td style={{ ...td, ...sep, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>
+                      <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.tat}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>
                       <td style={{ ...td, fontWeight: 700, background: tatBg, color: tatCol }}>{mTat === 0 ? '✓' : mTat}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>{m.cumul.refs}</td>
+                      <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.refs}</td>
                       <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>
                       <td style={{ ...td, fontWeight: 700, background: refsBg, color: refsCol }}>{mRefs === 0 ? '✓' : mRefs}</td>
-                      <td style={td}>{m.cumul.invites}</td>
-                      <td style={{ ...td, fontWeight: 600, color: m.cumul.mpb > 0 ? '#065F46' : '#9CA3AF' }}>{Number(m.cumul.mpb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                      <td style={td}>{m.cumul.ueg}</td>
+                      <td style={{ ...td, ...sep }}>{m.cumul.invites}</td>
+                      <td style={{ ...td, ...sep, fontWeight: 600, color: m.cumul.mpb > 0 ? '#065F46' : '#9CA3AF' }}>{Number(m.cumul.mpb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                      <td style={{ ...td, ...sep }}>{m.cumul.ueg}</td>
                     </tr>
                   )
                 })}
@@ -946,22 +970,32 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
                 <tfoot>
                   <tr style={{ borderTop: '2px solid #E8E6E1', background: '#F7F6F3' }}>
                     <td style={{ ...tdName, fontStyle: 'italic', color: '#6B7280' }}>Contribution BNI externe</td>
-                    <td style={{ ...td, background: '#F0EFEC' }}>—</td>
-                    <td style={td}>{bniCumul.tat}</td>
+                    <td style={{ ...td, ...sep, background: '#F0EFEC' }}>—</td>
+                    <td style={{ ...td, ...sep }}>{bniCumul.tat}</td>
                     <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.tat}</td>
                     <td style={td}>—</td>
-                    <td style={td}>{bniCumul.refs}</td>
+                    <td style={{ ...td, ...sep }}>{bniCumul.refs}</td>
                     <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.refs}</td>
                     <td style={td}>—</td>
-                    <td style={td}>{bniCumul.invites}</td>
-                    <td style={td}>{Number(bniCumul.mpb).toLocaleString('fr-FR')}</td>
-                    <td style={td}>{bniCumul.ueg}</td>
+                    <td style={{ ...td, ...sep }}>{bniCumul.invites}</td>
+                    <td style={{ ...td, ...sep }}>{Number(bniCumul.mpb).toLocaleString('fr-FR')}</td>
+                    <td style={{ ...td, ...sep }}>{bniCumul.ueg}</td>
                   </tr>
                 </tfoot>
               )}
             </table>
           </div>
         </TableWrap>
+      )}
+
+      {/* Modale détail membre (partagée avec Membres) */}
+      {selectedMembre && (
+        <MembreDetail
+          membre={selectedMembre.membres || {}}
+          score={selectedMembre}
+          profil={profil}
+          onClose={() => setSelectedMembre(null)}
+        />
       )}
     </div>
   )

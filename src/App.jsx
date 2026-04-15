@@ -210,7 +210,7 @@ export default function App() {
     alertes:   <Alertes />,
     dashboard: <Dashboard onNavigate={navigate} profil={profil} groupeCode={groupeCode} />,
     membres:   <Membres profil={profil} groupeCode={groupeCode} />,
-    hebdo:     <SuiviHebdo groupeCode={groupeCode} />,
+    hebdo:     <SuiviHebdo profil={profil} groupeCode={groupeCode} />,
     invites:   <Invites profil={profil} groupeCode={groupeCode} />,
     region:    <Region />,
     groupes:   <Groupes />,
