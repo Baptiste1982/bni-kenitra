@@ -12,6 +12,23 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
   const [expandedKpi, setExpandedKpi] = useState(null)
   const [hebdoData, setHebdoData] = useState([])
   const [hebdoLoaded, setHebdoLoaded] = useState(false)
+  // Ordre des cartes profil — personnalisable par drag & drop, persisté en localStorage
+  const DEFAULT_CARD_ORDER = ['societe','secteur','statut','renouv','rang','tyfcb']
+  const [cardOrder, setCardOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('membre-profil-card-order')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Valider : mêmes clés, même longueur
+        if (Array.isArray(parsed) && parsed.length === DEFAULT_CARD_ORDER.length && DEFAULT_CARD_ORDER.every(k => parsed.includes(k))) {
+          return parsed
+        }
+      }
+    } catch {}
+    return DEFAULT_CARD_ORDER
+  })
+  const [dragKey, setDragKey] = useState(null)
+  const [dragOverKey, setDragOverKey] = useState(null)
 
   const m = membre
   const s = score || {}
@@ -187,14 +204,59 @@ CONSIGNES:
 
           {tab === 'profil' && (
             <div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
-                {[['Société', m.societe||'—'],["Secteur", m.secteur_activite||'—'],['Statut', m.statut||'actif'],['Renouvellement', renouv?.toLocaleDateString('fr-FR')||'—'],['Rang classement', s.rank?`#${s.rank}`:'—'],['TYFCB généré', s.tyfcb?Number(s.tyfcb).toLocaleString('fr-FR')+' MAD':'—']].map(([label, value]) => (
-                  <div key={label} style={{ background:'#fff', borderRadius:8, padding:'12px 14px', border:'1px solid #E8E6E1' }}>
-                    <div style={{ fontSize:10, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3 }}>{label}</div>
-                    <div style={{ fontSize:14, fontWeight:600 }}>{value}</div>
+              {(() => {
+                const CARDS = {
+                  societe:  ['Société', m.societe||'—'],
+                  secteur:  ['Secteur', m.secteur_activite||'—'],
+                  statut:   ['Statut', m.statut||'actif'],
+                  renouv:   ['Renouvellement', renouv?.toLocaleDateString('fr-FR')||'—'],
+                  rang:     ['Rang classement', s.rank?`#${s.rank}`:'—'],
+                  tyfcb:    ['TYFCB généré', s.tyfcb?Number(s.tyfcb).toLocaleString('fr-FR')+' MAD':'—'],
+                }
+                const handleDrop = (targetKey) => {
+                  if (!dragKey || dragKey === targetKey) { setDragKey(null); setDragOverKey(null); return }
+                  const next = [...cardOrder]
+                  const from = next.indexOf(dragKey)
+                  const to = next.indexOf(targetKey)
+                  if (from < 0 || to < 0) return
+                  next.splice(from, 1)
+                  next.splice(to, 0, dragKey)
+                  setCardOrder(next)
+                  try { localStorage.setItem('membre-profil-card-order', JSON.stringify(next)) } catch {}
+                  setDragKey(null); setDragOverKey(null)
+                }
+                return (
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
+                    {cardOrder.map(key => {
+                      const [label, value] = CARDS[key]
+                      const isDragging = dragKey === key
+                      const isOver = dragOverKey === key && dragKey !== key
+                      return (
+                        <div key={key}
+                          draggable
+                          onDragStart={e => { setDragKey(key); e.dataTransfer.effectAllowed = 'move' }}
+                          onDragEnter={e => { e.preventDefault(); if (dragKey && dragKey !== key) setDragOverKey(key) }}
+                          onDragOver={e => e.preventDefault()}
+                          onDragLeave={() => setDragOverKey(prev => prev === key ? null : prev)}
+                          onDrop={e => { e.preventDefault(); handleDrop(key) }}
+                          onDragEnd={() => { setDragKey(null); setDragOverKey(null) }}
+                          style={{
+                            background:'#fff', borderRadius:8, padding:'12px 14px',
+                            border: isOver ? '1px dashed #C41E3A' : '1px solid #E8E6E1',
+                            cursor:'grab',
+                            opacity: isDragging ? 0.4 : 1,
+                            transform: isOver ? 'scale(1.02)' : 'scale(1)',
+                            transition: 'transform 0.12s, border-color 0.12s, opacity 0.12s',
+                            userSelect:'none'
+                          }}>
+                          <div style={{ fontSize:10, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3 }}>{label}</div>
+                          <div style={{ fontSize:14, fontWeight:600 }}>{value}</div>
+                        </div>
+                      )
+                    })}
                   </div>
-                ))}
-              </div>
+                )
+              })()}
               {isUrgent && (
                 <div style={{ padding:14, borderRadius:10, background:'#FEF2F2', border:'1px solid #FEE2E2', marginBottom:16 }}>
                   <div style={{ fontSize:13, fontWeight:600, color:'#DC2626' }}>⚠️ Renouvellement dans {daysToRenew} jours</div>

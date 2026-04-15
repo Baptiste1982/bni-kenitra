@@ -226,7 +226,7 @@ export default function App() {
   const NAV = ALL_MODULES.filter(m => userModules.includes(m.id))
 
   const Sidebar = () => (
-    <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%' }}>
+    <aside style={{ width:220, background:'#1C1C2E', display:'flex', flexDirection:'column', flexShrink:0, height:'100%', overflowY:'auto', overflowX:'hidden' }}>
       {/* Logo BNI */}
       <div style={{ padding:'16px', paddingTop: window.innerWidth <= 768 ? 56 : 16, borderBottom:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', alignItems:'center' }}>
         <img src="/logo-bni-kenitra.png" alt="BNI Kénitra" loading="eager" fetchPriority="high" style={{ width:'80%', maxWidth:160, borderRadius:'50%', objectFit:'cover', boxShadow:'0 4px 16px rgba(196,30,58,0.3)', marginBottom:10 }} />

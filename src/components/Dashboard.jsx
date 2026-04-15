@@ -133,8 +133,8 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
           {isAdmin && <button onClick={() => { setEditGreetingText(greeting); setEditGreetingSub(greetingSub); setEditGreetingLogo(greetingLogo); setEditGreeting(!editGreeting) }}
             style={{ background:'none', border:'1px solid #E8E6E1', borderRadius:8, padding:'5px 8px', cursor:'pointer', fontSize:12, color:'#6B7280' }} title="Personnaliser">✏️</button>}
           <div style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:10, padding:'10px 16px', textAlign:'right' }}>
-            <div style={{ fontSize:11, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>Lancé le</div>
-            <div style={{ fontSize:13, fontWeight:600 }}>12 déc 2025</div>
+            <div style={{ fontSize:9, fontWeight:600, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.08em' }}>Lancé le</div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>12 déc 2025</div>
           </div>
         </div>
       </div>
