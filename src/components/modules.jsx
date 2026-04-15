@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchObjectifs, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet, buildDynamicSystemPrompt } from '../lib/bniService'
+import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchObjectifs, fetchPalmsHebdoMois, fetchMonthlySnapshots, syncSheetToSupabase, writeInviteToSheet, buildDynamicSystemPrompt, fetchPostulants } from '../lib/bniService'
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, StatCard, Card, fullName, cap } from './ui'
+import PostulantsImport from './PostulantsImport'
+import PostulantDetail from './PostulantDetail'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
 export function Invites({ profil, groupeCode = 'MK-01' }) {
@@ -687,62 +689,319 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
 }
 
 // ─── GROUPES ─────────────────────────────────────────────────────────────────
-export function Groupes() {
-  const [kpis, setKpis] = useState(null)
-  useEffect(() => { fetchDashboardKPIs().then(setKpis) }, [])
+export function Groupes({ groupes = [], groupeCode, onSwitchGroupe }) {
+  const [dataByGroupe, setDataByGroupe] = useState({})  // { code: { kpis, scores, hebdo, prevSnapshot } }
+  const [postulantsByGroupe, setPostulantsByGroupe] = useState({}) // { code: [postulants] }
+  const [loading, setLoading] = useState(true)
+  const [importFor, setImportFor] = useState(null) // groupe_code cible pour l'import
+  const [selected, setSelected] = useState(null) // postulant sélectionné
 
-  const tyfcb = kpis?.tyfcb || 0
+  const now = new Date()
+  const mois = now.getMonth() + 1, annee = now.getFullYear()
+  const prevMois = mois === 1 ? 12 : mois - 1
+  const prevAnnee = mois === 1 ? annee - 1 : annee
+
+  const actifs = groupes.filter(g => g.statut === 'actif')
+  const prepa = groupes.filter(g => g.statut !== 'actif')
+
+  useEffect(() => {
+    if (!actifs.length) { setLoading(false); return }
+    setLoading(true)
+    Promise.all(actifs.map(async g => {
+      const [kpis, scores, hebdo, prevSnapshot] = await Promise.all([
+        fetchDashboardKPIs(g.code).catch(() => null),
+        fetchScoresMK01(g.code).catch(() => []),
+        fetchPalmsHebdoMois(mois, annee, g.code).catch(() => []),
+        fetchMonthlySnapshots(prevMois, prevAnnee, g.code).catch(() => []),
+      ])
+      return [g.code, { kpis, scores, hebdo, prevSnapshot }]
+    })).then(entries => {
+      const map = {}
+      entries.forEach(([code, data]) => { map[code] = data })
+      setDataByGroupe(map)
+      setLoading(false)
+    })
+  }, [groupes.map(g => g.code).join(',')])
+
+  // Charger postulants pour tous les groupes
+  const loadPostulants = () => {
+    if (!groupes.length) return
+    fetchPostulants().then(rows => {
+      const map = {}
+      groupes.forEach(g => { map[g.code] = [] })
+      ;(rows || []).forEach(r => {
+        if (!map[r.groupe_code]) map[r.groupe_code] = []
+        map[r.groupe_code].push(r)
+      })
+      setPostulantsByGroupe(map)
+    }).catch(() => {})
+  }
+  useEffect(loadPostulants, [groupes.map(g => g.code).join(',')])
+
+  const mob = window.innerWidth <= 768
+
+  // Calculs par groupe
+  const computeGroupeMetrics = (g) => {
+    const d = dataByGroupe[g.code]
+    if (!d) return null
+    const { kpis, scores, hebdo, prevSnapshot } = d
+    const tyfcb = kpis?.tyfcb || 0
+
+    // Distribution feux
+    const feux = { vert:0, orange:0, rouge:0, gris:0 }
+    scores.forEach(s => { feux[s.traffic_light || 'gris'] = (feux[s.traffic_light || 'gris'] || 0) + 1 })
+
+    // Hebdo agrégé par membre (pour détecter absents répétés)
+    const hMap = {}
+    hebdo.filter(r => r.membre_id).forEach(r => {
+      if (!hMap[r.membre_id]) hMap[r.membre_id] = { tat:0, presences:0, absences:0 }
+      const m = hMap[r.membre_id]
+      m.tat += r.tat || 0
+      if (r.palms === 'P') m.presences += r.nb_reunions || 1
+      else m.absences += r.nb_reunions || 1
+    })
+    const absentsRepetes = Object.values(hMap).filter(m => m.absences >= 2).length
+    const sansTat = scores.filter(s => {
+      const h = hMap[s.membre_id]
+      return !h || h.tat === 0
+    }).length
+
+    // TYFCB évolution vs N-1 (snapshot du mois précédent)
+    const prevTyfcb = prevSnapshot.reduce((s, r) => s + (Number(r.tyfcb_6mois) || 0), 0)
+    const tyfcbDelta = prevTyfcb > 0 ? Math.round((tyfcb - prevTyfcb) / prevTyfcb * 100) : null
+
+    return { kpis, scores, feux, tyfcb, tyfcbDelta, absentsRepetes, sansTat, membresRouges: feux.rouge }
+  }
+
+  const badge = (statut) => {
+    if (statut === 'actif') return { bg:'#D1FAE5', color:'#065F46', label:'Actif' }
+    if (statut === 'preparation' || statut === 'en_preparation') return { bg:'#FEF3C7', color:'#92400E', label:'En préparation' }
+    return { bg:'#F3F4F6', color:'#4B5563', label: statut || '—' }
+  }
+
+  const FeuxBar = ({ feux }) => {
+    const total = (feux.vert || 0) + (feux.orange || 0) + (feux.rouge || 0) + (feux.gris || 0)
+    if (!total) return <div style={{ fontSize:11, color:'#9CA3AF' }}>—</div>
+    const segs = [
+      { c:'#10B981', n:feux.vert || 0, lbl:'Vert' },
+      { c:'#F59E0B', n:feux.orange || 0, lbl:'Orange' },
+      { c:'#EF4444', n:feux.rouge || 0, lbl:'Rouge' },
+      { c:'#9CA3AF', n:feux.gris || 0, lbl:'Gris' },
+    ]
+    return (
+      <div>
+        <div style={{ display:'flex', height:10, borderRadius:5, overflow:'hidden', background:'#F3F2EF' }}>
+          {segs.map(s => s.n > 0 && (
+            <div key={s.lbl} style={{ width:`${s.n/total*100}%`, background:s.c }} title={`${s.lbl} : ${s.n}`} />
+          ))}
+        </div>
+        <div style={{ display:'flex', gap:10, marginTop:6, fontSize:11, color:'#6B7280' }}>
+          {segs.map(s => (
+            <span key={s.lbl} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+              <span style={{ width:8, height:8, borderRadius:'50%', background:s.c }} />
+              <span style={{ fontWeight:600, color:'#111827' }}>{s.n}</span>
+              <span>{s.lbl}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const ActiveCard = ({ g }) => {
+    const m = computeGroupeMetrics(g)
+    const isCurrent = g.code === groupeCode
+    const b = badge(g.statut)
+    return (
+      <div style={{
+        background:'#fff', borderRadius:14, padding: mob ? 16 : 24, border:'1px solid #E8E6E1',
+        borderLeft: `4px solid ${isCurrent ? '#C41E3A' : '#10B981'}`, marginBottom:16,
+        boxShadow: isCurrent ? '0 4px 16px rgba(196,30,58,0.08)' : 'none'
+      }}>
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+          <div>
+            <div style={{ fontFamily:'DM Sans, sans-serif', fontSize: mob ? 22 : 28, fontWeight:700, color:'#C41E3A' }}>{g.code}</div>
+            <div style={{ fontSize: mob ? 15 : 18, fontWeight:600, marginTop:2 }}>{g.nom || '—'}</div>
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+            <span style={{ fontSize:12, fontWeight:500, padding:'4px 10px', borderRadius:12, background:b.bg, color:b.color }}>{b.label}</span>
+            {!isCurrent && onSwitchGroupe && (
+              <button onClick={() => onSwitchGroupe(g.code)} style={{
+                fontSize:12, fontWeight:600, padding:'6px 12px', borderRadius:8,
+                background:'#1C1C2E', color:'#fff', border:'none', cursor:'pointer'
+              }}>Passer sur ce groupe</button>
+            )}
+            {isCurrent && <span style={{ fontSize:11, fontWeight:600, color:'#C41E3A', textTransform:'uppercase', letterSpacing:'0.05em' }}>Groupe actif</span>}
+          </div>
+        </div>
+
+        {!m ? (
+          <div style={{ padding:20, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Chargement…</div>
+        ) : (
+          <>
+            {/* KPIs */}
+            <div style={{ display:'grid', gridTemplateColumns: mob ? 'repeat(2,1fr)' : 'repeat(5,1fr)', gap: mob ? 8 : 12, marginTop: mob ? 14 : 20 }}>
+              {[
+                [m.kpis?.membresActifs ?? '—', 'Membres actifs'],
+                [m.kpis ? `${m.kpis.pRate}%` : '—', 'Présence'],
+                [m.kpis?.invitesTotal ?? '—', 'Invités reçus'],
+                [m.kpis?.invitesConvertis ?? '—', 'Convertis'],
+                [`${(m.tyfcb/1000).toFixed(0)}K MAD`, 'TYFCB 6 mois'],
+              ].map(([v, l]) => (
+                <div key={l} style={{ background:'#F7F6F3', borderRadius:8, padding: mob ? 10 : 12 }}>
+                  <div style={{ fontSize: mob ? 15 : 18, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{v}</div>
+                  <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Distribution feux */}
+            <div style={{ marginTop:18 }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>Distribution des feux</div>
+              <FeuxBar feux={m.feux} />
+            </div>
+
+            {/* Indicateurs critiques */}
+            <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(3,1fr)', gap:10, marginTop:18 }}>
+              <div style={{ background: m.membresRouges > 0 ? '#FEE2E2' : '#F7F6F3', borderRadius:8, padding:'10px 12px' }}>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:2 }}>Membres en alerte rouge</div>
+                <div style={{ fontSize:18, fontWeight:700, color: m.membresRouges > 0 ? '#991B1B' : '#111827' }}>{m.membresRouges}</div>
+              </div>
+              <div style={{ background: m.absentsRepetes > 0 ? '#FEF3C7' : '#F7F6F3', borderRadius:8, padding:'10px 12px' }}>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:2 }}>Absents répétés ({'≥'}2)</div>
+                <div style={{ fontSize:18, fontWeight:700, color: m.absentsRepetes > 0 ? '#92400E' : '#111827' }}>{m.absentsRepetes}</div>
+              </div>
+              <div style={{ background:'#F7F6F3', borderRadius:8, padding:'10px 12px' }}>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:2 }}>Évolution TYFCB vs M-1</div>
+                <div style={{ fontSize:18, fontWeight:700, color: m.tyfcbDelta == null ? '#9CA3AF' : m.tyfcbDelta >= 0 ? '#065F46' : '#991B1B' }}>
+                  {m.tyfcbDelta == null ? '—' : `${m.tyfcbDelta >= 0 ? '+' : ''}${m.tyfcbDelta}%`}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Kanban colonnes
+  const KANBAN = [
+    { v:'contacte',     l:'Contacté',     c:'#3730A3', bg:'#E0E7FF' },
+    { v:'rdv_planifie', l:'RDV',          c:'#92400E', bg:'#FEF3C7' },
+    { v:'visiteur',     l:'Visiteur',     c:'#6B21A8', bg:'#E9D5FF' },
+    { v:'inscrit',      l:'Inscrit',      c:'#065F46', bg:'#D1FAE5' },
+    { v:'refuse',       l:'Refusé',       c:'#991B1B', bg:'#FEE2E2' },
+  ]
+
+  const PostulantCard = ({ p }) => (
+    <div
+      onClick={() => setSelected(p)}
+      style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:8, padding:'10px 12px', cursor:'pointer', transition:'0.12s', boxShadow:'0 1px 2px rgba(0,0,0,0.03)' }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.03)'; e.currentTarget.style.transform = 'none' }}>
+      <div style={{ fontSize:13, fontWeight:600, color:'#111827' }}>{p.prenom} {p.nom}</div>
+      {p.profession && <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{p.profession}</div>}
+      {p.parrain_nom && <div style={{ fontSize:10, color:'#9CA3AF', marginTop:4, fontStyle:'italic' }}>via {p.parrain_nom}</div>}
+    </div>
+  )
+
+  const Pipeline = ({ groupeCode: gc }) => {
+    const list = postulantsByGroupe[gc] || []
+    return (
+      <div style={{ marginTop:14 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, flexWrap:'wrap', gap:8 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+            Pipeline postulants · {list.length} au total
+          </div>
+          <button onClick={() => setImportFor(gc)} style={{ padding:'7px 14px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+            + Importer postulation
+          </button>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(5, 1fr)', gap:10 }}>
+          {KANBAN.map(col => {
+            const items = list.filter(p => p.statut === col.v)
+            return (
+              <div key={col.v} style={{ background:'#F7F6F3', borderRadius:10, padding:10, minHeight:140 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8, padding:'2px 4px' }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:col.c, textTransform:'uppercase', letterSpacing:'0.05em' }}>{col.l}</span>
+                  <span style={{ fontSize:11, fontWeight:700, background:col.bg, color:col.c, padding:'2px 8px', borderRadius:10 }}>{items.length}</span>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {items.length === 0 ? (
+                    <div style={{ fontSize:11, color:'#9CA3AF', padding:'8px 4px', textAlign:'center' }}>—</div>
+                  ) : items.map(p => <PostulantCard key={p.id} p={p} />)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const PrepaCard = ({ g }) => {
+    const b = badge(g.statut)
+    const list = postulantsByGroupe[g.code] || []
+    const countsByStatut = list.reduce((acc, p) => { acc[p.statut] = (acc[p.statut] || 0) + 1; return acc }, {})
+    return (
+      <div style={{ background:'#fff', borderRadius:14, padding: mob ? 16 : 24, border:'1px dashed #D1D5DB', borderLeft:'4px solid #9CA3AF', marginBottom:16 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+          <div>
+            <div style={{ fontFamily:'DM Sans, sans-serif', fontSize: mob ? 22 : 28, fontWeight:700, color:'#9CA3AF' }}>{g.code}</div>
+            <div style={{ fontSize: mob ? 15 : 18, fontWeight:600, marginTop:2 }}>{g.nom || '—'}</div>
+            <div style={{ fontSize:12, color:'#6B7280', marginTop:6 }}>En cours de constitution</div>
+          </div>
+          <span style={{ fontSize:12, fontWeight:500, padding:'4px 10px', borderRadius:12, background:b.bg, color:b.color }}>{b.label}</span>
+        </div>
+        <div style={{ marginTop:14, padding:'10px 12px', background:'#F7F6F3', borderRadius:8, fontSize:12, color:'#4B5563', display:'flex', gap:14, flexWrap:'wrap' }}>
+          <span><strong style={{ color:'#111827' }}>{list.length}</strong> postulants</span>
+          <span><strong style={{ color:'#111827' }}>{countsByStatut.visiteur || 0}</strong> visiteurs</span>
+          <span><strong style={{ color:'#111827' }}>{countsByStatut.inscrit || 0}</strong> inscrits</span>
+        </div>
+        <Pipeline groupeCode={g.code} />
+      </div>
+    )
+  }
 
   return (
-    <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
-      <PageHeader title="Groupes" sub="Région Kénitra · 1 groupe actif · 1 en préparation" />
-      <div style={{ background:'#fff', borderRadius:14, padding:24, border:'1px solid #E8E6E1', borderLeft:'4px solid #C41E3A', marginBottom:16 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-          <div>
-            <div style={{ fontFamily:'DM Sans, sans-serif', fontSize:28, fontWeight:700, color:'#C41E3A' }}>MK-01</div>
-            <div style={{ fontSize:18, fontWeight:600, marginTop:2 }}>Kénitra Atlantique</div>
-            <div style={{ fontSize:13, color:'#6B7280', marginTop:4 }}>Lancé le 12 décembre 2025 · Région Kénitra</div>
-          </div>
-          <span style={{ fontSize:12, fontWeight:500, padding:'4px 10px', borderRadius:12, background:'#D1FAE5', color:'#065F46' }}>Actif</span>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, marginTop:20 }}>
-          {[[kpis?.membresActifs ?? '…','Membres actifs'],['83%','Objectif rempli'],[kpis?.invitesTotal ?? '…','Invités reçus'],[kpis?.invitesConvertis ?? '…','Convertis'],[(tyfcb/1000).toFixed(0)+'K MAD','TYFCB généré']].map(([v,l]) => (
-            <div key={l} style={{ background:'#F7F6F3', borderRadius:8, padding:12 }}>
-              <div style={{ fontSize:18, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{v}</div>
-              <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop:16 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#6B7280', marginBottom:6 }}>
-            <span>Progression objectif membres</span><span>{kpis?.membresActifs ?? '…'} / 30</span>
-          </div>
-          <div style={{ height:6, background:'#F3F2EF', borderRadius:3 }}>
-            <div style={{ height:6, width:`${Math.min(100,(kpis?.membresActifs||0)/30*100)}%`, background:'#C41E3A', borderRadius:3 }} />
+    <div style={{ padding: mob ? '16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
+      <PageHeader
+        title="Groupes"
+        sub={`Région Kénitra · ${actifs.length} actif${actifs.length > 1 ? 's' : ''} · ${prepa.length} en préparation`}
+      />
+      {loading && !Object.keys(dataByGroupe).length && (
+        <div style={{ padding:40, textAlign:'center', color:'#9CA3AF', fontSize:14 }}>Chargement des données des groupes…</div>
+      )}
+      {actifs.map(g => (
+        <div key={g.code}>
+          <ActiveCard g={g} />
+          <div style={{ marginTop:-8, marginBottom:20, padding: mob ? '0 4px' : '0 8px' }}>
+            <Pipeline groupeCode={g.code} />
           </div>
         </div>
-      </div>
-      <div style={{ background:'#fff', borderRadius:14, padding:24, border:'1px solid #E8E6E1', borderLeft:'4px solid #9CA3AF', opacity:0.85, marginBottom:16 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-          <div>
-            <div style={{ fontFamily:'DM Sans, sans-serif', fontSize:28, fontWeight:700, color:'#9CA3AF' }}>MK-02</div>
-            <div style={{ fontSize:18, fontWeight:600, marginTop:2 }}>Kénitra Impulse</div>
-            <div style={{ fontSize:13, color:'#6B7280', marginTop:4 }}>En cours de constitution · 2 postulants</div>
-          </div>
-          <span style={{ fontSize:12, fontWeight:500, padding:'4px 10px', borderRadius:12, background:'#F3F4F6', color:'#4B5563' }}>En préparation</span>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginTop:20 }}>
-          {[['2','Postulants'],['Achraf Nour','Fitness / Bien-être'],['Ilyasse Essafi','Dentiste']].map(([v,l]) => (
-            <div key={l} style={{ background:'#F7F6F3', borderRadius:8, padding:12 }}>
-              <div style={{ fontSize:15, fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>{v}</div>
-              <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ textAlign:'center', padding:20 }}>
-        <button style={{ padding:'12px 24px', background:'transparent', border:'2px dashed #E8E6E1', borderRadius:10, fontSize:13, color:'#9CA3AF', cursor:'pointer' }}>+ Ajouter un groupe</button>
-      </div>
+      ))}
+      {prepa.map(g => <PrepaCard key={g.code} g={g} />)}
+      {!groupes.length && !loading && (
+        <div style={{ padding:40, textAlign:'center', color:'#9CA3AF', fontSize:14 }}>Aucun groupe configuré.</div>
+      )}
+
+      {importFor && (
+        <PostulantsImport
+          groupes={groupes}
+          defaultGroupeCode={importFor}
+          onClose={() => setImportFor(null)}
+          onSaved={loadPostulants}
+        />
+      )}
+      {selected && (
+        <PostulantDetail
+          postulant={selected}
+          groupes={groupes}
+          onClose={() => setSelected(null)}
+          onUpdated={loadPostulants}
+        />
+      )}
     </div>
   )
 }

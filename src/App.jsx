@@ -215,7 +215,7 @@ export default function App() {
     hebdo:     <SuiviHebdo profil={profil} groupeCode={groupeCode} />,
     invites:   <Invites profil={profil} groupeCode={groupeCode} />,
     region:    <Region />,
-    groupes:   <Groupes />,
+    groupes:   <Groupes groupes={groupes} groupeCode={groupeCode} onSwitchGroupe={setGroupeCode} />,
     reporting: <Reporting groupeCode={groupeCode} />,
     objectifs: <Objectifs groupeCode={groupeCode} profil={profil} />,
     agent:     AGENT_IA_ROLES.includes(profil?.role) ? <AgentIA groupeCode={groupeCode} /> : <Dashboard onNavigate={navigate} profil={profil} groupeCode={groupeCode} />,

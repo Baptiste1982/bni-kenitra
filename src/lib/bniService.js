@@ -847,3 +847,73 @@ export async function fetchAllSnapshots(groupeCode = 'MK-01') {
   const seen = new Set()
   return (data||[]).filter(d => { const k=`${d.annee}-${d.mois}`; if(seen.has(k))return false; seen.add(k); return true })
 }
+
+// ─── POSTULANTS ────────────────────────────────────────────────────────────
+const sanitizeFileName = (s) => String(s || '').trim()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'sans_nom'
+
+export async function fetchPostulants(groupeCode) {
+  let q = supabase.from('postulants').select('*').is('archived_at', null).order('created_at', { ascending: false })
+  if (groupeCode) q = q.eq('groupe_code', groupeCode)
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
+export async function upsertPostulant(p) {
+  const payload = { ...p, updated_at: new Date().toISOString() }
+  if (p.id) {
+    const { data, error } = await supabase.from('postulants').update(payload).eq('id', p.id).select().single()
+    if (error) throw error
+    return data
+  }
+  const { data, error } = await supabase.from('postulants').insert(payload).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updatePostulantStatut(id, statut) {
+  const patch = { statut, updated_at: new Date().toISOString() }
+  if (statut === 'visiteur') patch.date_visite = new Date().toISOString().slice(0, 10)
+  const { data, error } = await supabase.from('postulants').update(patch).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function archivePostulant(id) {
+  const { error } = await supabase.from('postulants').update({ archived_at: new Date().toISOString() }).eq('id', id)
+  if (error) throw error
+}
+
+export async function uploadPostulantPDF(file, groupeCode, prenom, nom) {
+  if (!file) return null
+  const safe = `${sanitizeFileName(prenom)}_${sanitizeFileName(nom)}`
+  const stamp = Date.now()
+  const path = `${groupeCode}/${safe}_${stamp}.pdf`
+  const { error } = await supabase.storage.from('postulations').upload(path, file, {
+    contentType: 'application/pdf',
+    upsert: true,
+  })
+  if (error) throw error
+  const { data } = supabase.storage.from('postulations').getPublicUrl(path)
+  return data?.publicUrl || null
+}
+
+export async function convertPostulantToMembre(postulant, groupeId) {
+  // Crée un membre à partir d'un postulant et le marque statut='inscrit'
+  const { data: mem, error } = await supabase.from('membres').insert({
+    groupe_id: groupeId,
+    prenom: postulant.prenom,
+    nom: postulant.nom,
+    email: postulant.email || null,
+    telephone: postulant.phone || null,
+    societe: postulant.entreprise || null,
+    secteur_activite: postulant.profession || postulant.categorie || null,
+    statut: 'actif',
+    date_adhesion: new Date().toISOString().slice(0, 10),
+  }).select().single()
+  if (error) throw error
+  await supabase.from('postulants').update({ statut: 'inscrit', updated_at: new Date().toISOString() }).eq('id', postulant.id)
+  return mem
+}
