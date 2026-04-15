@@ -461,7 +461,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ display:'flex', gap:3 }}>{[0,1,2].map(i=><div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Initialisation</div>
             </div>
             {/* Bouton Archives Hebdo */}
@@ -469,7 +469,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ display:'flex', gap:3 }}>{[0,1,2].map(i=><div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Archives Hebdo</div>
             </div>
             {/* Bouton Insight */}
@@ -477,7 +477,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ display:'flex', gap:3 }}>{[0,1,2].map(i=><div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Insight</div>
             </div>
             {/* Bouton Saisie Provisoire */}
@@ -485,7 +485,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01' }) {
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ display:'flex', gap:3 }}>{[0,1,2].map(i=><div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Saisie Provisoire</div>
             </div>
           </div>
