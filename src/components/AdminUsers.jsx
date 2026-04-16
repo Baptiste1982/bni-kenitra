@@ -12,6 +12,7 @@ const ROLES = [
   { value: 'vice_president', label: 'Vice-Président', abbr: 'VP' },
   { value: 'secretaire_tresorier', label: 'Secrétaire Trésorier', abbr: 'ST' },
   { value: 'lecture', label: 'Lecture seule', abbr: 'L' },
+  { value: 'invite', label: 'Invité (visiteur)', abbr: 'INV' },
 ]
 
 const MODULES = [
@@ -36,6 +37,7 @@ const DEFAULT_ACCESS = {
   vice_president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting', 'objectifs'],
   secretaire_tresorier: ['dashboard', 'membres', 'invites', 'reporting'],
   lecture: ['dashboard', 'membres'],
+  invite: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting'],
 }
 
 const roleLabel = (role) => ROLES.find(r => r.value === role)?.label || role
@@ -49,6 +51,7 @@ const roleBadge = (role) => {
     vice_president: { bg: '#EDE9FE', color: '#5B21B6' },
     secretaire_tresorier: { bg: '#FEE2E2', color: '#991B1B' },
     lecture: { bg: '#F3F4F6', color: '#4B5563' },
+    invite: { bg: '#F0FDF4', color: '#166534' },
   }
   return colors[role] || colors.lecture
 }

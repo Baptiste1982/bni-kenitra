@@ -3,7 +3,7 @@ import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchObjectifs, fetc
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, StatCard, Card, AccordionPanel, fullName, cap } from './ui'
+import { PageHeader, SectionTitle, TableWrap, StatCard, Card, AccordionPanel, fullName, cap, canWrite, isReadOnly, ReadOnlyBanner } from './ui'
 import PostulantsImport from './PostulantsImport'
 import PostulantDetail from './PostulantDetail'
 import { formatMoroccanPhone } from '../lib/phone'
@@ -358,6 +358,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
 
   return (
     <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
+      <ReadOnlyBanner profil={profil} />
       <PageHeader title="Pipeline Invités" sub={`${groupeCode} · ${invites.length} invités`}
         right={
           <div style={{ display:'flex', gap: isMobile ? 6 : 10, alignItems:'center', flexWrap:'wrap' }}>
@@ -806,9 +807,9 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                       </td>
                     </tr>
                   )}
-                  <tr style={{ borderBottom: isEdit ? 'none' : '1px solid rgba(0,0,0,0.05)', background: isEdit ? '#FFFBEB' : statStyle.bg, cursor:'pointer', boxShadow: isEdit ? 'inset 0 0 0 2px #C9A84C' : 'none' }}
-                    onClick={() => { if (isEdit) { setEditId(null) } else { setEditId(inv.id); setEditData({...inv}) } }}
-                    onMouseEnter={e=>{ if(!isEdit) e.currentTarget.style.opacity='0.85'}} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                  <tr style={{ borderBottom: isEdit ? 'none' : '1px solid rgba(0,0,0,0.05)', background: isEdit ? '#FFFBEB' : statStyle.bg, cursor: canWrite(profil) ? 'pointer' : 'default', boxShadow: isEdit ? 'inset 0 0 0 2px #C9A84C' : 'none' }}
+                    onClick={() => { if (!canWrite(profil)) return; if (isEdit) { setEditId(null) } else { setEditId(inv.id); setEditData({...inv}) } }}
+                    onMouseEnter={e=>{ if(!isEdit && canWrite(profil)) e.currentTarget.style.opacity='0.85'}} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color }}>{inv.date_visite ? new Date(inv.date_visite).toLocaleDateString('fr-FR') : '—'}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.prenom)}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.nom)}</td>

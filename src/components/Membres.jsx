@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01, recalculateScores } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
-import { TLBadge, TrendArrow, PageHeader, TableWrap, AccordionPanel, fullName } from './ui'
+import { TLBadge, TrendArrow, PageHeader, TableWrap, AccordionPanel, fullName, ReadOnlyBanner, canWrite, isReadOnly } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
 
@@ -240,6 +240,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
 
   return (
     <div style={{ padding: mob ? '16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
+      <ReadOnlyBanner profil={profil} />
       <style>{`
         tr.membre-row {
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),

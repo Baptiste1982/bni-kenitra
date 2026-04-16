@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois, recalculateScores, fetchScoresMK01 } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, Card, Spinner, AccordionPanel, fullName } from './ui'
+import { PageHeader, SectionTitle, TableWrap, Card, Spinner, AccordionPanel, fullName, ReadOnlyBanner, canWrite, isReadOnly } from './ui'
 import MembreDetail from './MembreDetail'
 
 // Mapping des entêtes PALMS → noms internes
@@ -672,9 +672,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
           border-bottom-right-radius: 24px;
         }
       `}</style>
+      <ReadOnlyBanner profil={profil} />
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
           <div ref={headerBtnsRef} style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
+            {/* Tous les boutons d'import sont masques en lecture seule */}
+            {canWrite(profil) && <>
             {/* Bouton Initialisation */}
             <div onClick={() => { setShowPalmsInit(!showPalmsInit); if(!showPalmsInit) { setShowImport(false); setShowArchives(false); setShowInsight(false) } }}
               style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
@@ -732,6 +735,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
             </div>
+            </>}
           </div>
         }
       />

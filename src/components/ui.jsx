@@ -2,6 +2,19 @@ import React, { useEffect, useRef, useState } from 'react'
 
 export const cap = (s) => s ? s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : ''
 
+// ─── ROLES LECTURE SEULE ─────────────────────────────────────────────
+// Roles qui n'ont PAS le droit de modifier, importer ou supprimer.
+// Ils peuvent uniquement consulter les donnees.
+export const READONLY_ROLES = ['lecture', 'invite']
+export const isReadOnly = (profil) => READONLY_ROLES.includes(profil?.role)
+export const canWrite = (profil) => !isReadOnly(profil)
+// Helper pour afficher un bandeau "Mode lecture seule" sur les composants concernes
+export const ReadOnlyBanner = ({ profil }) => isReadOnly(profil) ? (
+  <div style={{ background:'#F0FDF4', border:'1px solid #86EFAC', color:'#166534', padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:600, marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
+    👁 Mode lecture seule — les modifications et imports sont désactivés pour votre rôle.
+  </div>
+) : null
+
 // Accordion fluide : height mesurée + opacity + translateY pour un drop-down net
 // Easing Material Design standard, 450ms
 export const AccordionPanel = ({ open, children }) => {
