@@ -649,7 +649,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                       background-color 0.2s ease;
         }
         tr.suivi-row > td {
-          border-bottom: 1px solid #F3F2EF;
+          border-bottom: 1px solid rgba(0,0,0,0.08);
           transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         tr.suivi-row.clickable:hover {
