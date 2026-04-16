@@ -128,11 +128,12 @@ input, textarea, select { font-family: var(--font-body); }
   body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 }
 
-/* ── MODE SOMBRE LEGER ──────────────────────────────────── */
-/* Approche ciblee sans filter : on darken les surfaces blanches
-   et on eclaircit les textes sombres via des overrides CSS sur
-   les inline styles. Les couleurs BNI (rouge, vert, orange) et les
-   badges de statut restent tels quels pour preserver le sens. */
+/* ── MODE SOMBRE ────────────────────────────────────────── */
+/* Palette complete avec semantique conservee :
+   - Fond app : bleu-noir #0F0F1A
+   - Surfaces : #1A1A2E (primaire), #181826 (alt)
+   - Pastels (vert/jaune/rouge/bleu/violet) : teintes translucides
+     avec couleur du theme pour garder le sens, textes clarifies */
 
 html.dark-mode {
   background: #0F0F1A;
@@ -143,7 +144,7 @@ html.dark-mode body {
   color: #E8E8F0;
 }
 
-/* Surfaces blanches / tres claires -> sombres */
+/* ─── Surfaces neutres ─── */
 html.dark-mode [style*="background: rgb(255, 255, 255)"],
 html.dark-mode [style*="background:#fff"],
 html.dark-mode [style*="background: #fff"] {
@@ -152,49 +153,106 @@ html.dark-mode [style*="background: #fff"] {
 html.dark-mode [style*="background: rgb(247, 246, 243)"],
 html.dark-mode [style*="background: rgb(249, 248, 246)"],
 html.dark-mode [style*="background: rgb(243, 242, 239)"],
-html.dark-mode [style*="background: rgb(250, 250, 248)"] {
-  background-color: #181826 !important;
+html.dark-mode [style*="background: rgb(250, 250, 248)"],
+html.dark-mode [style*="background: rgb(240, 239, 236)"] {
+  background-color: #15152A !important;
 }
-/* Section titles / sous-ensembles avec fond tres clair F7F6F3 */
-html.dark-mode [style*="background:#F7F6F3"],
-html.dark-mode [style*="background: #F7F6F3"],
-html.dark-mode [style*="background:#F9F8F6"],
-html.dark-mode [style*="background: #F9F8F6"] {
-  background-color: #181826 !important;
+html.dark-mode [style*="background: rgb(243, 244, 246)"],
+html.dark-mode [style*="background: rgb(229, 231, 235)"] {
+  background-color: rgba(107, 114, 128, 0.15) !important;
 }
 
-/* Textes sombres par defaut -> clairs */
+/* ─── Pastels colores : VERT (traffic light vert, OK, objectif atteint) ─── */
+html.dark-mode [style*="background: rgb(209, 250, 229)"] {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+}
+html.dark-mode [style*="background: rgb(167, 243, 208)"] {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+html.dark-mode [style*="background: rgb(236, 253, 245)"] {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+html.dark-mode [style*="color: rgb(6, 95, 70)"] { color: #6EE7B7 !important; }
+html.dark-mode [style*="color: rgb(5, 150, 105)"] { color: #34D399 !important; }
+html.dark-mode [style*="border: 1px solid rgb(167, 243, 208)"],
+html.dark-mode [style*="border: 1px solid rgb(134, 239, 172)"] {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* ─── Pastels colores : JAUNE/ORANGE (warning, intermediaire) ─── */
+html.dark-mode [style*="background: rgb(254, 249, 195)"] {
+  background-color: rgba(217, 119, 6, 0.14) !important;
+}
+html.dark-mode [style*="background: rgb(253, 230, 138)"] {
+  background-color: rgba(217, 119, 6, 0.22) !important;
+}
+html.dark-mode [style*="background: rgb(254, 243, 199)"] {
+  background-color: rgba(217, 119, 6, 0.16) !important;
+}
+html.dark-mode [style*="background: rgb(255, 251, 235)"] {
+  background-color: rgba(217, 119, 6, 0.08) !important;
+}
+html.dark-mode [style*="color: rgb(133, 77, 14)"] { color: #FCD34D !important; }
+html.dark-mode [style*="color: rgb(146, 64, 14)"] { color: #FDBA74 !important; }
+html.dark-mode [style*="color: rgb(217, 119, 6)"] { color: #F59E0B !important; }
+html.dark-mode [style*="border: 1px solid rgb(253, 230, 138)"],
+html.dark-mode [style*="border: 1px solid rgb(245, 158, 11)"] {
+  border-color: rgba(217, 119, 6, 0.4) !important;
+}
+
+/* ─── Pastels colores : ROUGE (danger, alerte) ─── */
+html.dark-mode [style*="background: rgb(254, 226, 226)"] {
+  background-color: rgba(220, 38, 38, 0.14) !important;
+}
+html.dark-mode [style*="background: rgb(254, 202, 202)"] {
+  background-color: rgba(220, 38, 38, 0.2) !important;
+}
+html.dark-mode [style*="background: rgb(252, 165, 165)"] {
+  background-color: rgba(220, 38, 38, 0.28) !important;
+}
+html.dark-mode [style*="background: rgb(254, 242, 242)"] {
+  background-color: rgba(220, 38, 38, 0.08) !important;
+}
+html.dark-mode [style*="color: rgb(153, 27, 27)"] { color: #FCA5A5 !important; }
+html.dark-mode [style*="color: rgb(220, 38, 38)"] { color: #F87171 !important; }
+html.dark-mode [style*="border: 1px solid rgb(254, 202, 202)"],
+html.dark-mode [style*="border: 1px solid rgb(252, 165, 165)"] {
+  border-color: rgba(220, 38, 38, 0.4) !important;
+}
+
+/* ─── Pastels colores : BLEU (info) ─── */
+html.dark-mode [style*="background: rgb(219, 234, 254)"] {
+  background-color: rgba(59, 130, 246, 0.14) !important;
+}
+html.dark-mode [style*="background: rgb(224, 231, 255)"] {
+  background-color: rgba(99, 102, 241, 0.14) !important;
+}
+html.dark-mode [style*="color: rgb(30, 64, 175)"] { color: #93C5FD !important; }
+html.dark-mode [style*="color: rgb(55, 48, 163)"] { color: #A5B4FC !important; }
+
+/* ─── Pastels colores : VIOLET (selection, hover) ─── */
+html.dark-mode [style*="background: rgb(237, 233, 254)"] {
+  background-color: rgba(139, 92, 246, 0.16) !important;
+}
+html.dark-mode [style*="color: rgb(91, 33, 182)"] { color: #C4B5FD !important; }
+html.dark-mode [style*="color: rgb(124, 58, 237)"] { color: #A78BFA !important; }
+
+/* ─── Textes neutres ─── */
 html.dark-mode [style*="color: rgb(28, 28, 46)"],
-html.dark-mode [style*="color:#1C1C2E"],
-html.dark-mode [style*="color: #1C1C2E"] {
-  color: #E8E8F0 !important;
-}
-html.dark-mode [style*="color: rgb(107, 114, 128)"],
-html.dark-mode [style*="color:#6B7280"],
-html.dark-mode [style*="color: #6B7280"] {
-  color: #9CA3B5 !important;
-}
-html.dark-mode [style*="color: rgb(75, 85, 99)"] {
-  color: #9CA3B5 !important;
-}
-html.dark-mode [style*="color: rgb(156, 163, 175)"],
-html.dark-mode [style*="color:#9CA3AF"] {
-  color: #6B7280 !important;
-}
+html.dark-mode [style*="color:#1C1C2E"] { color: #E8E8F0 !important; }
+html.dark-mode [style*="color: rgb(75, 85, 99)"] { color: #A1A7B5 !important; }
+html.dark-mode [style*="color: rgb(107, 114, 128)"] { color: #9CA3B5 !important; }
+html.dark-mode [style*="color: rgb(156, 163, 175)"] { color: #6B7280 !important; }
 
-/* Bordures claires -> sombres */
+/* ─── Bordures neutres ─── */
 html.dark-mode [style*="border: 1px solid rgb(232, 230, 225)"],
-html.dark-mode [style*="border:1px solid #E8E6E1"],
-html.dark-mode [style*="border: 1px solid #E8E6E1"] {
-  border-color: #2A2A44 !important;
-}
-html.dark-mode [style*="border-bottom: 1px solid rgb(232, 230, 225)"],
-html.dark-mode [style*="borderBottom:'1px solid #E8E6E1"] {
-  border-bottom-color: #2A2A44 !important;
-}
+html.dark-mode [style*="border: 1px solid #E8E6E1"] { border-color: #2A2A44 !important; }
+html.dark-mode [style*="border-bottom: 1px solid rgb(232, 230, 225)"] { border-bottom-color: #2A2A44 !important; }
+html.dark-mode [style*="border-top: 1px solid rgb(232, 230, 225)"] { border-top-color: #2A2A44 !important; }
+html.dark-mode [style*="borderColor: rgb(232, 230, 225)"] { border-color: #2A2A44 !important; }
 
-/* Inputs / textarea / selects */
-html.dark-mode input:not([type="checkbox"]):not([type="radio"]),
+/* ─── Inputs / textarea / selects ─── */
+html.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 html.dark-mode textarea,
 html.dark-mode select {
   background-color: #1F1F36 !important;
@@ -202,24 +260,21 @@ html.dark-mode select {
   border-color: #2A2A44 !important;
 }
 
-/* Lignes de statut des invites : attenuer les fonds pastels pour qu'ils
-   s'integrent mieux en mode sombre tout en restant identifiables */
+/* ─── Lignes de statut des tables (statut colors des invites) ─── */
 html.dark-mode tr[style*="background: rgb(254, 249, 195)"],
 html.dark-mode tr[style*="background: rgb(253, 230, 138)"] {
-  background-color: rgba(254, 249, 195, 0.15) !important;
+  background-color: rgba(217, 119, 6, 0.08) !important;
 }
-html.dark-mode tr[style*="background: rgb(254, 226, 226)"],
-html.dark-mode tr[style*="background: rgb(252, 165, 165)"] {
-  background-color: rgba(254, 226, 226, 0.15) !important;
+html.dark-mode tr[style*="background: rgb(254, 226, 226)"] {
+  background-color: rgba(220, 38, 38, 0.08) !important;
 }
-html.dark-mode tr[style*="background: rgb(209, 250, 229)"],
-html.dark-mode tr[style*="background: rgb(167, 243, 208)"] {
-  background-color: rgba(209, 250, 229, 0.15) !important;
+html.dark-mode tr[style*="background: rgb(209, 250, 229)"] {
+  background-color: rgba(16, 185, 129, 0.08) !important;
 }
 html.dark-mode tr[style*="background: rgb(219, 234, 254)"] {
-  background-color: rgba(219, 234, 254, 0.15) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
 }
 
-/* Scrollbar adaptee */
-html.dark-mode ::-webkit-scrollbar-thumb { background: #4B5563; }
-html.dark-mode ::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+/* ─── Scrollbar adaptee ─── */
+html.dark-mode ::-webkit-scrollbar-thumb { background: #3A3A52; }
+html.dark-mode ::-webkit-scrollbar-thumb:hover { background: #5A5A72; }
