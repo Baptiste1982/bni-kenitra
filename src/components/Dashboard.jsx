@@ -254,7 +254,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
             const pctObjectif = Math.round((cumulActuel / objectifTyfcb) * 100)
             const atteint = cumulActuel >= objectifTyfcb
             return (
-              <TableWrap>
+              <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden' }}>
                 <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
                   <SectionTitle>💰 TYFCB cumulé vs objectif</SectionTitle>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11 }}>
@@ -302,12 +302,12 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
-              </TableWrap>
+              </div>
             )
           })()}
 
           {/* Activité : TàT + Recos */}
-          <TableWrap>
+          <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden' }}>
             <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
               <SectionTitle>📊 Activité hebdo</SectionTitle>
             </div>
@@ -324,7 +324,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </TableWrap>
+          </div>
         </div>
       )}
 
