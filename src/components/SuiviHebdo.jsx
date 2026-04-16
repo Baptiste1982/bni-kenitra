@@ -707,26 +707,27 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
             </div>
-            {/* Bouton Import CSV Hebdo — ouvre directement le file picker + ouvre le panneau */}
+            {/* Bouton Import Excel — ouvre directement le file picker .xls (consolidé) */}
             <div onClick={() => { setShowImport(true); setShowArchives(false); setShowPalmsInit(false); setShowInsight(false); setTimeout(() => hebdoFileRef.current?.click(), 0) }}
-              style={{ background:'#C41E3A', border:'1px solid #C41E3A', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(196,30,58,0.35)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              style={{ background:'#10B981', border:'1px solid #10B981', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(16,185,129,0.35)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
+              title="Importer un fichier Excel .xls du rapport PALMS (clôture la semaine en Consolidé)">
               <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
                 <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Import</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>📄 CSV Hebdo</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>📊 Excel</div>
               </div>
             </div>
-            {/* Bouton Saisie Provisoire */}
+            {/* Bouton Import Texte Provisoire */}
             <div onClick={() => { setShowImport(!showImport); if(!showImport) { setShowArchives(false); setShowPalmsInit(false); setShowInsight(false) } }}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              style={{ background:'#F59E0B', border:'1px solid #F59E0B', borderRadius:12, padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(245,158,11,0.35)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
+              title="Coller du texte / CSV (saisie provisoire remplaçable)">
               <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
-                <div style={{ fontSize:9, fontWeight:600, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.08em' }}>Saisie</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1C1C2E' }}>Coller texte</div>
+                <div style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,0.8)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Import</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>✏️ Texte provisoire</div>
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>{[0,1,2].map(i=><div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'#C41E3A' }} />)}</div>
             </div>
           </div>
         }
