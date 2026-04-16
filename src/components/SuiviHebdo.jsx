@@ -890,7 +890,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                     <div style={{ fontSize:13, fontWeight:700, color:'#1C1C2E', textTransform:'capitalize' }}>{month}</div>
                     <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'#EDE9FE', color:'#5B21B6' }}>{sortedDates.length} semaine{sortedDates.length > 1 ? 's' : ''}</div>
                   </div>
-                  <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
                     {sortedDates.map(d => {
                       const date = new Date(d + 'T12:00:00')
                       const isActive = archiveDetail === d
@@ -906,20 +906,21 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                           const { data } = await supabase.from('palms_hebdo').select('*, membres(prenom, nom)').eq('date_reunion', d).order('tat', { ascending:false })
                           setArchiveData(data || [])
                         }}
-                          style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : isProvisoire ? '#FFFBEB' : '#ECFDF5', border:`1px solid ${isActive ? '#8B5CF6' : isProvisoire ? '#F59E0B' : '#10B981'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
-                          onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                          <div style={{ width:8, height:8, borderRadius:'50%', background: isProvisoire ? '#F59E0B' : '#10B981' }} />
+                          style={{ padding:'14px 20px', borderRadius:12, background: isActive ? '#EDE9FE' : isProvisoire ? '#FFFBEB' : '#ECFDF5', border:`2px solid ${isActive ? '#8B5CF6' : isProvisoire ? '#F59E0B' : '#10B981'}`, display:'flex', alignItems:'center', gap:12, cursor:'pointer', transition:'all 0.15s', minWidth:240, boxShadow: isActive ? '0 4px 12px rgba(139,92,246,0.25)' : '0 1px 3px rgba(0,0,0,0.06)' }}
+                          onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,0.12)' }}
+                          onMouseLeave={e=>{ e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow= isActive ? '0 4px 12px rgba(139,92,246,0.25)' : '0 1px 3px rgba(0,0,0,0.06)' }}>
+                          <div style={{ width:12, height:12, borderRadius:'50%', background: isProvisoire ? '#F59E0B' : '#10B981', flexShrink:0, boxShadow: `0 0 0 3px ${isProvisoire ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)'}` }} />
                           <div style={{ flex:1 }}>
-                            <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E', display:'flex', alignItems:'center', gap:6 }}>
+                            <div style={{ fontSize:15, fontWeight:700, color: isActive ? '#5B21B6' : '#1C1C2E', display:'flex', alignItems:'center', gap:8 }}>
                               {isProvisoire ? (
                                 <>Importé le {displayDate.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}</>
                               ) : (
                                 date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
                               )}
                               {isProvisoire ? (
-                                <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#FEF3C7', color:'#92400E', fontWeight:700, textTransform:'uppercase' }}>Provisoire</span>
+                                <span style={{ fontSize:9, padding:'2px 7px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>Provisoire</span>
                               ) : (
-                                <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#D1FAE5', color:'#065F46', fontWeight:700, textTransform:'uppercase' }}>Consolidé</span>
+                                <span style={{ fontSize:9, padding:'2px 7px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>Consolidé</span>
                               )}
                             </div>
                             {(() => {
@@ -930,9 +931,9 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                               periodeDebut.setDate(periodeDebut.getDate() - nbJours)
                               const fmtShort = (dt) => dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
                               return (
-                                <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#6B7280', marginTop:2, lineHeight:1.4 }}>
-                                  <div style={{ fontWeight:600 }}>Du {fmtShort(periodeDebut)} au {fmtShort(periodeFin)} · {nbJours} jours</div>
-                                  <div style={{ color: isActive ? '#7C3AED' : '#9CA3AF', fontSize:9, marginTop:1 }}>{isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}</div>
+                                <div style={{ fontSize:12, color: isActive ? '#7C3AED' : '#6B7280', marginTop:6, lineHeight:1.5 }}>
+                                  <div style={{ fontWeight:600 }}>📅 Du {fmtShort(periodeDebut)} au {fmtShort(periodeFin)} · {nbJours} jours</div>
+                                  <div style={{ color: isActive ? '#7C3AED' : '#9CA3AF', fontSize:11, marginTop:2, fontWeight:500 }}>{isActive ? '▲ Cliquer pour fermer' : '▼ Cliquer pour voir le détail'}</div>
                                 </div>
                               )
                             })()}
@@ -945,7 +946,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                             if (archiveDetail === d) { setArchiveDetail(null); setArchiveData([]) }
                             loadMonth()
                           }}
-                            style={{ width:18, height:18, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'#DC2626', cursor:'pointer', flexShrink:0 }}
+                            style={{ width:26, height:26, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, color:'#DC2626', cursor:'pointer', flexShrink:0 }}
                             onMouseEnter={e => e.currentTarget.style.background='#FEE2E2'}
                             onMouseLeave={e => e.currentTarget.style.background='transparent'}
                             title="Supprimer cette saisie">✕</div>
