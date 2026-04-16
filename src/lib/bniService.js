@@ -62,12 +62,14 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const aujourdHui = new Date().toISOString().split('T')[0]
   const palmsImportDate = periodeFin || aujourdHui
 
-  // 3. Charger TOUT palms_hebdo après l'import PALMS (données compilées)
+  // 3. Charger TOUT palms_hebdo pour ce groupe (pas de filtre : on split apres)
+  // FIX BUG : avant on filtrait >palmsImportDate ce qui excluait aussi le hebdo
+  // du mois en cours quand palms_imports couvrait une semaine recente.
+  // Maintenant on split en 2 agregations avec des conditions differentes.
   const { data: hebdoData } = await supabase
     .from('palms_hebdo')
     .select('membre_id, palms, rdi, rde, rri, rre, invites, tat, mpb, ueg, nb_reunions, date_reunion')
     .eq('groupe_id', groupeId)
-    .gt('date_reunion', palmsImportDate)
 
   // Déterminer le mois en cours pour séparer hebdo MENSUEL vs 6 MOIS
   const moisActuel = new Date(aujourdHui + 'T12:00:00')
@@ -75,31 +77,31 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const dernierJourMois = new Date(moisActuel.getFullYear(), moisActuel.getMonth() + 1, 0)
   const nbJeudisMois = countJeudis(premierJourMois, dernierJourMois.toISOString().split('T')[0]) || 1
 
-  // Agréger hebdo par membre avec DEUX cumuls :
-  //   - moisCourant : TàT et Refs du mois en cours uniquement (MENSUEL)
-  //   - total6m     : tous les hebdo post-PALMS pour les indicateurs 6 mois
+  // Agréger hebdo par membre avec DEUX cumuls independants :
+  //   - total6m    : hebdo POST-PALMS (date_reunion > palmsImportDate) pour
+  //                  indicateurs 6m (evite double count avec palms_imports)
+  //   - moisCourant : TOUS les hebdo >= premierJourMois pour le MENSUEL
+  //                  (independant du cutoff, inclut toujours le mois courant)
   const hebdoAgg = {}
   ;(hebdoData || []).forEach(h => {
     if (!h.membre_id) return
     if (!hebdoAgg[h.membre_id]) hebdoAgg[h.membre_id] = {
-      // 6 mois glissants (tous les hebdo post-PALMS)
       total6m: { presences:0, absences:0, invites:0, mpb:0, ueg:0, reunions:0 },
-      // Mois en cours uniquement (pour TàT et Refs)
       moisCourant: { tat:0, rdi:0, rde:0 },
     }
     const a = hebdoAgg[h.membre_id]
     const nb = h.nb_reunions || 1
-    // 6 mois : tous les hebdo
-    // Regle BNI : P (Present), L (Late), M (Maladie/excuse), S (Substitut) comptent TOUS
-    // comme presences effectives pour le calcul de l'attendance rate.
-    // Seul A (Absent) compte comme absence.
-    if (h.palms === 'A') a.total6m.absences += nb
-    else if (['P','L','M','S'].includes(h.palms)) a.total6m.presences += nb
-    a.total6m.invites += h.invites || 0
-    a.total6m.mpb += Number(h.mpb) || 0
-    a.total6m.ueg += h.ueg || 0
-    a.total6m.reunions += nb
-    // Mois courant : seulement les réunions du mois en cours
+    // ── Branche 1 : 6 mois glissants (post-PALMS base seulement) ──
+    if (h.date_reunion > palmsImportDate) {
+      // Regle BNI : P/L/M/S = presence, A = absence
+      if (h.palms === 'A') a.total6m.absences += nb
+      else if (['P','L','M','S'].includes(h.palms)) a.total6m.presences += nb
+      a.total6m.invites += h.invites || 0
+      a.total6m.mpb += Number(h.mpb) || 0
+      a.total6m.ueg += h.ueg || 0
+      a.total6m.reunions += nb
+    }
+    // ── Branche 2 : mois courant (INDEPENDANT du cutoff) ──
     if (h.date_reunion >= premierJourMois) {
       a.moisCourant.tat += h.tat || 0
       a.moisCourant.rdi += h.rdi || 0
