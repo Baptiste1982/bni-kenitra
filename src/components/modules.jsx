@@ -647,9 +647,9 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
           </div>
           <TableWrap>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr>{[['Date',90],['Prénom',120],['Nom',120],['Profession',null],['Statut',150],
-              ...(isColumnVisible('telephone') ? [['Téléphone',120]] : []),
-              ...(isColumnVisible('email') ? [['Email',160]] : []),
+            <thead><tr>{[['Date',85],['Prénom',100],['Nom',100],['Profession',null],['Statut',210],
+              ...(isColumnVisible('telephone') ? [['Téléphone',130]] : []),
+              ...(isColumnVisible('email') ? [['Email',180]] : []),
               ['Invité par',130],['CA en charge',100],
               ...(isColumnVisible('commentaires') && showCommentaires ? [['Commentaires',null]] : []),
             ].map(([h,w]) => (
@@ -701,7 +701,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.prenom)}</td>
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.nom)}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.profession || '—'}</td>
-                    <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:12, background:statStyle.badge, color:statStyle.color }}>{inv.statut || '—'}</span></td>
+                    <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:12, background:statStyle.badge, color:statStyle.color, whiteSpace:'nowrap', display:'inline-block' }}>{inv.statut || '—'}</span></td>
                     {isColumnVisible('telephone') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8 }}>{inv.telephone ? formatMoroccanPhone(inv.telephone) : '—'}</td>}
                     {isColumnVisible('email') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160 }}>{inv.email || '—'}</td>}
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
