@@ -91,40 +91,68 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
     setSyncMsg('Import en cours...')
     try {
       const text = await file.text()
-      // Parser le XLS SpreadsheetML
-      const rowChunks = text.split(/<Row[^>]*>/i).slice(1)
-      let headers = [], headerFound = false, imported = 0, skipped = 0
 
-      // Trouver les headers (ligne contenant "Prénom", "Société", "First", etc.)
-      const rows = []
+      // Parser SpreadsheetML 2003 via DOMParser (plus robuste que regex pour gerer
+      // les cellules vides <Data/> et les ss:Index qui sautent des colonnes)
+      const doc = new DOMParser().parseFromString(text, 'application/xml')
+      if (doc.getElementsByTagName('parsererror').length) {
+        setSyncMsg('Erreur : XML invalide. Vérifiez le format du fichier.')
+        return
+      }
+      const SS = 'urn:schemas-microsoft-com:office:spreadsheet'
+      const getElems = (parent, name) => {
+        const ns = parent.getElementsByTagNameNS ? parent.getElementsByTagNameNS(SS, name) : null
+        if (ns && ns.length) return Array.from(ns)
+        return Array.from(parent.getElementsByTagName(name))
+      }
+      const getAttr = (el, name) => {
+        const v = el.getAttributeNS ? el.getAttributeNS(SS, name) : null
+        return v || el.getAttribute('ss:' + name) || el.getAttribute(name)
+      }
+
+      const allRows = getElems(doc, 'Row')
       const allParsedRows = []
-      rowChunks.forEach(chunk => {
-        const cellMatches = [...chunk.matchAll(/<Cell([^>]*)>[\s\S]*?<Data[^>]*>([\s\S]*?)<\/Data>/g)]
-        if (!cellMatches.length) return
+      let headers = [], headerFound = false, imported = 0, skipped = 0
+      const rows = []
+
+      for (const row of allRows) {
+        const cells = getElems(row, 'Cell')
         const vals = []
-        cellMatches.forEach(m => {
-          const idxMatch = m[1].match(/ss:Index="(\d+)"/)
-          if (idxMatch) { while (vals.length < parseInt(idxMatch[1]) - 1) vals.push('') }
-          vals.push(m[2].trim())
-        })
+        let colIdx = 1
+        for (const cell of cells) {
+          const idx = parseInt(getAttr(cell, 'Index')) || colIdx
+          while (vals.length < idx - 1) { vals.push(''); colIdx++ }
+          const data = getElems(cell, 'Data')[0]
+          vals.push(data ? (data.textContent || '').trim() : '')
+          colIdx = idx + 1
+          const merge = parseInt(getAttr(cell, 'MergeAcross')) || 0
+          for (let k = 0; k < merge; k++) { vals.push(''); colIdx++ }
+        }
         allParsedRows.push(vals)
+
         if (!headerFound) {
-          const joined = vals.join(' ').toLowerCase()
-          // Détecter la ligne header : contient prénom/first + nom/last ou société/company
-          if (vals.length >= 5 && (
-            (joined.includes('prénom') && joined.includes('nom')) ||
-            (joined.includes('first') && joined.includes('last')) ||
-            (joined.includes('prénom') && joined.includes('société')) ||
-            vals.some(v => v.toLowerCase().includes('prénom recherché')) ||
-            vals.some(v => v.toLowerCase() === 'société')
-          )) {
-            headers = vals
-            headerFound = true
+          // Une VRAIE ligne d'en-tete a au moins 3 libelles distincts
+          // Les lignes de parametres "Prénom Recherché :" ont typiquement 1 ou 2 valeurs
+          const nonEmpty = vals.filter(v => v && v.trim()).length
+          const hasColon = vals.some(v => v && v.trim().endsWith(':'))
+          if (nonEmpty >= 5 && !hasColon) {
+            const joined = vals.join(' ').toLowerCase()
+            // Besoin de prenom+nom, ou first+last, ou societe comme ancre
+            if (
+              (joined.includes('prénom') && joined.includes('société')) ||
+              (joined.includes('first') && joined.includes('last')) ||
+              vals.some(v => v && v.toLowerCase().trim() === 'société') ||
+              vals.some(v => v && v.toLowerCase().trim() === 'nom recherché')
+            ) {
+              headers = vals
+              headerFound = true
+              continue
+            }
           }
-          return
+          continue
         }
         if (vals.length >= 3 && vals.some(v => v)) rows.push(vals)
-      })
+      }
 
       if (!headerFound || rows.length === 0) {
         console.log('Toutes les lignes parsées:', allParsedRows.slice(0, 10))
@@ -132,21 +160,36 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
         return
       }
 
-      // Mapper les colonnes (normalise accents)
-      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      const colIdx = (name) => headers.findIndex(h => h && (h.toLowerCase().includes(name.toLowerCase()) || norm(h).includes(norm(name))))
+      // Mapper les colonnes avec priorite : exact -> prefixe mot -> contient
+      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+      const findCol = (name) => {
+        const target = norm(name)
+        if (!target) return -1
+        // 1. Exact match (ignore accents + casse)
+        let i = headers.findIndex(h => h && norm(h) === target)
+        if (i >= 0) return i
+        // 2. Prefix/suffix avec espace (evite 'nom' qui matche 'prenom')
+        i = headers.findIndex(h => {
+          if (!h) return false
+          const nh = norm(h)
+          return nh.startsWith(target + ' ') || nh.endsWith(' ' + target) || nh.includes(' ' + target + ' ')
+        })
+        if (i >= 0) return i
+        // 3. Contient (fallback permissif)
+        return headers.findIndex(h => h && norm(h).includes(target))
+      }
       console.log('Headers trouvés:', headers)
-      const iPrenom = colIdx('prénom') >= 0 ? colIdx('prénom') : colIdx('prenom') >= 0 ? colIdx('prenom') : colIdx('first')
-      const iNom = colIdx('nom') >= 0 ? colIdx('nom') : colIdx('last')
-      const iSociete = colIdx('société') >= 0 ? colIdx('société') : colIdx('societe') >= 0 ? colIdx('societe') : colIdx('company')
-      const iProfession = colIdx('profession')
-      const iEmail = colIdx('email')
-      const iTel = colIdx('téléphone') >= 0 ? colIdx('téléphone') : colIdx('telephone')
-      const iAdresse = colIdx('adresse ligne 1') >= 0 ? colIdx('adresse ligne 1') : colIdx('adresse')
-      const iVille = colIdx('ville')
-      const iDate = colIdx('date de visite') >= 0 ? colIdx('date de visite') : colIdx('date')
-      const iInvitedBy = colIdx('invited by') >= 0 ? colIdx('invited by') : colIdx('invité par')
-      const iType = colIdx('type')
+      const iPrenom = findCol('prénom recherché') >= 0 ? findCol('prénom recherché') : findCol('prénom') >= 0 ? findCol('prénom') : findCol('first')
+      const iNom = findCol('nom recherché') >= 0 ? findCol('nom recherché') : findCol('nom') >= 0 ? findCol('nom') : findCol('last')
+      const iSociete = findCol('société') >= 0 ? findCol('société') : findCol('company')
+      const iProfession = findCol('profession')
+      const iEmail = findCol('email')
+      const iTel = findCol('téléphone') >= 0 ? findCol('téléphone') : findCol('telephone')
+      const iAdresse = findCol('adresse ligne 1') >= 0 ? findCol('adresse ligne 1') : findCol('adresse')
+      const iVille = findCol('ville')
+      const iDate = findCol('date de visite') >= 0 ? findCol('date de visite') : findCol('date')
+      const iInvitedBy = findCol('invited by') >= 0 ? findCol('invited by') : findCol('invité par')
+      const iType = findCol('type')
 
       const groupeId = (await supabase.from('groupes').select('id').eq('code', groupeCode).single()).data?.id
 
