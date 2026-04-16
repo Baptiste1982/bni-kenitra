@@ -20,6 +20,8 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
   const [visitorArchives, setVisitorArchives] = useState([])
   const [archiveDetail, setArchiveDetail] = useState(null)
   const [archiveData, setArchiveData] = useState([])
+  // Pour l'annulation d'une suppression d'archive : { archive, countdown (sec), timerId }
+  const [recentlyDeleted, setRecentlyDeleted] = useState(null)
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [newStatut, setNewStatut] = useState(false)
@@ -441,6 +443,34 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
         </Card>
       </AccordionPanel>
 
+      {/* Toast d'annulation apres suppression d'une archive */}
+      {recentlyDeleted && (
+        <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', background:'#1C1C2E', color:'#fff', padding:'12px 18px', borderRadius:10, display:'flex', alignItems:'center', gap:14, boxShadow:'0 4px 20px rgba(0,0,0,0.25)', zIndex:9999, fontSize:13, fontFamily:'DM Sans, sans-serif', animation:'fadeIn 0.2s ease' }}>
+          <span>🗑 Archive <strong>{recentlyDeleted.periode}</strong> supprimée</span>
+          <button onClick={async () => {
+            // Restaurer l'archive en base
+            const { id, ...rest } = recentlyDeleted.archive
+            const { data: restored, error } = await supabase.from('visitor_imports').insert({ id, ...rest }).select().single()
+            if (error) {
+              console.error('[Annuler] Erreur restauration:', error)
+              setSyncMsg(`Erreur : impossible d'annuler la suppression (${error.message})`)
+            } else {
+              setVisitorArchives(prev => [restored, ...prev].sort((a,b) => new Date(b.imported_at) - new Date(a.imported_at)))
+            }
+            if (recentlyDeleted.timerId) clearInterval(recentlyDeleted.timerId)
+            setRecentlyDeleted(null)
+          }}
+            style={{ background:'#C41E3A', color:'#fff', border:'none', padding:'6px 14px', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            onMouseEnter={e=>e.currentTarget.style.background='#A81830'}
+            onMouseLeave={e=>e.currentTarget.style.background='#C41E3A'}>
+            ↩ Annuler ({recentlyDeleted.countdown}s)
+          </button>
+          <span onClick={() => { if (recentlyDeleted.timerId) clearInterval(recentlyDeleted.timerId); setRecentlyDeleted(null) }}
+            style={{ cursor:'pointer', opacity:0.6, fontSize:14, padding:'0 4px' }}
+            onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.6'}>✕</span>
+        </div>
+      )}
+
       {/* Archives des imports visiteurs */}
       <AccordionPanel open={showVisitorArchives}>
         <Card style={{ marginBottom:20 }}>
@@ -475,10 +505,24 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                       </div>
                       <button onClick={async (e) => {
                         e.stopPropagation()
-                        if (!window.confirm(`Supprimer l'archive du ${debut} → ${fin} ?`)) return
+                        // Suppression sans confirm — l'utilisateur peut annuler via le toast
+                        // Snapshot de l'archive avant delete (pour restauration)
+                        const snapshot = { ...a }
                         await supabase.from('visitor_imports').delete().eq('id', a.id)
                         setVisitorArchives(prev => prev.filter(x => x.id !== a.id))
                         if (isActive) { setArchiveDetail(null); setArchiveData([]) }
+                        // Afficher le toast d'annulation (10s)
+                        setRecentlyDeleted(prev => {
+                          if (prev?.timerId) clearInterval(prev.timerId)
+                          const timerId = setInterval(() => {
+                            setRecentlyDeleted(curr => {
+                              if (!curr) return null
+                              if (curr.countdown <= 1) { clearInterval(curr.timerId); return null }
+                              return { ...curr, countdown: curr.countdown - 1 }
+                            })
+                          }, 1000)
+                          return { archive: snapshot, countdown: 10, timerId, periode: `${debut} → ${fin}` }
+                        })
                       }} title="Supprimer l'archive"
                         style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#DC2626', opacity:0.5, padding:'2px 6px', borderRadius:4, flexShrink:0 }}
                         onMouseEnter={e=>e.currentTarget.style.opacity='1'} onMouseLeave={e=>e.currentTarget.style.opacity='0.5'}>🗑</button>
