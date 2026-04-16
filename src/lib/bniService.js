@@ -53,10 +53,13 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   if (!palms?.length) throw new Error('Aucune donnée PALMS importée')
 
   // 2. Déterminer la période PALMS et la date d'import (point de coupure)
-  const periodeDebut = palms[0]?.periode_debut
-  const periodeFin = palms[0]?.periode_fin
+  // FIX BUG : palms_imports peut avoir plusieurs rows par membre couvrant
+  // differentes periodes. On prend la PLUS ANCIENNE periode_debut (pour la
+  // duree maximale des indicateurs 6 mois) et la PLUS RECENTE periode_fin
+  // (pour le cutoff hebdo, evite le double-comptage).
+  const periodeDebut = palms.map(p => p.periode_debut).filter(Boolean).sort()[0]
+  const periodeFin = palms.map(p => p.periode_fin).filter(Boolean).sort().slice(-1)[0]
   const aujourdHui = new Date().toISOString().split('T')[0]
-  // Point de coupure = dernier jour couvert par le PALMS Excel (periode_fin)
   const palmsImportDate = periodeFin || aujourdHui
 
   // 3. Charger TOUT palms_hebdo après l'import PALMS (données compilées)
@@ -144,7 +147,40 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   // 6. Visiteurs : PALMS base (invites) + hebdo compilé (invites)
   //    Même logique d'addition que TàT, Refs, MPB, etc.
 
-  // 7. Calculer les scores selon le barème BNI officiel
+  // 7. Aggregation palms_imports par membre AVANT le scoring.
+  // FIX BUG : un membre peut avoir plusieurs rows palms_imports (p.ex. un
+  // import 12/12→31/03 PUIS 09/04→16/04). Avant, palms.map les traitait
+  // separement -> UPSERT onConflict membre_id -> la derniere insertion
+  // gagnait de facon NON-deterministe. Maintenant on somme les champs
+  // cumulables pour avoir 1 seule ligne par membre.
+  const palmsByMembre = {}
+  palms.forEach(p => {
+    if (!p.membre_id) return
+    if (!palmsByMembre[p.membre_id]) {
+      palmsByMembre[p.membre_id] = {
+        membre_id: p.membre_id,
+        presences: 0, absences: 0, late: 0, makeup: 0, substitut: 0,
+        invites: 0, mpb: 0, ueg: 0, rdi: 0, rde: 0, rri: 0, rre: 0, tat: 0,
+      }
+    }
+    const agg = palmsByMembre[p.membre_id]
+    agg.presences += p.presences || 0
+    agg.absences += p.absences || 0
+    agg.late += p.late || 0
+    agg.makeup += p.makeup || 0
+    agg.substitut += p.substitut || 0
+    agg.invites += p.invites || 0
+    agg.mpb += Number(p.mpb) || 0
+    agg.ueg += p.ueg || 0
+    agg.rdi += p.rdi || 0
+    agg.rde += p.rde || 0
+    agg.rri += p.rri || 0
+    agg.rre += p.rre || 0
+    agg.tat += p.tat || 0
+  })
+  const uniquePalms = Object.values(palmsByMembre)
+
+  // 8. Calculer les scores selon le barème BNI officiel
   //    ┌─────────────┬──────────────────────────────────────────────────┐
   //    │ MENSUEL     │ TàT, Refs → mois courant UNIQUEMENT (hebdo)    │
   //    │             │ Dénominateur = nb jeudis du mois                │
@@ -152,7 +188,7 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   //    │ 6 MOIS      │ Présence, Visiteurs, TYFCB, CEU, Sponsors      │
   //    │ GLISSANTS   │ = PALMS base + TOUS les hebdo post-import      │
   //    └─────────────┴──────────────────────────────────────────────────┘
-  const scored = palms.map(p => {
+  const scored = uniquePalms.map(p => {
     const h = hebdoAgg[p.membre_id] || {
       total6m: { presences:0, absences:0, invites:0, mpb:0, ueg:0, reunions:0 },
       moisCourant: { tat:0, rdi:0, rde:0 },
