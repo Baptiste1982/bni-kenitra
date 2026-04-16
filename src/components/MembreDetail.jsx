@@ -16,6 +16,12 @@ export default function MembreDetail({ membre, score, profil, onClose }) {
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
   const dragRef = useRef(null)
+  // Animation d'entrée (fade + léger zoom)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   useEffect(() => {
     if (!dragging) return
@@ -176,8 +182,8 @@ CONSIGNES:
   const totalScore = s.total_score ? Number(s.total_score).toFixed(0) : '—'
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={onClose}>
-      <div style={{ background:'#F7F6F3', borderRadius:16, width:'100%', maxWidth:740, maxHeight:'92vh', overflow:'hidden', display:'flex', flexDirection:'column', transform:`translate(${pos.x}px, ${pos.y}px)`, transition: dragging ? 'none' : 'transform 0.2s ease', boxShadow: dragging ? '0 20px 60px rgba(0,0,0,0.3)' : '0 10px 40px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:16, opacity: mounted ? 1 : 0, transition:'opacity 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} onClick={onClose}>
+      <div style={{ background:'#F7F6F3', borderRadius:16, width:'100%', maxWidth:740, maxHeight:'92vh', overflow:'hidden', display:'flex', flexDirection:'column', transform:`translate(${pos.x}px, ${pos.y}px) scale(${mounted ? 1 : 0.96})`, opacity: mounted ? 1 : 0, transition: dragging ? 'none' : 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms ease', boxShadow: dragging ? '0 20px 60px rgba(0,0,0,0.3)' : '0 10px 40px rgba(0,0,0,0.2)', willChange:'transform, opacity' }} onClick={e => e.stopPropagation()}>
 
         {/* Header — drag handle */}
         <div

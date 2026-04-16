@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchUsers, createUser, deleteUser, toggleUserActive, resetUserPassword, fetchGroupes } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
-import { PageHeader, Card, SectionTitle, TableWrap, Spinner } from './ui'
+import { PageHeader, Card, SectionTitle, TableWrap, Spinner, AccordionPanel } from './ui'
 
 const ROLES = [
   { value: 'super_admin', label: 'Super Admin', abbr: 'SA' },
@@ -237,7 +237,7 @@ export default function AdminUsers() {
       />
 
       {/* Journal de connexion */}
-      {showLogs && (
+      <AccordionPanel open={showLogs}>
         <Card style={{ marginBottom:24 }}>
           <SectionTitle>📋 Journal de connexion</SectionTitle>
           {(() => {
@@ -362,7 +362,7 @@ export default function AdminUsers() {
             })
           })()}
         </Card>
-      )}
+      </AccordionPanel>
 
       {error && <div style={{ marginBottom: 16, padding: 12, background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: 8, fontSize: 13, color: '#DC2626' }}>{error}</div>}
       {success && <div style={{ marginBottom: 16, padding: 12, background: '#D1FAE5', border: '1px solid #A7F3D0', borderRadius: 8, fontSize: 13, color: '#065F46' }}>{success}</div>}
@@ -405,7 +405,7 @@ Directeur Exécutif BNI Kénitra`}
       )}
 
       {/* Formulaire création */}
-      {showForm && (
+      <AccordionPanel open={showForm}>
         <Card style={{ marginBottom: 24 }}>
           <SectionTitle>Créer un nouveau compte</SectionTitle>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -461,7 +461,7 @@ Directeur Exécutif BNI Kénitra`}
             </button>
           </div>
         </Card>
-      )}
+      </AccordionPanel>
 
       {/* Liste des utilisateurs */}
       {loading ? (

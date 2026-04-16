@@ -3,7 +3,7 @@ import { fetchInvites, fetchDashboardKPIs, fetchScoresMK01, fetchObjectifs, fetc
 import { GroupeScoresChart } from './ScoresChart'
 import { BNI_SYSTEM_PROMPT } from '../data/bniData'
 import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, StatCard, Card, fullName, cap } from './ui'
+import { PageHeader, SectionTitle, TableWrap, StatCard, Card, AccordionPanel, fullName, cap } from './ui'
 import PostulantsImport from './PostulantsImport'
 import PostulantDetail from './PostulantDetail'
 
@@ -306,7 +306,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                 onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
-                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>📂 Historique</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>Historique</div>
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
@@ -321,7 +321,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                 onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Importer</div>
-                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>📥 Fichier XLS</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>Fichier XLS</div>
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
@@ -336,7 +336,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                 onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Paramètres</div>
-                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔒 Accès</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>Accès</div>
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
@@ -351,7 +351,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                 onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Google Sheets</div>
-                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>🔄 {syncing ? 'Sync...' : 'Sync'}</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>{syncing ? 'Sync...' : 'Sync'}</div>
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
@@ -363,7 +363,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
         }
       />
       {/* Import XLS visiteurs */}
-      {showVisitorImport && (
+      <AccordionPanel open={showVisitorImport}>
         <Card style={{ marginBottom:20 }}>
           <SectionTitle>📥 Importer un rapport visiteurs (XLS)</SectionTitle>
           <div style={{ border:'2px dashed #E8E6E1', borderRadius:10, padding:'24px 20px', textAlign:'center', cursor:'pointer', background:'#FAFAF8' }}
@@ -380,10 +380,10 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
           </div>
           {syncMsg && <div style={{ marginTop:10, fontSize:12, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669', fontWeight:500 }}>{syncMsg}</div>}
         </Card>
-      )}
+      </AccordionPanel>
 
       {/* Archives des imports visiteurs */}
-      {showVisitorArchives && (
+      <AccordionPanel open={showVisitorArchives}>
         <Card style={{ marginBottom:20 }}>
           <SectionTitle>📂 Archives des imports visiteurs</SectionTitle>
           {visitorArchives.length === 0 ? (
@@ -461,10 +461,10 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
             </div>
           )}
         </Card>
-      )}
+      </AccordionPanel>
 
       {/* Panneau config accès données */}
-      {showAccessConfig && (
+      <AccordionPanel open={showAccessConfig}>
         <Card style={{ marginBottom:20 }}>
           <SectionTitle>🔒 Accès aux données sensibles par rôle</SectionTitle>
           <div style={{ overflowX:'auto' }}>
@@ -498,7 +498,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
           </div>
           <div style={{ marginTop:10, fontSize:10, color:'#9CA3AF' }}>Cliquez sur une case pour activer/désactiver l'accès. Les modifications sont appliquées immédiatement.</div>
         </Card>
-      )}
+      </AccordionPanel>
 
       {/* Cards par catégorie de couleur */}
       {(() => {
@@ -580,7 +580,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
               <span style={{ color:'#9CA3AF', fontSize:12, transition:'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
             </div>
           </div>
-          {!isCollapsed && <div>
+          <AccordionPanel open={!isCollapsed}><div>
           <div style={{ display:'flex', justifyContent:'flex-end', padding:'6px 10px 0' }}>
             {isColumnVisible('commentaires') && <button onClick={e=>{e.stopPropagation();setShowCommentaires(!showCommentaires)}} style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:6, border:'1px solid #E8E6E1', background:showCommentaires?'#1C1C2E':'#fff', color:showCommentaires?'#fff':'#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:4 }}>
               💬 {showCommentaires ? 'Masquer' : 'Afficher'} commentaires
@@ -618,7 +618,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                     {isColumnVisible('commentaires') && showCommentaires && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.7 }}>{inv.commentaires || '—'}</td>}
                   </tr>
                   {isEdit && (
-                    <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#FFFBEB', boxShadow:'inset 0 0 0 2px #C9A84C' }}>
+                    <tr style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background:'#FFFBEB', boxShadow:'inset 0 0 0 2px #C9A84C', animation:'fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                       <td colSpan={20} style={{ padding:'12px 14px' }}>
                         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:10 }}>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Prénom</label><input value={editData.prenom||''} onChange={e=>setEditData({...editData,prenom:e.target.value})} style={inputSt}/></div>
@@ -680,7 +680,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
             </tbody>
           </table>
         </TableWrap>
-        </div>}
+        </div></AccordionPanel>
         </div>
         )})
       })()}
@@ -918,11 +918,19 @@ export function Groupes({ groupes = [], groupeCode, onSwitchGroupe }) {
             + Importer postulation
           </button>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(5, 1fr)', gap:10 }}>
+        <div style={mob ? {
+          display:'flex', gap:10, overflowX:'auto', WebkitOverflowScrolling:'touch',
+          paddingBottom:4, marginLeft:-4, marginRight:-4, paddingLeft:4, paddingRight:4,
+          scrollSnapType:'x mandatory',
+        } : { display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:10 }}>
           {KANBAN.map(col => {
             const items = list.filter(p => p.statut === col.v)
             return (
-              <div key={col.v} style={{ background:'#F7F6F3', borderRadius:10, padding:10, minHeight:140 }}>
+              <div key={col.v} style={{
+                background:'#F7F6F3', borderRadius:10, padding: mob ? 8 : 10,
+                minHeight: mob ? 64 : 140,
+                ...(mob ? { flex:'0 0 130px', scrollSnapAlign:'start' } : {}),
+              }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8, padding:'2px 4px' }}>
                   <span style={{ fontSize:11, fontWeight:700, color:col.c, textTransform:'uppercase', letterSpacing:'0.05em' }}>{col.l}</span>
                   <span style={{ fontSize:11, fontWeight:700, background:col.bg, color:col.c, padding:'2px 8px', borderRadius:10 }}>{items.length}</span>

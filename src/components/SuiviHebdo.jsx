@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchMembresForMatch, insertPalmsHebdo, fetchPalmsHebdoMois, recalculateScores, fetchScoresMK01 } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, Card, Spinner, fullName } from './ui'
+import { PageHeader, SectionTitle, TableWrap, Card, Spinner, AccordionPanel, fullName } from './ui'
 import MembreDetail from './MembreDetail'
 
 const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre', 'Inv.': 'invites', 'TàT': 'tat', 'MPB': 'mpb', 'UEG': 'ueg' }
@@ -43,6 +43,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [loading, setLoading] = useState(true)
   const [scoresMap, setScoresMap] = useState({})
   const [selectedMembre, setSelectedMembre] = useState(null)
+  const [showDetails, setShowDetails] = useState(false)
   const [showPalmsInit, setShowPalmsInit] = useState(false)
   const [palmsInitLoading, setPalmsInitLoading] = useState(false)
   const [palmsInitResult, setPalmsInitResult] = useState(null)
@@ -464,6 +465,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
     .sort((a, b) => b.cumul.tat + b.cumul.refs - (a.cumul.tat + a.cumul.refs))
 
   const th = { padding: '8px 10px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', whiteSpace: 'nowrap' }
+  const kpiRule = { fontSize: 8, fontWeight: 400, color: '#9CA3AF', textTransform: 'none', letterSpacing: 0, marginTop: 3, whiteSpace: 'normal', lineHeight: 1.3 }
   const td = { padding: '8px 10px', fontSize: 12, textAlign: 'center', borderBottom: '1px solid #F3F2EF' }
   const tdName = { ...td, textAlign: 'left', fontWeight: 500, color: '#1C1C2E' }
   // Séparateur vertical entre groupes de colonnes
@@ -471,6 +473,33 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
 
   return (
     <div style={{ padding: '28px 32px', animation: 'fadeIn 0.25s ease' }}>
+      <style>{`
+        table.suivi-table thead tr:first-child > th { border-bottom: 2px solid #E8E6E1; }
+        table.suivi-table thead tr:nth-child(2) > th { border-bottom: 1px solid #E8E6E1; }
+        tr.suivi-row {
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        tr.suivi-row > td {
+          border-bottom: 1px solid #F3F2EF;
+          background-color: var(--row-bg);
+          transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        tr.suivi-row.clickable:hover {
+          transform: scale(1.008);
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.12)) brightness(1.04);
+          position: relative;
+          z-index: 5;
+        }
+        tr.suivi-row.clickable:hover td:first-child {
+          border-top-left-radius: 24px;
+          border-bottom-left-radius: 24px;
+        }
+        tr.suivi-row.clickable:hover td:last-child {
+          border-top-right-radius: 24px;
+          border-bottom-right-radius: 24px;
+        }
+      `}</style>
       <PageHeader title="Suivi Hebdomadaire" sub={`Saisies texte provisoires — projections de la semaine en cours · ${moisLabel}`}
         right={
           <div ref={headerBtnsRef} style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
@@ -645,7 +674,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       )}
 
       {/* ─── ARCHIVES ────────────────────────────────────────────────────── */}
-      {showArchives && (
+      <AccordionPanel open={showArchives}>
         <div ref={archivesPanelRef}><Card style={{ marginBottom: 24 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
             <SectionTitle>📂 Archives des saisies hebdo</SectionTitle>
@@ -765,10 +794,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             </div>
           )}
         </Card></div>
-      )}
+      </AccordionPanel>
 
       {/* ─── BNI INSIGHT ─────────────────────────────────────────────────── */}
-      {showInsight && (
+      <AccordionPanel open={showInsight}>
         <div ref={insightPanelRef} style={{ marginBottom:24 }}>
           {insightData.length > 0 ? (
             <>
@@ -832,7 +861,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             </Card>
           )}
         </div>
-      )}
+      </AccordionPanel>
 
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
       {showImport && <div ref={importPanelRef}><Card style={{ marginBottom: 24 }}>
@@ -899,26 +928,44 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       ) : (
         <TableWrap>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="suivi-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #E8E6E1' }}>
                   <th style={{ ...th, textAlign: 'left', minWidth: 140 }}>Membre</th>
-                  <th style={{ ...th, ...sep, background: '#F7F6F3' }}>Prés.</th>
-                  <th style={{ ...th, ...sep }} colSpan={3}>Tête-à-tête</th>
-                  <th style={{ ...th, ...sep }} colSpan={3}>Recommandations données</th>
-                  <th style={{ ...th, ...sep }}>Visiteurs</th>
-                  <th style={{ ...th, ...sep }}>TYFCB</th>
-                  <th style={{ ...th, ...sep }}>CEU</th>
+                  <th style={{ ...th, ...sep, background: '#F7F6F3' }}>
+                    <div>Prés.</div>
+                    <div style={kpiRule}>≥95%→10 · ≥88%→5</div>
+                  </th>
+                  <th style={{ ...th, ...sep, cursor: 'pointer', userSelect: 'none' }} colSpan={showDetails ? 3 : 1} onClick={() => setShowDetails(v => !v)} title={showDetails ? 'Réduire' : 'Voir détails hebdo'}>
+                    <div>Tête-à-tête <span style={{ color: '#C41E3A', fontSize: 11 }}>{showDetails ? '▾' : '▸'}</span></div>
+                    <div style={kpiRule}>/sem : ≥1→20 · ≥0.75→15 · ≥0.5→10 · ≥0.25→5</div>
+                  </th>
+                  <th style={{ ...th, ...sep, cursor: 'pointer', userSelect: 'none' }} colSpan={showDetails ? 3 : 1} onClick={() => setShowDetails(v => !v)} title={showDetails ? 'Réduire' : 'Voir détails hebdo'}>
+                    <div>Recommandations données <span style={{ color: '#C41E3A', fontSize: 11 }}>{showDetails ? '▾' : '▸'}</span></div>
+                    <div style={kpiRule}>/sem : ≥1.25→25 · ≥1→20 · ≥0.75→15 · ≥0.5→10 · ≥0.25→5</div>
+                  </th>
+                  <th style={{ ...th, ...sep }}>
+                    <div>Visiteurs</div>
+                    <div style={kpiRule}>6 mois : 5→25 · 4→20 · 3→15 · 2→10 · 1→5</div>
+                  </th>
+                  <th style={{ ...th, ...sep }}>
+                    <div>TYFCB</div>
+                    <div style={kpiRule}>6 mois : ≥300k→5 · ≥150k→4 · ≥50k→3 · ≥20k→2 · &gt;0→1</div>
+                  </th>
+                  <th style={{ ...th, ...sep }}>
+                    <div>CEU</div>
+                    <div style={kpiRule}>/sem : &gt;0.5→10 · &gt;0→5</div>
+                  </th>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #E8E6E1' }}>
                   <th style={th}></th>
                   <th style={{ ...th, ...sep, background: '#F7F6F3', fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                  <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>
-                  <th style={{ ...th, fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
-                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                  <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>
-                  <th style={{ ...th, fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
+                  {showDetails && <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>}
+                  {showDetails && <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>}
+                  <th style={{ ...th, ...(showDetails ? {} : sep), fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
+                  {showDetails && <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>}
+                  {showDetails && <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>}
+                  <th style={{ ...th, ...(showDetails ? {} : sep), fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
                   <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
                   <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
                   <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
@@ -946,18 +993,17 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                   const canOpen = !!score
                   return (
                     <tr key={i}
-                      style={{ background: rowBg, cursor: canOpen ? 'pointer' : 'default' }}
-                      onClick={() => { if (canOpen) setSelectedMembre(score) }}
-                      onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
-                      onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                      className={`suivi-row${canOpen ? ' clickable' : ''}`}
+                      style={{ '--row-bg': rowBg, cursor: canOpen ? 'pointer' : 'default' }}
+                      onClick={() => { if (canOpen) setSelectedMembre(score) }}>
                       <td style={{ ...tdName, color: nameCol, fontWeight: 600 }}>{fullName(m.prenom, m.nom)}</td>
                       <td style={{ ...td, ...sep, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>
-                      <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.tat}</td>
-                      <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>
-                      <td style={{ ...td, fontWeight: 700, background: tatBg, color: tatCol }}>{mTat === 0 ? '✓' : mTat}</td>
-                      <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.refs}</td>
-                      <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>
-                      <td style={{ ...td, fontWeight: 700, background: refsBg, color: refsCol }}>{mRefs === 0 ? '✓' : mRefs}</td>
+                      {showDetails && <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.tat}</td>}
+                      {showDetails && <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>}
+                      <td style={{ ...td, ...(showDetails ? {} : sep), fontWeight: 700, background: tatBg, color: tatCol }}>{mTat === 0 ? '✓' : mTat}</td>
+                      {showDetails && <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.refs}</td>}
+                      {showDetails && <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>}
+                      <td style={{ ...td, ...(showDetails ? {} : sep), fontWeight: 700, background: refsBg, color: refsCol }}>{mRefs === 0 ? '✓' : mRefs}</td>
                       <td style={{ ...td, ...sep }}>{m.cumul.invites}</td>
                       <td style={{ ...td, ...sep, fontWeight: 600, color: m.cumul.mpb > 0 ? '#065F46' : '#9CA3AF' }}>{Number(m.cumul.mpb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                       <td style={{ ...td, ...sep }}>{m.cumul.ueg}</td>
@@ -971,12 +1017,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                   <tr style={{ borderTop: '2px solid #E8E6E1', background: '#F7F6F3' }}>
                     <td style={{ ...tdName, fontStyle: 'italic', color: '#6B7280' }}>Contribution BNI externe</td>
                     <td style={{ ...td, ...sep, background: '#F0EFEC' }}>—</td>
-                    <td style={{ ...td, ...sep }}>{bniCumul.tat}</td>
-                    <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.tat}</td>
-                    <td style={td}>—</td>
-                    <td style={{ ...td, ...sep }}>{bniCumul.refs}</td>
-                    <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.refs}</td>
-                    <td style={td}>—</td>
+                    {showDetails && <td style={{ ...td, ...sep }}>{bniCumul.tat}</td>}
+                    {showDetails && <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.tat}</td>}
+                    <td style={{ ...td, ...(showDetails ? {} : sep) }}>—</td>
+                    {showDetails && <td style={{ ...td, ...sep }}>{bniCumul.refs}</td>}
+                    {showDetails && <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.refs}</td>}
+                    <td style={{ ...td, ...(showDetails ? {} : sep) }}>—</td>
                     <td style={{ ...td, ...sep }}>{bniCumul.invites}</td>
                     <td style={{ ...td, ...sep }}>{Number(bniCumul.mpb).toLocaleString('fr-FR')}</td>
                     <td style={{ ...td, ...sep }}>{bniCumul.ueg}</td>

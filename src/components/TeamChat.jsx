@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { fullName } from './ui'
+import { fullName, AccordionPanel } from './ui'
 
 const ROLE_COLORS = { super_admin:'#C9A84C', directeur_executif:'#C9A84C', directrice_consultante:'#3B82F6', president:'#6366F1', vice_president:'#8B5CF6', secretaire_tresorier:'#DC2626', lecture:'#6B7280' }
 const ROLE_ABBR = { super_admin:'SA', directeur_executif:'DE', directrice_consultante:'DC', president:'P', vice_president:'VP', secretaire_tresorier:'ST', lecture:'L' }
@@ -149,7 +149,7 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
       </div>
 
       {/* Poke selector */}
-      {showPoke && (
+      <AccordionPanel open={showPoke}>
         <div style={{ padding:'8px 14px', borderTop:'1px solid #E8E6E1', background:'#F7F6F3', flexShrink:0 }}>
           <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', marginBottom:6 }}>Mentionner :</div>
           <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
@@ -165,7 +165,7 @@ export default function TeamChat({ profil, isOpen, onClose, onlineUsers, onNewMe
             <button onClick={() => setShowPoke(false)} style={{ padding:'4px 8px', borderRadius:16, border:'1px solid #E8E6E1', background:'#fff', color:'#9CA3AF', fontSize:10, cursor:'pointer' }}>✕</button>
           </div>
         </div>
-      )}
+      </AccordionPanel>
 
       {/* Poke target indicator */}
       {pokeTarget && (

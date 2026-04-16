@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { fetchScoresMK01, fetchPalmsHebdoMois, fetchPalmsMK01, recalculateScores } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
-import { TLBadge, PageHeader, TableWrap, fullName } from './ui'
+import { TLBadge, TrendArrow, PageHeader, TableWrap, AccordionPanel, fullName } from './ui'
 import MembreDetail from './MembreDetail'
 import PalmsImport from './PalmsImport'
 
@@ -172,20 +172,47 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
     return matchQ && matchTL
   })
 
+  const mob = typeof window !== 'undefined' && window.innerWidth <= 768
+
   return (
-    <div style={{ padding:'28px 32px', animation:'fadeIn 0.25s ease' }}>
+    <div style={{ padding: mob ? '16px' : '28px 32px', animation:'fadeIn 0.25s ease' }}>
+      <style>{`
+        tr.membre-row {
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        tr.membre-row > td {
+          border-bottom: 1px solid #F3F2EF;
+          background-color: var(--row-bg);
+          transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        tr.membre-row:hover {
+          transform: scale(1.008);
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.12)) brightness(1.04);
+          position: relative;
+          z-index: 5;
+        }
+        tr.membre-row:hover td:first-child {
+          border-top-left-radius: 24px;
+          border-bottom-left-radius: 24px;
+        }
+        tr.membre-row:hover td:last-child {
+          border-top-right-radius: 24px;
+          border-bottom-right-radius: 24px;
+        }
+      `}</style>
       <PageHeader
         title="Membres"
         sub={`${groupeCode} · ${scores.length} membres scorés`}
         right={
           <div style={{ position:'relative' }}>
             <div onClick={() => { setShowImport(!showImport); setShowPalms(false); setShowPalmsMenu(false) }}
-              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12, minWidth:180, transition:'box-shadow 0.15s' }}
+              style={{ background:'#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: mob ? '8px 12px' : '12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap: mob ? 8 : 12, minWidth: mob ? 0 : 180, transition:'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernier import PALMS</div>
-                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize: mob ? 9 : 10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Dernier import PALMS</div>
+                <div style={{ fontSize: mob ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>
                   {(() => {
                     const first = Object.values(palmsData)[0]
                     if (!first?.created_at) return '—'
@@ -226,14 +253,14 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       />
 
       {/* PALMS Import */}
-      {showImport && (
+      <AccordionPanel open={showImport}>
         <div style={{ marginBottom:20 }}>
           <PalmsImport onImportDone={() => { load(); setShowImport(false) }} groupeCode={groupeCode} />
         </div>
-      )}
+      </AccordionPanel>
 
       {/* PALMS Consultation — vue combinée définitif | provisoire */}
-      {showPalms && (
+      <AccordionPanel open={showPalms}>
         <div style={{ marginBottom:20, display:'flex', gap:0, border:'1px solid #E8E6E1', borderRadius:12, overflow:'hidden', background:'#fff' }}>
           {/* Colonne gauche : Import Excel (Définitif) */}
           <div style={{ flex:1, minWidth:0 }}>
@@ -335,7 +362,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
             </div>
           </div>
         </div>
-      )}
+      </AccordionPanel>
 
       {/* Mois en cours */}
       <div style={{ display:'flex', alignItems:'center', padding: window.innerWidth <= 768 ? '10px 14px' : '14px 20px', background:'#1C1C2E', borderRadius:12, marginBottom:20, color:'#fff', gap: window.innerWidth <= 768 ? 8 : 16 }}>
@@ -349,11 +376,11 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       </div>
 
       {/* Search + filters */}
-      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un membre..." style={{ flex:1, minWidth:200, padding:'9px 14px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none' }} />
+      <div style={{ display:'flex', gap: mob ? 6 : 10, marginBottom:16, flexWrap:'wrap' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un membre..." style={{ flex:1, minWidth: mob ? '100%' : 200, padding:'9px 14px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none' }} />
         {['tous','vert','orange','rouge','gris'].map(f => (
-          <button key={f} onClick={() => setTlFilter(f)} style={{ padding:'9px 14px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:12, background:tlFilter===f?'#C41E3A':'#fff', color:tlFilter===f?'#fff':'#6B7280', borderColor:tlFilter===f?'#C41E3A':'#E8E6E1', fontWeight:tlFilter===f?600:400, cursor:'pointer' }}>
-            {f === 'tous' ? `Tous (${scores.length})` : f.charAt(0).toUpperCase()+f.slice(1)}
+          <button key={f} onClick={() => setTlFilter(f)} style={{ padding: mob ? '7px 10px' : '9px 14px', border:'1px solid #E8E6E1', borderRadius:8, fontSize: mob ? 11 : 12, background:tlFilter===f?'#C41E3A':'#fff', color:tlFilter===f?'#fff':'#6B7280', borderColor:tlFilter===f?'#C41E3A':'#E8E6E1', fontWeight:tlFilter===f?600:400, cursor:'pointer' }}>
+            {f === 'tous' ? (mob ? `Tous ${scores.length}` : `Tous (${scores.length})`) : f.charAt(0).toUpperCase()+f.slice(1)}
           </button>
         ))}
       </div>
@@ -361,13 +388,15 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       {loading ? (
         <div style={{ textAlign:'center', padding:40, color:'#9CA3AF' }}>Chargement depuis Supabase...</div>
       ) : (<>
-        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:6 }}>
-          <button onClick={()=>setShowSociete(!showExtra)} style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:6, border:'1px solid #E8E6E1', background:showExtra?'#1C1C2E':'#fff', color:showExtra?'#fff':'#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:4 }}>
-            {showExtra ? '⊟ Moins de colonnes' : '⊞ Plus de colonnes'}
-          </button>
-        </div>
+        {!mob && (
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:6 }}>
+            <button onClick={()=>setShowSociete(!showExtra)} style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:6, border:'1px solid #E8E6E1', background:showExtra?'#1C1C2E':'#fff', color:showExtra?'#fff':'#6B7280', cursor:'pointer', fontFamily:'DM Sans, sans-serif', display:'flex', alignItems:'center', gap:4 }}>
+              {showExtra ? '⊟ Moins de colonnes' : '⊞ Plus de colonnes'}
+            </button>
+          </div>
+        )}
         <TableWrap>
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0 }}>
             <thead><tr>{['#','Membre', ...(showExtra ? ['Société'] : []),'Score', ...(showExtra ? ['Traffic Light'] : []),'Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB','CEU', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []), ...(showExtra ? ['Renouvellement'] : [])].map(h => (
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
             ))}</tr></thead>
@@ -378,11 +407,13 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                 const isUrgent = renouv && (renouv - new Date()) < 90 * 24 * 60 * 60 * 1000
                 const rowBg = { vert:'#D1FAE5', orange:'#FEF9C3', rouge:'#FEE2E2', gris:'#F9FAFB' }[s.traffic_light] || '#fff'
                 return (
-                  <tr key={i} onClick={() => setSelected(s)} style={{ borderBottom:'1px solid #F3F2EF', cursor:'pointer', background:rowBg }}
-                    onMouseEnter={e => e.currentTarget.style.background='rgba(0,0,0,0.03)'}
-                    onMouseLeave={e => e.currentTarget.style.background=rowBg}>
-                    <td style={{ padding:'10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:600, color:nameColor(s.total_score) }}>{fullName(m.prenom, m.nom)}</td>
+                  <tr key={i} className="membre-row" onClick={() => setSelected(s)}
+                    style={{
+                      cursor:'pointer',
+                      '--row-bg': rowBg,
+                    }}>
+                    <td style={{ padding: mob ? '8px 8px' : '10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
+                    <td style={{ padding: mob ? '8px 8px' : '10px 14px', fontWeight:600, color:nameColor(s.total_score), fontSize: mob ? 12 : 13, whiteSpace: mob ? 'nowrap' : 'normal', overflow: mob ? 'hidden' : 'visible', textOverflow: mob ? 'ellipsis' : 'clip', maxWidth: mob ? 120 : 'none' }}>{fullName(m.prenom, m.nom)}</td>
                     {showExtra && <td style={{ padding:'10px 14px', color:'#6B7280', fontSize:12 }}>{m.societe || '—'}</td>}
                     {(() => { const bg = scoreBg(Number(s.total_score||0)); return <td style={{ padding:'10px 14px', fontWeight:700, background:bg.bg, color:bg.color, textAlign:'center' }}>{s.total_score ? Number(s.total_score).toFixed(0) : '0'}</td> })()}
                     {showExtra && (() => { const bg = tlBg(s.traffic_light || 'gris'); return <td style={{ padding:'10px 14px', background:bg.bg, textAlign:'center' }}><TLBadge tl={s.traffic_light} /></td> })()}
@@ -445,7 +476,12 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                       const manqueTat = Math.max(0, nbJeudis - totalTat)
                       const manqueRefs = Math.max(0, Math.ceil(nbJeudis * 1.25) - totalRefs)
                       return <>
-                        <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color: pr ? (pr.score >= 70 ? '#059669' : pr.score >= 50 ? '#D97706' : pr.score >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{pr ? pr.score : '0'}</td>
+                        <td style={{ padding:'10px 14px' }}>
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                            <span style={{ fontSize:13, fontWeight:700, color: pr ? (pr.score >= 70 ? '#059669' : pr.score >= 50 ? '#D97706' : pr.score >= 30 ? '#DC2626' : '#9CA3AF') : '#9CA3AF' }}>{pr ? pr.score : '0'}</span>
+                            {pr && <TrendArrow from={s.total_score} to={pr.score} />}
+                          </span>
+                        </td>
                         <td style={{ padding:'10px 14px' }}>{pr ? <TLBadge tl={pr.tl} /> : <TLBadge tl="gris" />}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: manqueTat === 0 ? '#059669' : manqueTat <= 2 ? '#D97706' : '#DC2626' }}>{manqueTat === 0 ? '✓' : manqueTat}</td>
                         <td style={{ padding:'10px 14px', fontSize:12, fontWeight:700, color: manqueRefs === 0 ? '#059669' : manqueRefs <= 2 ? '#D97706' : '#DC2626' }}>{manqueRefs === 0 ? '✓' : manqueRefs}</td>
