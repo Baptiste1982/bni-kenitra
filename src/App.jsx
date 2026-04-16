@@ -430,9 +430,9 @@ export default function App() {
         <ConnectionToast key={t.id} name={t.name} onDone={() => setConnectionToasts(prev => prev.filter(x => x.id !== t.id))} />
       ))}
 
-      {/* Chat — onglet en haut */}
+      {/* Chat — onglet collé en bas à droite */}
       <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
-        style={{ position:'fixed', bottom:8, right:48, padding:'6px 14px', background:'rgba(28,28,46,0.75)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:'10px 10px 0 0', display: window.innerWidth <= 768 ? 'none' : 'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 -1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
+        style={{ position:'fixed', bottom:0, right:48, padding:'6px 14px', background:'rgba(28,28,46,0.75)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:'10px 10px 0 0', display: window.innerWidth <= 768 ? 'none' : 'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 -1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
         onMouseEnter={e=>e.currentTarget.style.background='rgba(28,28,46,0.85)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(28,28,46,0.65)'}>
         <span style={{ fontSize:12 }}>💬</span>
         <span style={{ color:'#fff', fontSize:10, fontWeight:600 }}>Chat</span>
