@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { fetchUsers, createUser, deleteUser, toggleUserActive, resetUserPassword, fetchGroupes } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { PageHeader, Card, SectionTitle, TableWrap, Spinner, AccordionPanel } from './ui'
+import { formatMoroccanPhone } from '../lib/phone'
 
 const ROLES = [
   { value: 'super_admin', label: 'Super Admin', abbr: 'SA' },
@@ -119,7 +120,8 @@ export default function AdminUsers() {
     try {
       if (!form.email || !form.password || !form.prenom || !form.nom) throw new Error('Prénom, nom, email et mot de passe sont requis')
       if (form.password.length < 6) throw new Error('Le mot de passe doit faire au moins 6 caractères')
-      await createUser({ ...form, groupe_id: form.groupe_id || null, modules_access: formAccess })
+      const normalizedForm = { ...form, telephone: form.telephone ? formatMoroccanPhone(form.telephone) : form.telephone }
+      await createUser({ ...normalizedForm, groupe_id: form.groupe_id || null, modules_access: formAccess })
       setCreatedCredentials({ prenom: form.prenom, nom: form.nom, email: form.email, password: form.password, role: roleLabel(form.role) })
       setCopied(false)
       setSuccess(`Compte créé pour ${form.prenom} ${form.nom}`)
@@ -159,7 +161,8 @@ export default function AdminUsers() {
     try {
       const { error } = await supabase.from('profils').update({
         prenom: editForm.prenom, nom: editForm.nom, email: editForm.email,
-        role: editForm.role, titre: editForm.titre || null, telephone: editForm.telephone || null,
+        role: editForm.role, titre: editForm.titre || null,
+        telephone: editForm.telephone ? formatMoroccanPhone(editForm.telephone) : null,
         groupe_id: editForm.groupe_id || null
       }).eq('id', editUser)
       if (error) throw error
@@ -444,7 +447,7 @@ Directeur Exécutif BNI Kénitra`}
             </div>
             <div>
               <label style={labelStyle}>Téléphone</label>
-              <input value={form.telephone} onChange={e => setForm({ ...form, telephone: e.target.value })} style={inputStyle} placeholder="+212 6 00 00 00 00" />
+              <input value={form.telephone} onChange={e => setForm({ ...form, telephone: e.target.value })} onBlur={e => setForm(f => ({ ...f, telephone: formatMoroccanPhone(e.target.value) }))} style={inputStyle} placeholder="+212 6XX-XXXXXX" />
             </div>
           </div>
           {/* Cases à cocher modules */}
@@ -585,7 +588,7 @@ Directeur Exécutif BNI Kénitra`}
                             <div><label style={labelStyle}>Email</label><input value={editForm.email} onChange={e=>setEditForm({...editForm,email:e.target.value})} style={inputStyle}/></div>
                             <div><label style={labelStyle}>Rôle</label><select value={editForm.role} onChange={e=>setEditForm({...editForm,role:e.target.value})} style={inputStyle}>{ROLES.map(r=><option key={r.value} value={r.value}>{r.abbr} — {r.label}</option>)}</select></div>
                             <div><label style={labelStyle}>Titre</label><input value={editForm.titre} onChange={e=>setEditForm({...editForm,titre:e.target.value})} style={inputStyle}/></div>
-                            <div><label style={labelStyle}>Téléphone</label><input value={editForm.telephone} onChange={e=>setEditForm({...editForm,telephone:e.target.value})} style={inputStyle}/></div>
+                            <div><label style={labelStyle}>Téléphone</label><input value={editForm.telephone} onChange={e=>setEditForm({...editForm,telephone:e.target.value})} onBlur={e=>setEditForm(f=>({...f,telephone:formatMoroccanPhone(e.target.value)}))} placeholder="+212 6XX-XXXXXX" style={inputStyle}/></div>
                             <div><label style={labelStyle}>Groupe</label><select value={editForm.groupe_id} onChange={e=>setEditForm({...editForm,groupe_id:e.target.value})} style={inputStyle}><option value="">Tous</option>{groupes.map(g=><option key={g.id} value={g.id}>{g.code} — {g.nom}</option>)}</select></div>
                             <div style={{display:'flex',alignItems:'flex-end',gap:8}}>
                               <button onClick={handleSaveEdit} disabled={saving} style={{ padding:'8px 18px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>{saving?'...':'Sauvegarder'}</button>

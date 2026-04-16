@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, StatCard, Card, AccordionPanel, fullName, cap } from './ui'
 import PostulantsImport from './PostulantsImport'
 import PostulantDetail from './PostulantDetail'
+import { formatMoroccanPhone } from '../lib/phone'
 
 // ─── INVITÉS ────────────────────────────────────────────────────────────────
 export function Invites({ profil, groupeCode = 'MK-01' }) {
@@ -165,7 +166,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
           societe: r[iSociete] || null,
           profession: r[iProfession] || null,
           email: iEmail >= 0 ? (r[iEmail] || null) : null,
-          telephone: iTel >= 0 ? (r[iTel] || null) : null,
+          telephone: iTel >= 0 ? (formatMoroccanPhone(r[iTel]) || null) : null,
           adresse: iAdresse >= 0 ? (r[iAdresse] || null) : null,
           ville: iVille >= 0 ? (r[iVille] || null) : null,
           invite_par_nom: iInvitedBy >= 0 ? (r[iInvitedBy] || null) : null,
@@ -247,11 +248,13 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
 
   const handleSaveEdit = async () => {
     try {
-      await supabase.from('invites').update(editData).eq('id', editId)
+      // Normaliser le téléphone au format +212 XXX-XXXXXX
+      const normalized = { ...editData, telephone: editData.telephone ? formatMoroccanPhone(editData.telephone) : editData.telephone }
+      await supabase.from('invites').update(normalized).eq('id', editId)
       // Aussi écrire dans Google Sheet
-      try { await writeInviteToSheet(editData) } catch(e) { console.log('Sheet write skipped:', e) }
+      try { await writeInviteToSheet(normalized) } catch(e) { console.log('Sheet write skipped:', e) }
       // Mettre à jour localement sans recharger (évite le scroll en haut)
-      setInvites(prev => prev.map(inv => inv.id === editId ? { ...inv, ...editData } : inv))
+      setInvites(prev => prev.map(inv => inv.id === editId ? { ...inv, ...normalized } : inv))
       setEditId(null)
       setSyncMsg('Invité mis à jour')
     } catch(e) { setSyncMsg('Erreur : ' + e.message) }
@@ -457,7 +460,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                                   <td style={{ padding:'6px 10px', fontSize:11, fontWeight:600, color:st.color }}>{cap(inv.nom)}</td>
                                   <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.societe || '—'}</td>
                                   <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.profession || '—'}</td>
-                                  {isColumnVisible('telephone') && <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.telephone || '—'}</td>}
+                                  {isColumnVisible('telephone') && <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.telephone ? formatMoroccanPhone(inv.telephone) : '—'}</td>}
                                   {isColumnVisible('email') && <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.email || '—'}</td>}
                                   <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.invite_par_nom || '—'}</td>
                                   <td style={{ padding:'6px 10px', fontSize:10, color:st.color }}>{inv.type_visite || '—'}</td>
@@ -624,7 +627,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                     <td style={{ padding:'10px 14px', fontWeight:600, color:statStyle.color }}>{cap(inv.nom)}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.profession || '—'}</td>
                     <td style={{ padding:'10px 14px' }}><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:12, background:statStyle.badge, color:statStyle.color }}>{inv.statut || '—'}</span></td>
-                    {isColumnVisible('telephone') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8 }}>{inv.telephone || '—'}</td>}
+                    {isColumnVisible('telephone') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8 }}>{inv.telephone ? formatMoroccanPhone(inv.telephone) : '—'}</td>}
                     {isColumnVisible('email') && <td style={{ padding:'10px 14px', fontSize:11, color:statStyle.color, opacity:0.8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160 }}>{inv.email || '—'}</td>}
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.invite_par_nom || '—'}</td>
                     <td style={{ padding:'10px 14px', fontSize:12, color:statStyle.color, opacity:0.8 }}>{inv.membre_ca_charge_nom || '—'}</td>
@@ -644,7 +647,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                           </div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Société</label><input value={editData.societe||''} onChange={e=>setEditData({...editData,societe:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Profession</label><input value={editData.profession||''} onChange={e=>setEditData({...editData,profession:e.target.value})} style={inputSt}/></div>
-                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Téléphone</label><input value={editData.telephone||''} onChange={e=>setEditData({...editData,telephone:e.target.value})} style={inputSt}/></div>
+                          <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Téléphone</label><input value={editData.telephone||''} onChange={e=>setEditData({...editData,telephone:e.target.value})} onBlur={e=>setEditData(d=>({...d,telephone:formatMoroccanPhone(e.target.value)}))} placeholder="+212 6XX-XXXXXX" style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Statut</label>
                             {newStatut ? (
                               <div style={{ display:'flex', gap:4 }}>
