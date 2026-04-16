@@ -384,23 +384,58 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
 
         {/* Right column */}
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div onClick={() => onNavigate('membres')} onMouseEnter={hover} onMouseLeave={unhover}
-            style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-              <SectionTitle>Traffic Light</SectionTitle>
-              <span style={{ fontSize:11, color:'#C41E3A', fontWeight:500 }}>Voir →</span>
-            </div>
-            {[['vert', tl.vert, '#059669', '#D1FAE5'], ['orange', tl.orange, '#854D0E', '#FEF9C3'], ['rouge', tl.rouge, '#991B1B', '#FEE2E2'], ['gris', tl.gris, '#4B5563', '#E5E7EB']].map(([t, n, col, bg]) => (
-              <div key={t} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, padding:'8px 12px', borderRadius:8, background:bg }}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background:({ vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' })[t], flexShrink:0 }} />
-                <span style={{ fontSize:12, width:50, fontWeight:700, color:col }}>{t}</span>
-                <div style={{ flex:1, background:'rgba(255,255,255,0.6)', height:8, borderRadius:4 }}>
-                  <div style={{ width:`${(n || 0)/25*100}%`, height:8, borderRadius:4, background:({ vert:'#059669', orange:'#D97706', rouge:'#DC2626', gris:'#9CA3AF' })[t], transition:'width 0.6s ease' }} />
+          {(() => {
+            // Score de sante pondere : vert=100, orange=60, rouge=30, gris=0
+            const total = (tl.vert || 0) + (tl.orange || 0) + (tl.rouge || 0) + (tl.gris || 0)
+            const sante = total > 0 ? Math.round(((tl.vert || 0) * 100 + (tl.orange || 0) * 60 + (tl.rouge || 0) * 30) / total) : 0
+            const santeColor = sante >= 70 ? '#059669' : sante >= 50 ? '#D97706' : sante >= 30 ? '#DC2626' : '#9CA3AF'
+            const santeLabel = sante >= 70 ? 'Excellente' : sante >= 50 ? 'Correcte' : sante >= 30 ? 'Fragile' : 'Alerte'
+            // Gauge SVG : demi-cercle de 0 (gauche) a 100 (droite)
+            const W = 260, H = 150, cx = W/2, cy = H - 20, r = 90, th = 18
+            const angleOf = (s) => Math.PI - (Math.max(0, Math.min(100, s)) / 100) * Math.PI
+            const pt = (a) => ({ x: cx + r * Math.cos(a), y: cy - r * Math.sin(a) })
+            const arcPath = (a, b) => { const p1 = pt(angleOf(a)), p2 = pt(angleOf(b)); return `M ${p1.x} ${p1.y} A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}` }
+            const nAngle = angleOf(sante)
+            const nEnd = pt(nAngle)
+            return (
+              <div onClick={() => onNavigate('membres')} onMouseEnter={hover} onMouseLeave={unhover}
+                style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                  <SectionTitle>🩺 Santé du chapter</SectionTitle>
+                  <span style={{ fontSize:11, color:'#C41E3A', fontWeight:500 }}>Voir →</span>
                 </div>
-                <span style={{ fontSize:16, fontWeight:700, width:28, textAlign:'right', color:col }}>{n || 0}</span>
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ maxWidth:280 }}>
+                    {/* Zones colorees de l'arc */}
+                    <path d={arcPath(0, 30)} stroke="#FCA5A5" strokeWidth={th} fill="none" strokeLinecap="round" />
+                    <path d={arcPath(30, 60)} stroke="#FCD34D" strokeWidth={th} fill="none" />
+                    <path d={arcPath(60, 100)} stroke="#86EFAC" strokeWidth={th} fill="none" strokeLinecap="round" />
+                    {/* Graduations */}
+                    <text x={cx - r} y={cy + 18} textAnchor="middle" fontSize={9} fill="#9CA3AF">0</text>
+                    <text x={cx} y={cy - r - 6} textAnchor="middle" fontSize={9} fill="#9CA3AF">50</text>
+                    <text x={cx + r} y={cy + 18} textAnchor="middle" fontSize={9} fill="#9CA3AF">100</text>
+                    {/* Aiguille */}
+                    <line x1={cx} y1={cy} x2={nEnd.x} y2={nEnd.y} stroke={santeColor} strokeWidth={3} strokeLinecap="round" style={{ transition:'all 0.6s ease' }} />
+                    <circle cx={cx} cy={cy} r={10} fill={santeColor} />
+                    <circle cx={cx} cy={cy} r={4} fill="#fff" />
+                    {/* Score central */}
+                    <text x={cx} y={cy - 45} textAnchor="middle" fontSize={32} fontWeight={800} fill={santeColor}>{sante}</text>
+                    <text x={cx} y={cy - 28} textAnchor="middle" fontSize={10} fill="#6B7280" fontWeight={600}>/ 100 · {santeLabel}</text>
+                  </svg>
+                </div>
+                {/* Chips de repartition */}
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'center', marginTop:4 }}>
+                  {[['Vert', tl.vert, '#059669', '#D1FAE5'], ['Orange', tl.orange, '#854D0E', '#FEF9C3'], ['Rouge', tl.rouge, '#991B1B', '#FEE2E2'], ['Gris', tl.gris, '#4B5563', '#E5E7EB']].map(([t, n, col, bg]) => (
+                    <div key={t} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:12, background:bg }}>
+                      <div style={{ width:7, height:7, borderRadius:'50%', background: col }} />
+                      <span style={{ fontSize:10, color:col, fontWeight:600 }}>{t}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:col }}>{n || 0}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          })()}
 
           <div onClick={() => onNavigate('invites')} onMouseEnter={hover} onMouseLeave={unhover}
             style={{ background:'#fff', borderRadius:12, padding:'16px 18px', border:'1px solid #E8E6E1', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}>
