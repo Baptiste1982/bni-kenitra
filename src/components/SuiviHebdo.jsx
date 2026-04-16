@@ -584,10 +584,17 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       }, {})))
     : 0
   // Découpage consolidé (import PALMS, vert) vs provisoire (saisies hebdo, orange)
-  const datesConsolidees = new Set(memberRows.filter(r => !r.is_provisoire).map(r => r.date_reunion))
-  const datesProvisoires = new Set(memberRows.filter(r => r.is_provisoire).map(r => r.date_reunion))
-  const reunionsConsolidees = datesConsolidees.size
-  const reunionsProvisoires = datesProvisoires.size
+  // FIX : un import avec nb_reunions=3 couvre 3 semaines (21 jours) sur une SEULE
+  // date_reunion -> doit remplir 3 billes, pas 1. On somme donc les nb_reunions
+  // par date (toutes les rows d'une meme date partagent le meme nb_reunions).
+  const nbReunionsByDate = {}
+  memberRows.forEach(r => {
+    if (!nbReunionsByDate[r.date_reunion]) {
+      nbReunionsByDate[r.date_reunion] = { nb: r.nb_reunions || 1, isProv: r.is_provisoire }
+    }
+  })
+  const reunionsConsolidees = Object.values(nbReunionsByDate).filter(v => !v.isProv).reduce((s, v) => s + v.nb, 0)
+  const reunionsProvisoires = Object.values(nbReunionsByDate).filter(v => v.isProv).reduce((s, v) => s + v.nb, 0)
 
   memberRows.forEach(r => {
     const key = r.membre_id
