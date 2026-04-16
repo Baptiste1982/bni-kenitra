@@ -1142,6 +1142,72 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         </div>
       </Card></div>}
 
+      {/* ─── TABLEAU ACTIONS POUR ALL GREEN ─────────────────────────────── */}
+      {!loading && dates.length > 0 && (() => {
+        const actionsSorted = Object.values(membresMap).slice().sort((a, b) => {
+          const remA = manque(a.cumul.tat, objTat) + manque(a.cumul.refs, objRefs)
+          const remB = manque(b.cumul.tat, objTat) + manque(b.cumul.refs, objRefs)
+          return remB - remA
+        })
+        const nbTotal = actionsSorted.length
+        const nbVerts = actionsSorted.filter(m => manque(m.cumul.tat, objTat) === 0 && manque(m.cumul.refs, objRefs) === 0).length
+        const pct = nbTotal > 0 ? Math.round((nbVerts / nbTotal) * 100) : 0
+        return (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                <span style={{ color:'#fff', fontSize:15, fontWeight:700 }}>🎯 Actions pour tout passer au vert</span>
+                <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(16,185,129,0.2)', color:'#A7F3D0' }}>{nbVerts}/{nbTotal} au vert</span>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ width:80, height:6, background:'rgba(255,255,255,0.15)', borderRadius:3, overflow:'hidden' }}>
+                  <div style={{ width:`${pct}%`, height:'100%', background:'#10B981', transition:'width 0.3s' }} />
+                </div>
+                <span style={{ fontSize:10, color:'rgba(255,255,255,0.7)', fontWeight:600 }}>{pct}%</span>
+              </div>
+            </div>
+            <TableWrap>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0 }}>
+                  <thead>
+                    <tr style={{ borderBottom:'2px solid #E8E6E1' }}>
+                      <th style={{ ...th, textAlign:'left', minWidth:140 }}>Membre</th>
+                      <th style={{ ...th, ...sep }}>Tête-à-tête<br/><span style={kpiRule}>Objectif : {objTat}/mois</span></th>
+                      <th style={{ ...th, ...sep }}>Recommandations<br/><span style={kpiRule}>Objectif : {objRefs}/mois</span></th>
+                      <th style={{ ...th, ...sep }}>Visiteurs<br/><span style={kpiRule}>Mois en cours</span></th>
+                      <th style={{ ...th, ...sep }}>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {actionsSorted.map((m, i) => {
+                      const mTat = manque(m.cumul.tat, objTat)
+                      const mRefs = manque(m.cumul.refs, objRefs)
+                      const isAllGreen = mTat === 0 && mRefs === 0
+                      const tatBg = mTat === 0 ? '#D1FAE5' : mTat <= 2 ? '#FEF9C3' : '#FEE2E2'
+                      const tatCol = mTat === 0 ? '#065F46' : mTat <= 2 ? '#854D0E' : '#991B1B'
+                      const refsBg = mRefs === 0 ? '#D1FAE5' : mRefs <= 2 ? '#FEF9C3' : '#FEE2E2'
+                      const refsCol = mRefs === 0 ? '#065F46' : mRefs <= 2 ? '#854D0E' : '#991B1B'
+                      const invBg = m.cumul.invites > 0 ? '#D1FAE5' : '#F3F4F6'
+                      const invCol = m.cumul.invites > 0 ? '#065F46' : '#6B7280'
+                      const rowOpacity = isAllGreen ? 0.55 : 1
+                      return (
+                        <tr key={i} style={{ opacity: rowOpacity, borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                          <td style={{ ...tdName, fontWeight: isAllGreen ? 500 : 600 }}>{fullName(m.prenom, m.nom)}</td>
+                          <td style={{ ...td, ...sep, background:tatBg, color:tatCol, fontWeight:700 }}>{mTat === 0 ? '✓' : mTat}</td>
+                          <td style={{ ...td, ...sep, background:refsBg, color:refsCol, fontWeight:700 }}>{mRefs === 0 ? '✓' : mRefs}</td>
+                          <td style={{ ...td, ...sep, background:invBg, color:invCol, fontWeight:600 }}>{m.cumul.invites || 0}</td>
+                          <td style={{ ...td, ...sep, fontSize:16 }}>{isAllGreen ? '✅' : '⏳'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </TableWrap>
+          </div>
+        )
+      })()}
+
       {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', marginBottom:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
