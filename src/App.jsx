@@ -22,11 +22,11 @@ const SidebarClock = () => {
   )
 }
 
-// Toast de connexion
-const ConnectionToast = ({ name, onDone }) => {
+// Toast de connexion — empile a gauche de l'onglet Chat (bottom-right)
+const ConnectionToast = ({ name, onDone, index = 0 }) => {
   React.useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t) }, [])
   return (
-    <div style={{ position:'fixed', top:16, left:'50%', transform:'translateX(-50%)', background:'#1C1C2E', color:'#fff', padding:'8px 18px', borderRadius:20, fontSize:12, fontWeight:500, display:'flex', alignItems:'center', gap:8, boxShadow:'0 4px 16px rgba(0,0,0,0.25)', zIndex:9999, animation:'fadeIn 0.3s ease' }}>
+    <div data-keep-color style={{ position:'fixed', bottom: 8 + index * 44, right:160, background:'#1C1C2E', color:'#fff', padding:'8px 18px', borderRadius:20, fontSize:12, fontWeight:500, display:'flex', alignItems:'center', gap:8, boxShadow:'0 4px 16px rgba(0,0,0,0.25)', zIndex:9999, animation:'fadeIn 0.3s ease' }}>
       <div style={{ width:8, height:8, borderRadius:'50%', background:'#059669' }} />
       {name} vient de se connecter
     </div>
@@ -449,9 +449,9 @@ export default function App() {
       {/* Realtime alerts toast */}
       <RealtimeAlerts onNavigate={navigate} />
 
-      {/* Connection toasts */}
-      {connectionToasts.map(t => (
-        <ConnectionToast key={t.id} name={t.name} onDone={() => setConnectionToasts(prev => prev.filter(x => x.id !== t.id))} />
+      {/* Connection toasts — empiles vers le haut a gauche du chat */}
+      {connectionToasts.map((t, i) => (
+        <ConnectionToast key={t.id} name={t.name} index={i} onDone={() => setConnectionToasts(prev => prev.filter(x => x.id !== t.id))} />
       ))}
 
       {/* Chat — onglet collé en bas à droite */}
