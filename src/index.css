@@ -127,3 +127,29 @@ input, textarea, select { font-family: var(--font-body); }
 @supports (padding-top: env(safe-area-inset-top)) {
   body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* ── MODE NUIT ──────────────────────────────────────────── */
+/* Approche pragmatique : filter invert + hue-rotate sur le body
+   pour basculer toute l'app en sombre sans refactor massif.
+   Les elements deja sombres (sidebar, topbar mobile) sont contre-
+   inverses pour garder leur apparence originale.
+   Les images/logos/graphes aussi pour preserver les couleurs. */
+html.dark-mode {
+  background: #0B0B14;
+}
+html.dark-mode body {
+  filter: invert(1) hue-rotate(180deg);
+  background: #ffffff; /* devient noir apres inversion */
+}
+/* Contre-inversion : ces elements gardent leur aspect original */
+html.dark-mode img,
+html.dark-mode video,
+html.dark-mode svg.recharts-surface,
+html.dark-mode aside,
+html.dark-mode .mobile-topbar,
+html.dark-mode [data-keep-color] {
+  filter: invert(1) hue-rotate(180deg);
+}
+/* Scrollbar adaptee */
+html.dark-mode ::-webkit-scrollbar-thumb { background: #4B5563; }
+html.dark-mode ::-webkit-scrollbar-thumb:hover { background: #6B7280; }

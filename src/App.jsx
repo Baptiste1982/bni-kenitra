@@ -65,6 +65,15 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [active, setActive] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('bni_dark_mode') === '1' } catch { return false }
+  })
+  React.useEffect(() => {
+    if (darkMode) document.documentElement.classList.add('dark-mode')
+    else document.documentElement.classList.remove('dark-mode')
+    try { localStorage.setItem('bni_dark_mode', darkMode ? '1' : '0') } catch {}
+  }, [darkMode])
+  const toggleDarkMode = () => setDarkMode(d => !d)
   const [alertCount, setAlertCount] = useState(4)
   const [onlineUsers, setOnlineUsers] = useState([])
   const [connectionToasts, setConnectionToasts] = useState([])
@@ -356,7 +365,15 @@ export default function App() {
             <div style={{ color:'rgba(255,255,255,0.35)', fontSize:10 }}>{profil?.titre || profil?.role || ''}</div>
           </div>
         </div>
-        <button onClick={handleLogout} style={{ fontSize:11, color:'rgba(255,255,255,0.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:'DM Sans, sans-serif' }}>Déconnexion →</button>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <button onClick={handleLogout} style={{ fontSize:11, color:'rgba(255,255,255,0.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:'DM Sans, sans-serif' }}>Déconnexion →</button>
+          <button onClick={toggleDarkMode} title={darkMode ? 'Passer en mode clair' : 'Passer en mode nuit'}
+            style={{ fontSize:14, color:'rgba(255,255,255,0.5)', background:'rgba(255,255,255,0.08)', border:'none', cursor:'pointer', padding:'4px 8px', borderRadius:6, fontFamily:'DM Sans, sans-serif', marginLeft:'auto' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}>
+            {darkMode ? '☀' : '☾'}
+          </button>
+        </div>
       </div>
     </aside>
   )
@@ -438,7 +455,7 @@ export default function App() {
       ))}
 
       {/* Chat — onglet collé en bas à droite */}
-      <div ref={chatTabRef} onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
+      <div ref={chatTabRef} data-keep-color onClick={() => { setChatOpen(!chatOpen); if(!chatOpen) setUnreadChat(0) }}
         style={{ position:'fixed', bottom:0, right:48, padding:'6px 14px', background:'rgba(28,28,46,0.75)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:'10px 10px 0 0', display: window.innerWidth <= 768 ? 'none' : 'flex', alignItems:'center', gap:5, cursor:'pointer', boxShadow:'0 -1px 6px rgba(0,0,0,0.12)', zIndex:201, transition:'background 0.15s' }}
         onMouseEnter={e=>e.currentTarget.style.background='rgba(28,28,46,0.85)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(28,28,46,0.65)'}>
         <span style={{ fontSize:12 }}>💬</span>
