@@ -478,18 +478,22 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         table.suivi-table thead tr:nth-child(2) > th { border-bottom: 1px solid #E8E6E1; }
         tr.suivi-row {
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      background-color 0.2s ease;
         }
         tr.suivi-row > td {
           border-bottom: 1px solid #F3F2EF;
-          background-color: var(--row-bg);
           transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         tr.suivi-row.clickable:hover {
+          background-color: transparent !important;
           transform: scale(1.008);
           filter: drop-shadow(0 6px 16px rgba(0,0,0,0.12)) brightness(1.04);
           position: relative;
           z-index: 5;
+        }
+        tr.suivi-row.clickable:hover > td {
+          background-color: var(--row-bg);
         }
         tr.suivi-row.clickable:hover td:first-child {
           border-top-left-radius: 24px;
@@ -994,7 +998,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                   return (
                     <tr key={i}
                       className={`suivi-row${canOpen ? ' clickable' : ''}`}
-                      style={{ '--row-bg': rowBg, cursor: canOpen ? 'pointer' : 'default' }}
+                      style={{ backgroundColor: rowBg, '--row-bg': rowBg, cursor: canOpen ? 'pointer' : 'default' }}
                       onClick={() => { if (canOpen) setSelectedMembre(score) }}>
                       <td style={{ ...tdName, color: nameCol, fontWeight: 600 }}>{fullName(m.prenom, m.nom)}</td>
                       <td style={{ ...td, ...sep, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>

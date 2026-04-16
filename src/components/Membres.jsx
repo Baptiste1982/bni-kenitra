@@ -179,18 +179,22 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
       <style>{`
         tr.membre-row {
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      background-color 0.2s ease;
         }
         tr.membre-row > td {
           border-bottom: 1px solid #F3F2EF;
-          background-color: var(--row-bg);
           transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         tr.membre-row:hover {
+          background-color: transparent !important;
           transform: scale(1.008);
           filter: drop-shadow(0 6px 16px rgba(0,0,0,0.12)) brightness(1.04);
           position: relative;
           z-index: 5;
+        }
+        tr.membre-row:hover > td {
+          background-color: var(--row-bg);
         }
         tr.membre-row:hover td:first-child {
           border-top-left-radius: 24px;
@@ -410,6 +414,7 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
                   <tr key={i} className="membre-row" onClick={() => setSelected(s)}
                     style={{
                       cursor:'pointer',
+                      backgroundColor: rowBg,
                       '--row-bg': rowBg,
                     }}>
                     <td style={{ padding: mob ? '8px 8px' : '10px 14px', color:'#9CA3AF', fontSize:12 }}>{s.rank || '—'}</td>
