@@ -363,7 +363,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
         right={
           <div style={{ display:'flex', gap: isMobile ? 6 : 10, alignItems:'center', flexWrap:'wrap' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
-            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
+            {['super_admin','directrice_consultante','secretaire_tresorier','comite_affiliation'].includes(profil?.role) &&
               <div onClick={() => { setShowVisitorArchives(!showVisitorArchives); if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false); setShowTrash(false); supabase.from('visitor_imports').select('*').is('deleted_at', null).order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[])) } }}
                 style={{ background: showVisitorArchives ? '#F3F2EF' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:12 }}
                 onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
@@ -378,7 +378,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
                 </div>
               </div>}
-            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
+            {['super_admin','directrice_consultante','secretaire_tresorier','comite_affiliation'].includes(profil?.role) &&
               <div onClick={() => { setShowTrash(!showTrash); if (!showTrash) { setShowVisitorArchives(false); setShowVisitorImport(false); setShowAccessConfig(false); supabase.from('visitor_imports').select('*').not('deleted_at','is',null).order('deleted_at',{ascending:false}).then(({data}) => setTrashArchives(data||[])) } }}
                 style={{ background: showTrash ? '#F3F2EF' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:12 }}
                 onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
@@ -393,7 +393,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
                 </div>
               </div>}
-            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
+            {['super_admin','directrice_consultante','secretaire_tresorier','comite_affiliation'].includes(profil?.role) &&
               <div onClick={() => { setShowVisitorImport(!showVisitorImport); if(!showVisitorImport) { setShowVisitorArchives(false); setShowAccessConfig(false) } }}
                 style={{ background: showVisitorImport ? '#F3F2EF' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:12 }}
                 onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
