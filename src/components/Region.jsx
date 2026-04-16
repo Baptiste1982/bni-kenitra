@@ -1,78 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { fetchRegionKPIs } from '../lib/bniService'
-import { supabase } from '../lib/supabase'
-import { PageHeader, SectionTitle, TableWrap, fullName, canWrite } from './ui'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from 'recharts'
+import { PageHeader, SectionTitle, TableWrap, fullName } from './ui'
 
-const MOIS_NOMS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
-const MOIS_COURT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc']
-const moisLabelFromNum = (m) => MOIS_COURT[(m - 1) % 12] || '?'
-
-// Parseur du rapport Traffic Light régional PALMS (.xls SpreadsheetML 2003)
-function parseRegionTrafficLightXml(xml) {
-  try {
-    const doc = new DOMParser().parseFromString(xml, 'application/xml')
-    if (doc.getElementsByTagName('parsererror').length) return null
-    const SS = 'urn:schemas-microsoft-com:office:spreadsheet'
-    const getElems = (p, n) => {
-      const ns = p.getElementsByTagNameNS ? p.getElementsByTagNameNS(SS, n) : null
-      if (ns && ns.length) return Array.from(ns)
-      return Array.from(p.getElementsByTagName(n))
-    }
-    const getAttr = (el, n) => {
-      const v = el.getAttributeNS ? el.getAttributeNS(SS, n) : null
-      return v || el.getAttribute('ss:' + n) || el.getAttribute(n)
-    }
-    const rows = getElems(doc, 'Row')
-    const parsedRows = []
-    for (const row of rows) {
-      const cells = getElems(row, 'Cell')
-      const vals = []
-      let colIdx = 1
-      for (const cell of cells) {
-        const idx = parseInt(getAttr(cell, 'Index')) || colIdx
-        while (vals.length < idx - 1) { vals.push(''); colIdx++ }
-        const data = getElems(cell, 'Data')[0]
-        vals.push(data ? (data.textContent || '').trim() : '')
-        colIdx = idx + 1
-        const merge = parseInt(getAttr(cell, 'MergeAcross')) || 0
-        for (let k = 0; k < merge; k++) { vals.push(''); colIdx++ }
-      }
-      parsedRows.push(vals)
-    }
-    // Extraire region / annee / mois depuis les lignes "Region :" / "Année :" / "Mois :"
-    let region = 'Kenitra', annee = new Date().getFullYear(), moisNom = ''
-    for (const r of parsedRows) {
-      if (r[0] === 'Région :' && r[1]) region = r[1]
-      if (r[0] === 'Année :' && r[1]) annee = parseInt(r[1]) || annee
-      if (r[0] === 'Mois :' && r[1]) moisNom = r[1].toLowerCase()
-    }
-    const moisNum = MOIS_NOMS.indexOf(moisNom) + 1
-    if (!moisNum) return null
-    // Lignes de donnees : commencent apres la ligne d'en-tete contenant "Nom du Groupe"
-    const groupes = []
-    let headerFound = false
-    for (const r of parsedRows) {
-      if (!headerFound) { if (r[0] === 'Nom du Groupe') headerFound = true; continue }
-      if (!r[0] || r[0].trim() === '') continue
-      groupes.push({
-        nom: r[0].trim(),
-        taille: parseFloat(r[1]) || 0,
-        croissance: parseFloat(r[2]) || 0,
-        stabilite: parseFloat(r[3]) || 0,
-        recommandations: parseFloat(r[4]) || 0,
-        invites: parseFloat(r[5]) || 0,
-        conversion: parseFloat(r[6]) || 0,
-        absenteisme: parseFloat(r[7]) || 0,
-        score: parseInt(r[8]) || 0,
-      })
-    }
-    return { region, annee, mois: moisNum, groupes }
-  } catch (e) {
-    console.error('[RTL parse]', e)
-    return null
-  }
-}
+// NB : le module Traffic Light Régional a été extrait dans
+// RegionTrafficLight.jsx et est accessible via la sidebar comme module autonome.
 
 const GROUP_COLORS = { 'MK-01': '#C41E3A', 'MK-02': '#3B82F6' }
 const fmtMAD = v => Math.round(v).toLocaleString('de-DE') + ' MAD'
@@ -84,50 +15,13 @@ const kpiBg = (good, mid, val, threshGood, threshMid) =>
   : val >= threshMid ? { bg:'#FEF9C3', topBg:'#FDE68A', color:'#854D0E' }
   : { bg:'#FEE2E2', topBg:'#FECACA', color:'#991B1B' }
 
-export default function Region({ profil }) {
+export default function Region() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [rtlData, setRtlData] = useState([]) // Historique Traffic Light regional
-  const [rtlUploading, setRtlUploading] = useState(false)
-  const [rtlMsg, setRtlMsg] = useState('')
-  const rtlFileRef = useRef(null)
-
-  const loadRtl = () => {
-    supabase.from('region_traffic_light').select('*').order('annee',{ascending:true}).order('mois',{ascending:true}).then(({ data }) => setRtlData(data || []))
-  }
 
   useEffect(() => {
     fetchRegionKPIs().then(d => { setData(d); setLoading(false) }).catch(() => setLoading(false))
-    loadRtl()
   }, [])
-
-  const handleRtlUpload = async (files) => {
-    if (!files || files.length === 0) return
-    setRtlUploading(true); setRtlMsg('')
-    let imported = 0, skipped = 0, errors = 0
-    for (const file of Array.from(files)) {
-      try {
-        const text = await file.text()
-        const parsed = parseRegionTrafficLightXml(text)
-        if (!parsed) { errors++; continue }
-        for (const g of parsed.groupes) {
-          const payload = {
-            region: parsed.region, annee: parsed.annee, mois: parsed.mois,
-            groupe_nom: g.nom, taille_groupe: g.taille, croissance: g.croissance,
-            stabilite: g.stabilite, recommandations: g.recommandations, invites: g.invites,
-            conversion: g.conversion, absenteisme: g.absenteisme, score: g.score,
-            imported_at: new Date().toISOString(),
-          }
-          const { error } = await supabase.from('region_traffic_light').upsert(payload, { onConflict: 'region,annee,mois,groupe_nom' })
-          if (error) { errors++; console.error('[RTL upsert]', error) } else imported++
-        }
-      } catch (e) { errors++; console.error('[RTL file]', e) }
-    }
-    setRtlMsg(`${imported} lignes importées${errors > 0 ? ` · ${errors} erreur(s)` : ''}`)
-    await loadRtl()
-    setRtlUploading(false)
-    if (rtlFileRef.current) rtlFileRef.current.value = ''
-  }
 
   const isMobile = window.innerWidth <= 768
 
@@ -346,121 +240,6 @@ export default function Region({ profil }) {
         </div>
       </div>
 
-      {/* ─── TRAFFIC LIGHT RÉGIONAL — PROGRESSION MENSUELLE ────────────── */}
-      {(() => {
-        // Grouper par groupe, trier par date (annee*100+mois)
-        const moisCourant = new Date()
-        const anneeCourante = moisCourant.getFullYear()
-        const moisCourantNum = moisCourant.getMonth() + 1
-        const byGroupe = {}
-        rtlData.forEach(r => {
-          if (!byGroupe[r.groupe_nom]) byGroupe[r.groupe_nom] = []
-          byGroupe[r.groupe_nom].push(r)
-        })
-        Object.values(byGroupe).forEach(arr => arr.sort((a, b) => (a.annee * 12 + a.mois) - (b.annee * 12 + b.mois)))
-        const groupesNoms = Object.keys(byGroupe)
-        // Preparer les donnees chart : un point par (annee, mois), valeur = score moyen ou par groupe
-        const allPoints = new Map()
-        rtlData.forEach(r => {
-          const key = `${r.annee}-${String(r.mois).padStart(2,'0')}`
-          if (!allPoints.has(key)) allPoints.set(key, { annee:r.annee, mois:r.mois, key, label:`${moisLabelFromNum(r.mois)} ${String(r.annee).slice(-2)}` })
-          const pt = allPoints.get(key)
-          pt[r.groupe_nom] = r.score
-        })
-        const chartData = Array.from(allPoints.values()).sort((a, b) => (a.annee*12+a.mois) - (b.annee*12+b.mois))
-        const groupColorFor = (nom, i) => {
-          if (nom.startsWith('MK-01')) return '#C41E3A'
-          if (nom.startsWith('MK-02')) return '#3B82F6'
-          return ['#059669','#7C3AED','#D97706','#0EA5E9'][i % 4]
-        }
-        return (
-          <div style={{ marginBottom:24 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12, flexWrap:'wrap', gap:8 }}>
-              <SectionTitle>🚦 Traffic Light régional — progression mensuelle</SectionTitle>
-              {canWrite(profil) && (
-                <div>
-                  <input ref={rtlFileRef} type="file" accept=".xls,.xlsx,.xml" multiple hidden
-                    onChange={e => handleRtlUpload(e.target.files)} />
-                  <button onClick={() => rtlFileRef.current?.click()} disabled={rtlUploading}
-                    style={{ background: rtlUploading ? '#E8E6E1' : '#1C1C2E', color:'#fff', border:'none', padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, cursor: rtlUploading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif' }}>
-                    {rtlUploading ? '⏳ Import...' : '📂 Importer .xls (multi-fichiers)'}
-                  </button>
-                  {rtlMsg && <span style={{ marginLeft:10, fontSize:11, color: rtlMsg.includes('erreur') ? '#DC2626' : '#059669', fontWeight:600 }}>{rtlMsg}</span>}
-                </div>
-              )}
-            </div>
-            {rtlData.length === 0 ? (
-              <div style={{ background:'#fff', border:'1px dashed #E8E6E1', borderRadius:12, padding:32, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>
-                Aucun rapport Traffic Light importé. {canWrite(profil) && 'Cliquez sur "Importer" pour ajouter les .xls mensuels.'}
-              </div>
-            ) : (
-              <>
-                {/* Graphique de progression */}
-                <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden', marginBottom:16 }}>
-                  <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-                    <SectionTitle>📈 Évolution du score par groupe</SectionTitle>
-                    <span style={{ fontSize:10, color:'#6B7280' }}>Seuils BNI : ≥70 vert · ≥50 orange · ≥30 rouge · &lt;30 gris</span>
-                  </div>
-                  <div style={{ padding:'12px 8px 4px', height:280, minWidth:0 }}>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
-                        <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize:10, fill:'#9CA3AF' }} />
-                        <Tooltip contentStyle={{ borderRadius:8, border:'1px solid #E8E6E1', fontSize:12 }} />
-                        <Legend wrapperStyle={{ fontSize:11 }} />
-                        <ReferenceLine y={70} stroke="#059669" strokeDasharray="4 4" label={{ value:'Vert 70+', position:'right', fill:'#059669', fontSize:10, fontWeight:600 }} />
-                        <ReferenceLine y={50} stroke="#D97706" strokeDasharray="4 4" label={{ value:'Orange 50+', position:'right', fill:'#D97706', fontSize:10, fontWeight:600 }} />
-                        <ReferenceLine y={30} stroke="#DC2626" strokeDasharray="4 4" label={{ value:'Rouge 30+', position:'right', fill:'#DC2626', fontSize:10, fontWeight:600 }} />
-                        {groupesNoms.map((nom, i) => (
-                          <Line key={nom} type="monotone" dataKey={nom} name={nom} stroke={groupColorFor(nom, i)} strokeWidth={3} dot={{ r:5 }} activeDot={{ r:7 }} connectNulls />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                {/* Tableau mois par mois */}
-                <div style={{ background:'#fff', borderRadius:12, border:'1px solid #E8E6E1', overflow:'hidden' }}>
-                  <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
-                    <SectionTitle>📋 Détail mensuel</SectionTitle>
-                  </div>
-                  <div style={{ overflowX:'auto' }}>
-                    <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                      <thead><tr>{['Période','Groupe','Taille','Croissance','Stabilité','Recos/sem','Invités/sem','Conv.%','Absent.%','Score'].map(h => (
-                        <th key={h} style={{ background:'#F9F8F6', padding:'10px 12px', textAlign:'left', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', whiteSpace:'nowrap' }}>{h}</th>
-                      ))}</tr></thead>
-                      <tbody>
-                        {[...rtlData].sort((a, b) => (b.annee*12+b.mois) - (a.annee*12+a.mois)).map((r, i) => {
-                          const enCours = r.annee === anneeCourante && r.mois === moisCourantNum
-                          const scoreBgC = r.score >= 70 ? '#D1FAE5' : r.score >= 50 ? '#FEF9C3' : r.score >= 30 ? '#FEE2E2' : '#F3F4F6'
-                          const scoreColC = r.score >= 70 ? '#065F46' : r.score >= 50 ? '#854D0E' : r.score >= 30 ? '#991B1B' : '#4B5563'
-                          return (
-                            <tr key={i} style={{ borderBottom:'1px solid rgba(0,0,0,0.05)', background: enCours ? '#FFFBEB' : undefined }}>
-                              <td style={{ padding:'8px 12px', fontSize:12, fontWeight:600, color:'#1C1C2E', whiteSpace:'nowrap' }}>
-                                {moisLabelFromNum(r.mois)} {r.annee}
-                                {enCours && <span style={{ marginLeft:6, fontSize:8, padding:'2px 6px', borderRadius:4, background:'#FEF3C7', color:'#92400E', fontWeight:700, textTransform:'uppercase' }}>En cours</span>}
-                              </td>
-                              <td style={{ padding:'8px 12px', fontSize:11, color:'#4B5563' }}>{r.groupe_nom}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.taille_groupe).toFixed(0)}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.croissance).toFixed(0)}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.stabilite).toFixed(2)}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.recommandations).toFixed(2)}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.invites).toFixed(2)}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.conversion).toFixed(2)}</td>
-                              <td style={{ padding:'8px 12px', fontSize:12, color:'#1C1C2E', textAlign:'right' }}>{Number(r.absenteisme).toFixed(2)}</td>
-                              <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', background:scoreBgC, color:scoreColC }}>{r.score}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )
-      })()}
 
       {/* Top classements — même style tables que Dashboard */}
       <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap:16, marginBottom:24 }}>

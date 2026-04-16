@@ -9,6 +9,7 @@ import SuiviHebdo from './components/SuiviHebdo'
 import AdminUsers from './components/AdminUsers'
 import Alertes from './components/Alertes'
 import Region from './components/Region'
+import RegionTrafficLight from './components/RegionTrafficLight'
 import TeamChat from './components/TeamChat'
 
 const SidebarClock = () => {
@@ -45,6 +46,7 @@ const ALL_MODULES = [
   { id:'hebdo',     label:'Suivi Hebdo',      icon:'◧' },
   { id:'invites',   label:'Invités',           icon:'◉' },
   { id:'region',    label:'Région',             icon:'◎' },
+  { id:'rtl',       label:'Traffic Light Rég.', icon:'🚦' },
   { id:'groupes',   label:'Groupes',           icon:'⬟' },
   { id:'reporting', label:'Reporting',         icon:'◫' },
   { id:'objectifs', label:'Objectifs',          icon:'◎' },
@@ -241,7 +243,8 @@ export default function App() {
     membres:   <Membres profil={profil} groupeCode={groupeCode} />,
     hebdo:     <SuiviHebdo profil={profil} groupeCode={groupeCode} />,
     invites:   <Invites profil={profil} groupeCode={groupeCode} />,
-    region:    <Region profil={profil} />,
+    region:    <Region />,
+    rtl:       <RegionTrafficLight profil={profil} />,
     groupes:   <Groupes groupes={groupes} groupeCode={groupeCode} onSwitchGroupe={setGroupeCode} />,
     reporting: <Reporting groupeCode={groupeCode} />,
     objectifs: <Objectifs groupeCode={groupeCode} profil={profil} />,

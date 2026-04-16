@@ -22,6 +22,7 @@ const MODULES = [
   { id: 'hebdo', label: 'Suivi Hebdo' },
   { id: 'invites', label: 'Invités' },
   { id: 'region', label: 'Région' },
+  { id: 'rtl', label: 'Traffic Light Régional' },
   { id: 'groupes', label: 'Groupes' },
   { id: 'reporting', label: 'Reporting' },
   { id: 'objectifs', label: 'Objectifs' },
@@ -31,15 +32,15 @@ const MODULES = [
 
 // Accès par défaut selon le rôle
 const DEFAULT_ACCESS = {
-  super_admin: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'groupes', 'reporting', 'objectifs', 'agent', 'admin'],
-  directeur_executif: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'groupes', 'reporting', 'objectifs', 'agent', 'admin'],
-  directrice_consultante: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'groupes', 'reporting', 'objectifs', 'agent'],
-  president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting', 'objectifs'],
-  vice_president: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting', 'objectifs'],
+  super_admin: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'rtl', 'groupes', 'reporting', 'objectifs', 'agent', 'admin'],
+  directeur_executif: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'rtl', 'groupes', 'reporting', 'objectifs', 'agent', 'admin'],
+  directrice_consultante: ['dashboard', 'membres', 'hebdo', 'invites', 'region', 'rtl', 'groupes', 'reporting', 'objectifs', 'agent'],
+  president: ['dashboard', 'membres', 'hebdo', 'invites', 'rtl', 'reporting', 'objectifs'],
+  vice_president: ['dashboard', 'membres', 'hebdo', 'invites', 'rtl', 'reporting', 'objectifs'],
   secretaire_tresorier: ['dashboard', 'membres', 'invites', 'reporting'],
   comite_accueil: ['invites'],
   lecture: ['dashboard', 'membres'],
-  invite: ['dashboard', 'membres', 'hebdo', 'invites', 'reporting'],
+  invite: ['dashboard', 'membres', 'hebdo', 'invites', 'rtl', 'reporting'],
 }
 
 const roleLabel = (role) => ROLES.find(r => r.value === role)?.label || role
