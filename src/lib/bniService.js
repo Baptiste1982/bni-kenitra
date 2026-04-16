@@ -105,13 +105,13 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const nbSemaines = countJeudis(periodeDebut, aujourdHui) || 1
   console.log(`[recalculateScores] Période 6m: ${periodeDebut} → ${aujourdHui} (${nbSemaines} jeudis), Mois: ${premierJourMois} (${nbJeudisMois} jeudis), PALMS importé le ${palmsImportDate}`)
 
-  // 4. Charger BNI Insight (Sponsors + CEU Rate) — source prioritaire
+  // 4. Charger BNI Insight (Sponsors uniquement — CEU vient desormais du PALMS UEG)
   const { data: insightData } = await supabase
     .from('bni_insight_imports')
-    .select('membre_id, sponsors, ceu_rate')
+    .select('membre_id, sponsors')
     .eq('groupe_id', groupeId)
   const insightMap = {}
-  ;(insightData || []).forEach(d => { insightMap[d.membre_id] = { sponsors: d.sponsors || 0, ceu_rate: Number(d.ceu_rate) || 0 } })
+  ;(insightData || []).forEach(d => { insightMap[d.membre_id] = { sponsors: d.sponsors || 0 } })
 
   // 5. Charger les membres pour matcher invite_par_nom → membre_id
   const { data: membres } = await supabase
@@ -146,10 +146,10 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const attendanceRate = totalReunions > 0 ? presences / totalReunions : 0
     const rateUeg = ueg / nbSemaines
 
-    // ── BNI INSIGHT : CEU Rate et Sponsors (source prioritaire si importé) ──
-    const insight = insightMap[p.membre_id] || { sponsors: 0, ceu_rate: 0 }
-    // CEU : BNI Insight rate si disponible, sinon calcul depuis PALMS+hebdo
-    const finalCeuRate = insight.ceu_rate > 0 ? insight.ceu_rate : rateUeg
+    // ── BNI INSIGHT : Sponsors uniquement (parrainages) ──
+    const insight = insightMap[p.membre_id] || { sponsors: 0 }
+    // CEU : calcule depuis PALMS UEG (cumul 6 mois) / nb jeudis
+    const finalCeuRate = rateUeg
     // Sponsors : depuis BNI Insight
     const finalSponsors = insight.sponsors
 

@@ -288,7 +288,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
     setInsightData(data || [])
   }
 
-  // ── Import BNI Insight CSV (Sponsors + CEU Rate) ──
+  // ── Import BNI Insight CSV (Sponsors uniquement — CEU vient du PALMS UEG) ──
   const handleInsightImport = async (file) => {
     if (!file) return
     setInsightLoading(true)
@@ -314,10 +314,9 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       const headers = parseCSVLine(lines[0])
       const nameIdx = headers.indexOf('Name')
       const sponsorsIdx = headers.indexOf('Sponsors')
-      const ceuRateIdx = headers.indexOf('CEU Rate')
 
-      if (nameIdx === -1 || sponsorsIdx === -1 || ceuRateIdx === -1) {
-        throw new Error('Colonnes manquantes : Name, Sponsors ou CEU Rate introuvables')
+      if (nameIdx === -1 || sponsorsIdx === -1) {
+        throw new Error('Colonnes manquantes : Name ou Sponsors introuvables')
       }
 
       const rows = []
@@ -343,7 +342,6 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             groupe_id: m.groupe_id,
             membre_id: m.id,
             sponsors: parseInt(cols[sponsorsIdx]) || 0,
-            ceu_rate: parseFloat(cols[ceuRateIdx]) || 0,
             periode_debut: null,
             periode_fin: null,
             imported_at: new Date().toISOString(),
@@ -1003,8 +1001,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                   <thead>
                     <tr style={{ background:'#F7F6F3' }}>
                       <th style={{ padding:'8px 12px', textAlign:'left', fontWeight:600, color:'#6B7280' }}>Membre</th>
-                      <th style={{ padding:'8px 12px', textAlign:'center', fontWeight:600, color:'#6B7280' }}>Sponsors</th>
-                      <th style={{ padding:'8px 12px', textAlign:'center', fontWeight:600, color:'#6B7280' }}>CEU Rate</th>
+                      <th style={{ padding:'8px 12px', textAlign:'center', fontWeight:600, color:'#6B7280' }}>Sponsors (parrainages)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1012,7 +1009,6 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                       <tr key={i} style={{ borderTop:'1px solid #F3F2EF' }}>
                         <td style={{ padding:'6px 12px', fontWeight:600 }}>{fullName(d.membres?.prenom, d.membres?.nom)}</td>
                         <td style={{ padding:'6px 12px', textAlign:'center', fontWeight:700, color: d.sponsors > 0 ? '#059669' : '#9CA3AF' }}>{d.sponsors}</td>
-                        <td style={{ padding:'6px 12px', textAlign:'center', fontWeight:700, color: d.ceu_rate > 0 ? '#059669' : '#9CA3AF' }}>{Number(d.ceu_rate).toFixed(4)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1026,8 +1022,8 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             </>
           ) : (
             <Card>
-              <SectionTitle>📊 Import BNI Insight — CEU · Parrainages</SectionTitle>
-              <p style={{ fontSize:12, color:'#6B7280', marginBottom:12 }}>Importez le fichier CSV "Rank" depuis BNI Insight. Seules les colonnes <strong>Sponsors</strong> et <strong>CEU Rate</strong> sont extraites.</p>
+              <SectionTitle>📊 Import BNI Insight — Parrainages (Sponsors)</SectionTitle>
+              <p style={{ fontSize:12, color:'#6B7280', marginBottom:12 }}>Importez le fichier CSV "Rank" depuis BNI Insight. Seule la colonne <strong>Sponsors</strong> est extraite — le CEU provient désormais directement de la colonne UEG des imports PALMS (Excel/texte provisoire).</p>
               {insightLoading ? (
                 <div style={{ display:'flex', alignItems:'center', gap:8, padding:12 }}>
                   <Spinner size={16} />
