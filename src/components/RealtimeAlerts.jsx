@@ -49,10 +49,10 @@ export default function RealtimeAlerts({ onNavigate }) {
 
   return (
     <>
-      {/* Toast notification pour nouvelle alerte en temps réel */}
+      {/* Toast notification pour nouvelle alerte en temps reel — a gauche du chat */}
       {show && newAlert && (
         <div style={{
-          position:'fixed', bottom:24, right:24, zIndex:1000,
+          position:'fixed', bottom:8, right:160, zIndex:1000,
           background:'#1C1C2E', borderRadius:12, padding:'16px 20px',
           maxWidth:380, boxShadow:'0 8px 32px rgba(0,0,0,0.3)',
           animation:'slideInRight 0.3s ease',

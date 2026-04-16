@@ -463,9 +463,9 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
         </Card>
       </AccordionPanel>
 
-      {/* Toast d'annulation apres suppression d'une archive */}
+      {/* Toast d'annulation apres suppression d'une archive — a gauche du chat */}
       {recentlyDeleted && (
-        <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', background:'#1C1C2E', color:'#fff', padding:'12px 18px', borderRadius:10, display:'flex', alignItems:'center', gap:14, boxShadow:'0 4px 20px rgba(0,0,0,0.25)', zIndex:9999, fontSize:13, fontFamily:'DM Sans, sans-serif', animation:'fadeIn 0.2s ease' }}>
+        <div style={{ position:'fixed', bottom:8, right:160, background:'#1C1C2E', color:'#fff', padding:'12px 18px', borderRadius:10, display:'flex', alignItems:'center', gap:14, boxShadow:'0 4px 20px rgba(0,0,0,0.25)', zIndex:9999, fontSize:13, fontFamily:'DM Sans, sans-serif', animation:'fadeIn 0.2s ease' }}>
           <span>🗑 Archive <strong>{recentlyDeleted.periode}</strong> supprimée</span>
           <button onClick={async () => {
             // Restaurer : remettre deleted_at a NULL
