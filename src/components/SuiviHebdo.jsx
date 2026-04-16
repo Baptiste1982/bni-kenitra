@@ -1160,6 +1160,137 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         </div>
       )}
 
+      {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
+      <div onClick={() => setMonthCollapsed(c => !c)}
+        style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius: monthCollapsed ? 10 : '10px 10px 0 0', marginBottom:0, cursor:'pointer', userSelect:'none', transition:'background 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background='#2A2A44'}
+        onMouseLeave={e => e.currentTarget.style.background='#1C1C2E'}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize' }}>Suivi — {moisLabel}</span>
+          <span style={{ fontSize:8, padding:'2px 6px', borderRadius:4, background:'rgba(254,243,199,0.25)', color:'#FDE68A', fontWeight:600 }}>Provisoire</span>
+          <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{totalReunionsSaisies}/{nbJeudis} réunions</span>
+          <div style={{ display:'flex', gap:3 }}>
+            {Array.from({length:nbJeudis}).map((_,i) => (
+              <div key={i} style={{ width:8, height:8, borderRadius:'50%', background: i < reunionsConsolidees ? '#059669' : i < reunionsConsolidees + reunionsProvisoires ? '#F59E0B' : 'rgba(255,255,255,0.2)' }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
+          <span style={{ color:'rgba(255,255,255,0.65)', fontSize:13, transition:'transform 0.2s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
+      ) : dates.length === 0 ? (
+        <Card style={{ marginBottom: 20 }}><p style={{ color: '#6B7280', fontSize: 13, textAlign: 'center', margin: 0 }}>Aucune donnée hebdomadaire pour {moisLabel}. Collez les données ci-dessus pour commencer.</p></Card>
+      ) : (
+        <div style={{ marginBottom: 20 }}>
+          <AccordionPanel open={!monthCollapsed}><TableWrap>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="suivi-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #E8E6E1' }}>
+                    <th style={{ ...th, textAlign: 'left', minWidth: 140 }}>Membre</th>
+                    <th style={{ ...th, ...sep, background: '#F7F6F3' }}>
+                      <div>Prés.</div>
+                      <div style={kpiRule}>≥95%→10 · ≥88%→5</div>
+                    </th>
+                    <th style={{ ...th, ...sep, cursor: 'pointer', userSelect: 'none' }} colSpan={showDetails ? 3 : 1} onClick={() => setShowDetails(v => !v)} title={showDetails ? 'Réduire' : 'Voir détails hebdo'}>
+                      <div>Tête-à-tête <span style={{ color: '#C41E3A', fontSize: 11 }}>{showDetails ? '▾' : '▸'}</span></div>
+                      <div style={kpiRule}>/sem : ≥1→20 · ≥0.75→15 · ≥0.5→10 · ≥0.25→5</div>
+                    </th>
+                    <th style={{ ...th, ...sep, cursor: 'pointer', userSelect: 'none' }} colSpan={showDetails ? 3 : 1} onClick={() => setShowDetails(v => !v)} title={showDetails ? 'Réduire' : 'Voir détails hebdo'}>
+                      <div>Recommandations données <span style={{ color: '#C41E3A', fontSize: 11 }}>{showDetails ? '▾' : '▸'}</span></div>
+                      <div style={kpiRule}>/sem : ≥1.25→25 · ≥1→20 · ≥0.75→15 · ≥0.5→10 · ≥0.25→5</div>
+                    </th>
+                    <th style={{ ...th, ...sep }}>
+                      <div>Visiteurs</div>
+                      <div style={kpiRule}>6 mois : 5→25 · 4→20 · 3→15 · 2→10 · 1→5</div>
+                    </th>
+                    <th style={{ ...th, ...sep }}>
+                      <div>TYFCB</div>
+                      <div style={kpiRule}>6 mois : ≥300k→5 · ≥150k→4 · ≥50k→3 · ≥20k→2 · &gt;0→1</div>
+                    </th>
+                    <th style={{ ...th, ...sep }}>
+                      <div>CEU</div>
+                      <div style={kpiRule}>/sem : &gt;0.5→10 · &gt;0→5</div>
+                    </th>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #E8E6E1' }}>
+                    <th style={th}></th>
+                    <th style={{ ...th, ...sep, background: '#F7F6F3', fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                    {showDetails && <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>}
+                    {showDetails && <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>}
+                    <th style={{ ...th, ...(showDetails ? {} : sep), fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
+                    {showDetails && <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>}
+                    {showDetails && <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>}
+                    <th style={{ ...th, ...(showDetails ? {} : sep), fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
+                    <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                    <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                    <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((m, i) => {
+                    const mTat = manque(m.cumul.tat, objTat)
+                    const mRefs = manque(m.cumul.refs, objRefs)
+                    const activity = m.cumul.tat + m.cumul.refs
+                    const rowBg = activity >= objTat ? '#D1FAE5' : activity > 0 ? '#FEF9C3' : m.cumul.presences === 0 ? '#FEE2E2' : '#F9FAFB'
+                    const nameCol = activity >= objTat ? '#065F46' : activity > 0 ? '#854D0E' : m.cumul.presences === 0 ? '#991B1B' : '#6B7280'
+                    const presTotal = m.cumul.presences + m.cumul.absences
+                    const presBg = presTotal === 0 ? '#FEE2E2' : m.cumul.absences === 0 ? '#D1FAE5' : '#FEF9C3'
+                    const presCol = presTotal === 0 ? '#991B1B' : m.cumul.absences === 0 ? '#065F46' : '#854D0E'
+                    const tatBg = mTat === 0 ? '#D1FAE5' : mTat <= 2 ? '#FEF9C3' : '#FEE2E2'
+                    const tatCol = mTat === 0 ? '#065F46' : mTat <= 2 ? '#854D0E' : '#991B1B'
+                    const refsBg = mRefs === 0 ? '#D1FAE5' : mRefs <= 2 ? '#FEF9C3' : '#FEE2E2'
+                    const refsCol = mRefs === 0 ? '#065F46' : mRefs <= 2 ? '#854D0E' : '#991B1B'
+                    const score = scoresMap[m.id]
+                    const canOpen = !!score
+                    return (
+                      <tr key={i}
+                        className={`suivi-row${canOpen ? ' clickable' : ''}`}
+                        style={{ backgroundColor: rowBg, '--row-bg': rowBg, cursor: canOpen ? 'pointer' : 'default' }}
+                        onClick={() => { if (canOpen) setSelectedMembre(score) }}>
+                        <td style={{ ...tdName, color: nameCol, fontWeight: 600 }}>{fullName(m.prenom, m.nom)}</td>
+                        <td style={{ ...td, ...sep, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>
+                        {showDetails && <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.tat}</td>}
+                        {showDetails && <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>}
+                        <td style={{ ...td, ...(showDetails ? {} : sep), fontWeight: 700, background: tatBg, color: tatCol }}>{mTat === 0 ? '✓' : mTat}</td>
+                        {showDetails && <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.refs}</td>}
+                        {showDetails && <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>}
+                        <td style={{ ...td, ...(showDetails ? {} : sep), fontWeight: 700, background: refsBg, color: refsCol }}>{mRefs === 0 ? '✓' : mRefs}</td>
+                        <td style={{ ...td, ...sep }}>{m.cumul.invites}</td>
+                        <td style={{ ...td, ...sep, fontWeight: 600, color: m.cumul.mpb > 0 ? '#065F46' : '#9CA3AF' }}>{Number(m.cumul.mpb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                        <td style={{ ...td, ...sep }}>{m.cumul.ueg}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                {(bniCumul.tat > 0 || bniCumul.refs > 0 || bniCumul.mpb > 0) && (
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #E8E6E1', background: '#F7F6F3' }}>
+                      <td style={{ ...tdName, fontStyle: 'italic', color: '#6B7280' }}>Contribution BNI externe</td>
+                      <td style={{ ...td, ...sep, background: '#F0EFEC' }}>—</td>
+                      {showDetails && <td style={{ ...td, ...sep }}>{bniCumul.tat}</td>}
+                      {showDetails && <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.tat}</td>}
+                      <td style={{ ...td, ...(showDetails ? {} : sep) }}>—</td>
+                      {showDetails && <td style={{ ...td, ...sep }}>{bniCumul.refs}</td>}
+                      {showDetails && <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.refs}</td>}
+                      <td style={{ ...td, ...(showDetails ? {} : sep) }}>—</td>
+                      <td style={{ ...td, ...sep }}>{bniCumul.invites}</td>
+                      <td style={{ ...td, ...sep }}>{Number(bniCumul.mpb).toLocaleString('fr-FR')}</td>
+                      <td style={{ ...td, ...sep }}>{bniCumul.ueg}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </TableWrap></AccordionPanel>
+        </div>
+      )}
+
       {/* ─── TABLEAU ACTIONS POUR ALL GREEN ─────────────────────────────── */}
       {!loading && dates.length > 0 && (() => {
         const actionsSorted = Object.values(membresMap)
@@ -1234,140 +1365,6 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
           </div>
         )
       })()}
-
-      {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
-      <div onClick={() => setMonthCollapsed(c => !c)}
-        style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius: monthCollapsed ? 10 : '10px 10px 0 0', marginBottom:0, cursor:'pointer', userSelect:'none', transition:'background 0.15s' }}
-        onMouseEnter={e => e.currentTarget.style.background='#2A2A44'}
-        onMouseLeave={e => e.currentTarget.style.background='#1C1C2E'}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize' }}>Suivi — {moisLabel}</span>
-          <span style={{ fontSize:8, padding:'2px 6px', borderRadius:4, background:'rgba(254,243,199,0.25)', color:'#FDE68A', fontWeight:600 }}>Provisoire</span>
-          <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)' }}>{totalReunionsSaisies}/{nbJeudis} réunions</span>
-          <div style={{ display:'flex', gap:3 }}>
-            {Array.from({length:nbJeudis}).map((_,i) => (
-              <div key={i} style={{ width:8, height:8, borderRadius:'50%', background: i < reunionsConsolidees ? '#059669' : i < reunionsConsolidees + reunionsProvisoires ? '#F59E0B' : 'rgba(255,255,255,0.2)' }} />
-            ))}
-          </div>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
-          <span style={{ color:'rgba(255,255,255,0.65)', fontSize:13, transition:'transform 0.2s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
-      ) : dates.length === 0 ? (
-        <Card><p style={{ color: '#6B7280', fontSize: 13, textAlign: 'center', margin: 0 }}>Aucune donnée hebdomadaire pour {moisLabel}. Collez les données ci-dessus pour commencer.</p></Card>
-      ) : (
-        <AccordionPanel open={!monthCollapsed}><TableWrap>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="suivi-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #E8E6E1' }}>
-                  <th style={{ ...th, textAlign: 'left', minWidth: 140 }}>Membre</th>
-                  <th style={{ ...th, ...sep, background: '#F7F6F3' }}>
-                    <div>Prés.</div>
-                    <div style={kpiRule}>≥95%→10 · ≥88%→5</div>
-                  </th>
-                  <th style={{ ...th, ...sep, cursor: 'pointer', userSelect: 'none' }} colSpan={showDetails ? 3 : 1} onClick={() => setShowDetails(v => !v)} title={showDetails ? 'Réduire' : 'Voir détails hebdo'}>
-                    <div>Tête-à-tête <span style={{ color: '#C41E3A', fontSize: 11 }}>{showDetails ? '▾' : '▸'}</span></div>
-                    <div style={kpiRule}>/sem : ≥1→20 · ≥0.75→15 · ≥0.5→10 · ≥0.25→5</div>
-                  </th>
-                  <th style={{ ...th, ...sep, cursor: 'pointer', userSelect: 'none' }} colSpan={showDetails ? 3 : 1} onClick={() => setShowDetails(v => !v)} title={showDetails ? 'Réduire' : 'Voir détails hebdo'}>
-                    <div>Recommandations données <span style={{ color: '#C41E3A', fontSize: 11 }}>{showDetails ? '▾' : '▸'}</span></div>
-                    <div style={kpiRule}>/sem : ≥1.25→25 · ≥1→20 · ≥0.75→15 · ≥0.5→10 · ≥0.25→5</div>
-                  </th>
-                  <th style={{ ...th, ...sep }}>
-                    <div>Visiteurs</div>
-                    <div style={kpiRule}>6 mois : 5→25 · 4→20 · 3→15 · 2→10 · 1→5</div>
-                  </th>
-                  <th style={{ ...th, ...sep }}>
-                    <div>TYFCB</div>
-                    <div style={kpiRule}>6 mois : ≥300k→5 · ≥150k→4 · ≥50k→3 · ≥20k→2 · &gt;0→1</div>
-                  </th>
-                  <th style={{ ...th, ...sep }}>
-                    <div>CEU</div>
-                    <div style={kpiRule}>/sem : &gt;0.5→10 · &gt;0→5</div>
-                  </th>
-                </tr>
-                <tr style={{ borderBottom: '1px solid #E8E6E1' }}>
-                  <th style={th}></th>
-                  <th style={{ ...th, ...sep, background: '#F7F6F3', fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                  {showDetails && <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>}
-                  {showDetails && <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>}
-                  <th style={{ ...th, ...(showDetails ? {} : sep), fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
-                  {showDetails && <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>}
-                  {showDetails && <th style={{ ...th, fontSize: 9, color: '#C41E3A', whiteSpace: 'normal' }}>Semaine en cours</th>}
-                  <th style={{ ...th, ...(showDetails ? {} : sep), fontSize: 9, color: '#DC2626', whiteSpace: 'normal' }}>Reste à faire</th>
-                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                  <th style={{ ...th, ...sep, fontSize: 9, whiteSpace: 'normal' }}>Mois en cours</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((m, i) => {
-                  const mTat = manque(m.cumul.tat, objTat)
-                  const mRefs = manque(m.cumul.refs, objRefs)
-                  // Couleur de fond basée sur l'activité globale
-                  const activity = m.cumul.tat + m.cumul.refs
-                  const rowBg = activity >= objTat ? '#D1FAE5' : activity > 0 ? '#FEF9C3' : m.cumul.presences === 0 ? '#FEE2E2' : '#F9FAFB'
-                  const nameCol = activity >= objTat ? '#065F46' : activity > 0 ? '#854D0E' : m.cumul.presences === 0 ? '#991B1B' : '#6B7280'
-                  // Couleur présence
-                  const presTotal = m.cumul.presences + m.cumul.absences
-                  const presBg = presTotal === 0 ? '#FEE2E2' : m.cumul.absences === 0 ? '#D1FAE5' : '#FEF9C3'
-                  const presCol = presTotal === 0 ? '#991B1B' : m.cumul.absences === 0 ? '#065F46' : '#854D0E'
-                  // Couleur TàT
-                  const tatBg = mTat === 0 ? '#D1FAE5' : mTat <= 2 ? '#FEF9C3' : '#FEE2E2'
-                  const tatCol = mTat === 0 ? '#065F46' : mTat <= 2 ? '#854D0E' : '#991B1B'
-                  // Couleur Reco
-                  const refsBg = mRefs === 0 ? '#D1FAE5' : mRefs <= 2 ? '#FEF9C3' : '#FEE2E2'
-                  const refsCol = mRefs === 0 ? '#065F46' : mRefs <= 2 ? '#854D0E' : '#991B1B'
-                  const score = scoresMap[m.id]
-                  const canOpen = !!score
-                  return (
-                    <tr key={i}
-                      className={`suivi-row${canOpen ? ' clickable' : ''}`}
-                      style={{ backgroundColor: rowBg, '--row-bg': rowBg, cursor: canOpen ? 'pointer' : 'default' }}
-                      onClick={() => { if (canOpen) setSelectedMembre(score) }}>
-                      <td style={{ ...tdName, color: nameCol, fontWeight: 600 }}>{fullName(m.prenom, m.nom)}</td>
-                      <td style={{ ...td, ...sep, background: presBg, fontWeight: 600, color: presCol }}>{m.cumul.presences}/{presTotal}</td>
-                      {showDetails && <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.tat}</td>}
-                      {showDetails && <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.tat}</td>}
-                      <td style={{ ...td, ...(showDetails ? {} : sep), fontWeight: 700, background: tatBg, color: tatCol }}>{mTat === 0 ? '✓' : mTat}</td>
-                      {showDetails && <td style={{ ...td, ...sep, fontWeight: 600 }}>{m.cumul.refs}</td>}
-                      {showDetails && <td style={{ ...td, color: '#C41E3A', fontWeight: 600 }}>{m.derniere.refs}</td>}
-                      <td style={{ ...td, ...(showDetails ? {} : sep), fontWeight: 700, background: refsBg, color: refsCol }}>{mRefs === 0 ? '✓' : mRefs}</td>
-                      <td style={{ ...td, ...sep }}>{m.cumul.invites}</td>
-                      <td style={{ ...td, ...sep, fontWeight: 600, color: m.cumul.mpb > 0 ? '#065F46' : '#9CA3AF' }}>{Number(m.cumul.mpb).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                      <td style={{ ...td, ...sep }}>{m.cumul.ueg}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              {/* Ligne BNI (contribution externe) */}
-              {(bniCumul.tat > 0 || bniCumul.refs > 0 || bniCumul.mpb > 0) && (
-                <tfoot>
-                  <tr style={{ borderTop: '2px solid #E8E6E1', background: '#F7F6F3' }}>
-                    <td style={{ ...tdName, fontStyle: 'italic', color: '#6B7280' }}>Contribution BNI externe</td>
-                    <td style={{ ...td, ...sep, background: '#F0EFEC' }}>—</td>
-                    {showDetails && <td style={{ ...td, ...sep }}>{bniCumul.tat}</td>}
-                    {showDetails && <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.tat}</td>}
-                    <td style={{ ...td, ...(showDetails ? {} : sep) }}>—</td>
-                    {showDetails && <td style={{ ...td, ...sep }}>{bniCumul.refs}</td>}
-                    {showDetails && <td style={{ ...td, color: '#C41E3A' }}>{bniDerniere.refs}</td>}
-                    <td style={{ ...td, ...(showDetails ? {} : sep) }}>—</td>
-                    <td style={{ ...td, ...sep }}>{bniCumul.invites}</td>
-                    <td style={{ ...td, ...sep }}>{Number(bniCumul.mpb).toLocaleString('fr-FR')}</td>
-                    <td style={{ ...td, ...sep }}>{bniCumul.ueg}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        </TableWrap></AccordionPanel>
-      )}
 
       {/* Modale détail membre (partagée avec Membres) */}
       {selectedMembre && (
