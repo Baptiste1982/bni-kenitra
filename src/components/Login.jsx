@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+
+const STORAGE_KEY = 'bni_remember'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -7,6 +9,21 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mode, setMode] = useState('login') // login | magic
+  const [remember, setRemember] = useState(true)
+
+  // Restauration au mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw)
+      if (saved?.email) setEmail(saved.email)
+      if (saved?.password) {
+        try { setPassword(atob(saved.password)) } catch { /* ignore */ }
+      }
+      setRemember(true)
+    } catch { /* ignore */ }
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -15,6 +32,12 @@ export default function Login({ onLogin }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+      // Sauvegarder ou purger selon la case à cocher
+      if (remember) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ email, password: btoa(password) }))
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
       onLogin(data.user)
     } catch (err) {
       setError(err.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect.' : err.message)
@@ -78,6 +101,20 @@ export default function Login({ onLogin }) {
                   style={{ width:'100%', padding:'11px 14px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'#fff', fontSize:14, fontFamily:'DM Sans, sans-serif', outline:'none' }}
                 />
               </div>
+            )}
+
+            {mode === 'login' && (
+              <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:20, cursor:'pointer', userSelect:'none' }}>
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={e => setRemember(e.target.checked)}
+                  style={{ width:16, height:16, accentColor:'#C41E3A', cursor:'pointer', margin:0 }}
+                />
+                <span style={{ fontSize:12, color:'rgba(255,255,255,0.6)', fontFamily:'DM Sans, sans-serif' }}>
+                  Se souvenir de moi sur cet appareil
+                </span>
+              </label>
             )}
 
             {mode === 'magic' && (

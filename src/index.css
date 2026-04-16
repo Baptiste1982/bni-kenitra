@@ -78,6 +78,7 @@ input, textarea, select { font-family: var(--font-body); }
   .hide-mobile { display: none !important; }
   .hide-desktop { display: flex !important; }
   .mobile-topbar { display: flex !important; }
+  .mobile-update-banner { display: flex !important; }
 
   /* Contenu principal */
   main > div { padding: 16px !important; }

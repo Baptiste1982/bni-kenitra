@@ -67,7 +67,24 @@ export default function App() {
   const [unreadChat, setUnreadChat] = useState(0)
   const [groupeCode, setGroupeCode] = useState('MK-01')
   const [groupes, setGroupes] = useState([])
+  const [showUpdateBanner, setShowUpdateBanner] = useState(() => {
+    try { return sessionStorage.getItem('bni_update_dismissed') !== '1' } catch { return true }
+  })
   const chatTabRef = React.useRef(null)
+
+  const handleReload = () => {
+    try { sessionStorage.removeItem('bni_update_dismissed') } catch {}
+    // Force reload (bypasse le cache navigateur)
+    if ('caches' in window) {
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).finally(() => window.location.reload())
+    } else {
+      window.location.reload()
+    }
+  }
+  const dismissUpdateBanner = () => {
+    try { sessionStorage.setItem('bni_update_dismissed', '1') } catch {}
+    setShowUpdateBanner(false)
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -361,6 +378,34 @@ export default function App() {
             )}
           </div>
         </div>
+
+        {/* Bandeau mise à jour (mobile uniquement) */}
+        {showUpdateBanner && (
+          <div className="mobile-update-banner" style={{
+            display:'none',
+            alignItems:'center', gap:10, padding:'10px 14px',
+            background:'linear-gradient(135deg, #C41E3A 0%, #A01830 100%)',
+            color:'#fff', fontFamily:'DM Sans, sans-serif',
+            position:'sticky', top:0, zIndex:99,
+            boxShadow:'0 2px 8px rgba(196,30,58,0.25)',
+            animation:'fadeIn 0.3s ease',
+          }}>
+            <div style={{ fontSize:16, flexShrink:0 }}>↻</div>
+            <div style={{ flex:1, fontSize:11, lineHeight:1.3 }}>
+              Rechargez l'app pour appliquer les dernières mises à jour
+            </div>
+            <button onClick={handleReload} style={{
+              background:'rgba(255,255,255,0.2)', border:'1px solid rgba(255,255,255,0.35)',
+              color:'#fff', fontSize:11, fontWeight:600, padding:'5px 10px',
+              borderRadius:6, cursor:'pointer', fontFamily:'DM Sans, sans-serif',
+              whiteSpace:'nowrap', flexShrink:0,
+            }}>Recharger</button>
+            <button onClick={dismissUpdateBanner} aria-label="Fermer" style={{
+              background:'none', border:'none', color:'rgba(255,255,255,0.7)',
+              fontSize:16, cursor:'pointer', padding:'0 4px', lineHeight:1, flexShrink:0,
+            }}>×</button>
+          </div>
+        )}
 
         <main key={active} style={{ flex:1, overflowY:'auto', overflowX:'hidden', background:'#F7F6F3', display:'flex', flexDirection:'column' }}>
           {MODULES[active]}
