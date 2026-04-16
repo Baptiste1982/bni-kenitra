@@ -656,12 +656,44 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
               <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', width: w ? w : undefined }}>{h}</th>
             ))}</tr></thead>
             <tbody>
-              {monthInvites.map((inv, i) => {
+              {(() => {
+                // Trier les invites du mois par date (plus recent en premier)
+                const sorted = [...monthInvites].sort((a, b) => (b.date_visite || '').localeCompare(a.date_visite || ''))
+                // Calculer le nombre de colonnes pour le colSpan du separateur
+                const nbCols = 7 + (isColumnVisible('telephone') ? 1 : 0) + (isColumnVisible('email') ? 1 : 0) + (isColumnVisible('commentaires') && showCommentaires ? 1 : 0)
+                // Semaine = jeudi de la semaine (on "snappe" au jeudi)
+                const weekLabel = (dateStr) => {
+                  if (!dateStr) return 'Sans date'
+                  const d = new Date(dateStr + 'T12:00:00')
+                  const day = d.getDay()
+                  const thu = new Date(d); thu.setDate(d.getDate() + (4 - day))
+                  return `Semaine du ${thu.toLocaleDateString('fr-FR', { day:'numeric', month:'long' })}`
+                }
+                const weekKey = (dateStr) => {
+                  if (!dateStr) return 'no-date'
+                  const d = new Date(dateStr + 'T12:00:00')
+                  const thu = new Date(d); thu.setDate(d.getDate() + (4 - d.getDay()))
+                  return thu.toISOString().split('T')[0]
+                }
+                let lastWeek = null
+                return sorted.map((inv, i) => {
+                const currentWeek = weekKey(inv.date_visite)
+                const isNewWeek = currentWeek !== lastWeek
+                // Afficher aussi une en-tete de semaine avant la toute premiere ligne
+                const showSeparator = isNewWeek
+                lastWeek = currentWeek
                 const statStyle = getStatutStyle(inv.statut)
                 const isEdit = editId === inv.id
                 const inputSt = { padding:'4px 8px', border:'1px solid #E8E6E1', borderRadius:6, fontSize:11, fontFamily:'DM Sans, sans-serif', width:'100%', boxSizing:'border-box' }
                 return (
                   <React.Fragment key={i}>
+                  {showSeparator && (
+                    <tr>
+                      <td colSpan={nbCols} style={{ padding:'6px 14px', background:'#F3F2EF', borderTop:'1px solid #D1D5DB', borderBottom:'1px solid #E8E6E1', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                        {weekLabel(inv.date_visite)}
+                      </td>
+                    </tr>
+                  )}
                   <tr style={{ borderBottom: isEdit ? 'none' : '1px solid rgba(0,0,0,0.05)', background: isEdit ? '#FFFBEB' : statStyle.bg, cursor:'pointer', boxShadow: isEdit ? 'inset 0 0 0 2px #C9A84C' : 'none' }}
                     onClick={() => { if (isEdit) { setEditId(null) } else { setEditId(inv.id); setEditData({...inv}) } }}
                     onMouseEnter={e=>{ if(!isEdit) e.currentTarget.style.opacity='0.85'}} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
@@ -741,7 +773,8 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                   )}
                   </React.Fragment>
                 )
-              })}
+              })
+              })()}
             </tbody>
           </table>
         </TableWrap>
