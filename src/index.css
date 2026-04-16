@@ -128,28 +128,80 @@ input, textarea, select { font-family: var(--font-body); }
   body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 }
 
-/* ── MODE NUIT ──────────────────────────────────────────── */
-/* Approche pragmatique : filter invert + hue-rotate sur le body
-   pour basculer toute l'app en sombre sans refactor massif.
-   Les elements deja sombres (sidebar, topbar mobile) sont contre-
-   inverses pour garder leur apparence originale.
-   Les images/logos/graphes aussi pour preserver les couleurs. */
+/* ── MODE SOMBRE LEGER ──────────────────────────────────── */
+/* Approche ciblee sans filter : on darken les surfaces blanches
+   et on eclaircit les textes sombres via des overrides CSS sur
+   les inline styles. Les couleurs BNI (rouge, vert, orange) et les
+   badges de statut restent tels quels pour preserver le sens. */
+
 html.dark-mode {
-  background: #0B0B14;
+  background: #0F0F1A;
+  color-scheme: dark;
 }
 html.dark-mode body {
-  filter: invert(1) hue-rotate(180deg);
-  background: #ffffff; /* devient noir apres inversion */
+  background: #0F0F1A;
+  color: #E8E8F0;
 }
-/* Contre-inversion : ces elements gardent leur aspect original */
-html.dark-mode img,
-html.dark-mode video,
-html.dark-mode svg.recharts-surface,
-html.dark-mode aside,
-html.dark-mode .mobile-topbar,
-html.dark-mode [data-keep-color] {
-  filter: invert(1) hue-rotate(180deg);
+
+/* Surfaces blanches / tres claires -> sombres */
+html.dark-mode [style*="background: rgb(255, 255, 255)"],
+html.dark-mode [style*="background:#fff"],
+html.dark-mode [style*="background: #fff"] {
+  background-color: #1A1A2E !important;
 }
+html.dark-mode [style*="background: rgb(247, 246, 243)"],
+html.dark-mode [style*="background: rgb(249, 248, 246)"],
+html.dark-mode [style*="background: rgb(243, 242, 239)"],
+html.dark-mode [style*="background: rgb(250, 250, 248)"] {
+  background-color: #181826 !important;
+}
+/* Section titles / sous-ensembles avec fond tres clair F7F6F3 */
+html.dark-mode [style*="background:#F7F6F3"],
+html.dark-mode [style*="background: #F7F6F3"],
+html.dark-mode [style*="background:#F9F8F6"],
+html.dark-mode [style*="background: #F9F8F6"] {
+  background-color: #181826 !important;
+}
+
+/* Textes sombres par defaut -> clairs */
+html.dark-mode [style*="color: rgb(28, 28, 46)"],
+html.dark-mode [style*="color:#1C1C2E"],
+html.dark-mode [style*="color: #1C1C2E"] {
+  color: #E8E8F0 !important;
+}
+html.dark-mode [style*="color: rgb(107, 114, 128)"],
+html.dark-mode [style*="color:#6B7280"],
+html.dark-mode [style*="color: #6B7280"] {
+  color: #9CA3B5 !important;
+}
+html.dark-mode [style*="color: rgb(75, 85, 99)"] {
+  color: #9CA3B5 !important;
+}
+html.dark-mode [style*="color: rgb(156, 163, 175)"],
+html.dark-mode [style*="color:#9CA3AF"] {
+  color: #6B7280 !important;
+}
+
+/* Bordures claires -> sombres */
+html.dark-mode [style*="border: 1px solid rgb(232, 230, 225)"],
+html.dark-mode [style*="border:1px solid #E8E6E1"],
+html.dark-mode [style*="border: 1px solid #E8E6E1"] {
+  border-color: #2A2A44 !important;
+}
+html.dark-mode [style*="border-bottom: 1px solid rgb(232, 230, 225)"],
+html.dark-mode [style*="borderBottom:'1px solid #E8E6E1"] {
+  border-bottom-color: #2A2A44 !important;
+}
+
+/* Inputs / textarea / selects */
+html.dark-mode input:not([type="checkbox"]):not([type="radio"]),
+html.dark-mode textarea,
+html.dark-mode select {
+  background-color: #1F1F36 !important;
+  color: #E8E8F0 !important;
+  border-color: #2A2A44 !important;
+}
+
 /* Scrollbar adaptee */
 html.dark-mode ::-webkit-scrollbar-thumb { background: #4B5563; }
 html.dark-mode ::-webkit-scrollbar-thumb:hover { background: #6B7280; }
