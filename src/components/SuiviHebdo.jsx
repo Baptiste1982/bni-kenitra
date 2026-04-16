@@ -57,6 +57,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [insightData, setInsightData] = useState([])
   const palmsInitFileRef = useRef(null)
   const insightFileRef = useRef(null)
+  const hebdoFileRef = useRef(null)
   const palmsInitPanelRef = useRef(null)
   const archivesPanelRef = useRef(null)
   const importPanelRef = useRef(null)
@@ -318,7 +319,26 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
 
     try {
       const membres = await fetchMembresForMatch(groupeCode)
-      const lines = rawText.trim().split('\n').map(l => l.split('\t'))
+
+      // Détection automatique du séparateur : tab (copier/coller), puis point-virgule (CSV fr), puis virgule
+      const firstLine = rawText.trim().split(/\r?\n/)[0] || ''
+      const sep = firstLine.includes('\t') ? '\t'
+        : firstLine.split(';').length > firstLine.split(',').length ? ';'
+        : ','
+      // Parser une ligne en gérant les guillemets (pour CSV avec virgules dans des champs)
+      const parseLine = (line) => {
+        if (sep === '\t') return line.split('\t')
+        const out = []; let cur = ''; let inQuotes = false
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i]
+          if (ch === '"') { inQuotes = !inQuotes; continue }
+          if (ch === sep && !inQuotes) { out.push(cur); cur = ''; continue }
+          cur += ch
+        }
+        out.push(cur)
+        return out.map(s => s.trim())
+      }
+      const lines = rawText.trim().split(/\r?\n/).map(parseLine)
 
       // Detect headers
       const headerRow = lines[0]
@@ -870,9 +890,35 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
       {showImport && <div ref={importPanelRef}><Card style={{ marginBottom: 24 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:0 }}>
-          <SectionTitle>Coller les données PALMS</SectionTitle>
+          <SectionTitle>Coller les données PALMS ou importer un CSV</SectionTitle>
           <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Import texte · Provisoire</span>
         </div>
+
+        {/* Zone de dépôt CSV */}
+        <div
+          style={{ border:'2px dashed #E8E6E1', borderRadius:10, padding:16, textAlign:'center', cursor:'pointer', marginBottom:12, marginTop:8, transition:'background 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.background='#FAFAF8'}
+          onMouseLeave={e => e.currentTarget.style.background='transparent'}
+          onClick={() => hebdoFileRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.style.background='#FEF3C7' }}
+          onDragLeave={e => { e.currentTarget.style.background='transparent' }}
+          onDrop={e => {
+            e.preventDefault(); e.currentTarget.style.background='transparent'
+            const f = e.dataTransfer.files?.[0]
+            if (f) { const r = new FileReader(); r.onload = ev => setRawText(String(ev.target?.result || '')); r.readAsText(f, 'utf-8') }
+          }}>
+          <div style={{ fontSize:22, marginBottom:4 }}>📄</div>
+          <div style={{ fontSize:12, color:'#6B7280' }}>Cliquez ou glissez un fichier CSV/TSV (tab, virgule ou point-virgule)</div>
+        </div>
+        <input ref={hebdoFileRef} type="file" accept=".csv,.tsv,.txt" hidden
+          onChange={e => {
+            const f = e.target.files?.[0]; if (!f) return
+            const r = new FileReader()
+            r.onload = ev => setRawText(String(ev.target?.result || ''))
+            r.readAsText(f, 'utf-8')
+            e.target.value = '' // permet de re-sélectionner le même fichier
+          }} />
+
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <label style={{ fontSize: 12, color: '#6B7280' }}>Date :</label>
