@@ -105,6 +105,9 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [scoresMap, setScoresMap] = useState({})
   const [selectedMembre, setSelectedMembre] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
+  // Accordeons des 2 tableaux hebdo — replies par defaut, cliquer sur le bandeau pour ouvrir
+  const [actionsCollapsed, setActionsCollapsed] = useState(true)
+  const [monthCollapsed, setMonthCollapsed] = useState(true)
   const [showPalmsInit, setShowPalmsInit] = useState(false)
   const [palmsInitLoading, setPalmsInitLoading] = useState(false)
   const [palmsInitResult, setPalmsInitResult] = useState(null)
@@ -1163,7 +1166,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         const pct = nbTotal > 0 ? Math.round((nbVerts / nbTotal) * 100) : 0
         return (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0' }}>
+            <div onClick={() => setActionsCollapsed(c => !c)}
+              style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius: actionsCollapsed ? 10 : '10px 10px 0 0', cursor:'pointer', userSelect:'none', transition:'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background='#2A2A44'}
+              onMouseLeave={e => e.currentTarget.style.background='#1C1C2E'}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <span style={{ color:'#fff', fontSize:15, fontWeight:700 }}>🎯 Actions pour tout passer au vert</span>
                 <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:10, background:'rgba(16,185,129,0.2)', color:'#A7F3D0' }}>{nbVerts}/{nbTotal} au vert</span>
@@ -1173,9 +1179,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                   <div style={{ width:`${pct}%`, height:'100%', background:'#10B981', transition:'width 0.3s' }} />
                 </div>
                 <span style={{ fontSize:10, color:'rgba(255,255,255,0.7)', fontWeight:600 }}>{pct}%</span>
+                <span style={{ color:'rgba(255,255,255,0.65)', fontSize:13, transition:'transform 0.2s', transform: actionsCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
               </div>
             </div>
-            <TableWrap>
+            <AccordionPanel open={!actionsCollapsed}><TableWrap>
               <div style={{ overflowX:'auto' }}>
                 <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0 }}>
                   <thead>
@@ -1212,13 +1219,16 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                   </tbody>
                 </table>
               </div>
-            </TableWrap>
+            </TableWrap></AccordionPanel>
           </div>
         )
       })()}
 
       {/* ─── TABLEAU MENSUEL ─────────────────────────────────────────────── */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius:'10px 10px 0 0', marginBottom:0 }}>
+      <div onClick={() => setMonthCollapsed(c => !c)}
+        style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 18px', background:'#1C1C2E', borderRadius: monthCollapsed ? 10 : '10px 10px 0 0', marginBottom:0, cursor:'pointer', userSelect:'none', transition:'background 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background='#2A2A44'}
+        onMouseLeave={e => e.currentTarget.style.background='#1C1C2E'}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <span style={{ color:'#fff', fontSize:15, fontWeight:700, textTransform:'capitalize' }}>Suivi — {moisLabel}</span>
           <span style={{ fontSize:8, padding:'2px 6px', borderRadius:4, background:'rgba(254,243,199,0.25)', color:'#FDE68A', fontWeight:600 }}>Provisoire</span>
@@ -1229,7 +1239,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             ))}
           </div>
         </div>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
+          <span style={{ color:'rgba(255,255,255,0.65)', fontSize:13, transition:'transform 0.2s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', marginLeft:4 }}>▼</span>
+        </div>
       </div>
 
       {loading ? (
@@ -1237,7 +1250,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       ) : dates.length === 0 ? (
         <Card><p style={{ color: '#6B7280', fontSize: 13, textAlign: 'center', margin: 0 }}>Aucune donnée hebdomadaire pour {moisLabel}. Collez les données ci-dessus pour commencer.</p></Card>
       ) : (
-        <TableWrap>
+        <AccordionPanel open={!monthCollapsed}><TableWrap>
           <div style={{ overflowX: 'auto' }}>
             <table className="suivi-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
@@ -1342,7 +1355,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
               )}
             </table>
           </div>
-        </TableWrap>
+        </TableWrap></AccordionPanel>
       )}
 
       {/* Modale détail membre (partagée avec Membres) */}
