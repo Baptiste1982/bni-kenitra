@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { fetchDashboardKPIs, cloturerMois } from '../lib/bniService'
 import { supabase } from '../lib/supabase'
 import { TLBadge, SectionTitle, PageHeader, TableWrap, fullName } from './ui'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, ComposedChart, ReferenceLine, Legend } from 'recharts'
+
+// Objectif mensuel TYFCB par defaut (ajustable). Base sur le seuil "vert" (>= 100k)
+const OBJECTIF_TYFCB_MOIS = 100000
 
 const scoreBg = (score) => score >= 70 ? { bg:'#D1FAE5', color:'#065F46' } : score >= 50 ? { bg:'#FEF9C3', color:'#854D0E' } : score >= 30 ? { bg:'#FEE2E2', color:'#991B1B' } : { bg:'#F3F4F6', color:'#4B5563' }
 const tlBg = (tl) => ({ vert:{bg:'#D1FAE5',color:'#065F46'}, orange:{bg:'#FEF9C3',color:'#854D0E'}, rouge:{bg:'#FEE2E2',color:'#991B1B'}, gris:{bg:'#F3F4F6',color:'#4B5563'} }[tl] || {bg:'#F3F4F6',color:'#4B5563'})
@@ -221,23 +224,48 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
       {/* Tendances hebdo */}
       {trendData.length > 1 && (
         <div style={{ display:'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr', gap:16, marginBottom:24, minWidth:0 }}>
-          {/* TYFCB par réunion */}
-          <TableWrap>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1' }}>
-              <SectionTitle>💰 TYFCB par réunion</SectionTitle>
-            </div>
-            <div style={{ padding:'12px 8px 4px', height:200, minWidth:0 }}>
-              <ResponsiveContainer width="100%" height={190}>
-                <BarChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
-                  <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />
-                  <YAxis tick={{ fontSize:10, fill:'#9CA3AF' }} />
-                  <Tooltip formatter={(v) => [`${Number(v).toLocaleString('fr-FR')} MAD`, 'TYFCB']} labelStyle={{ fontWeight:700 }} contentStyle={{ borderRadius:8, border:'1px solid #E8E6E1', fontSize:12 }} />
-                  <Bar dataKey="mpb" fill="#C41E3A" radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </TableWrap>
+          {/* TYFCB par réunion + cumul + objectif */}
+          {(() => {
+            // Calculer le cumul progressif du TYFCB semaine apres semaine
+            let runningSum = 0
+            const dataWithCumul = trendData.map(d => {
+              runningSum += Number(d.mpb) || 0
+              return { ...d, mpbCumul: Math.round(runningSum) }
+            })
+            const cumulActuel = dataWithCumul.length ? dataWithCumul[dataWithCumul.length - 1].mpbCumul : 0
+            const pctObjectif = Math.round((cumulActuel / OBJECTIF_TYFCB_MOIS) * 100)
+            const atteint = cumulActuel >= OBJECTIF_TYFCB_MOIS
+            return (
+              <TableWrap>
+                <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+                  <SectionTitle>💰 TYFCB cumulé vs objectif</SectionTitle>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11 }}>
+                    <span style={{ fontWeight:700, color: atteint ? '#065F46' : pctObjectif >= 50 ? '#854D0E' : '#991B1B' }}>
+                      {Number(cumulActuel).toLocaleString('fr-FR')} / {Number(OBJECTIF_TYFCB_MOIS).toLocaleString('fr-FR')} MAD
+                    </span>
+                    <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background: atteint ? '#D1FAE5' : pctObjectif >= 50 ? '#FEF9C3' : '#FEE2E2', color: atteint ? '#065F46' : pctObjectif >= 50 ? '#854D0E' : '#991B1B', fontWeight:700 }}>{pctObjectif}%</span>
+                  </div>
+                </div>
+                <div style={{ padding:'12px 8px 4px', height:220, minWidth:0 }}>
+                  <ResponsiveContainer width="100%" height={210}>
+                    <ComposedChart data={dataWithCumul}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F3F2EF" />
+                      <XAxis dataKey="label" tick={{ fontSize:10, fill:'#9CA3AF' }} />
+                      <YAxis tick={{ fontSize:10, fill:'#9CA3AF' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                      <Tooltip
+                        formatter={(v, name) => [`${Number(v).toLocaleString('fr-FR')} MAD`, name === 'mpb' ? 'TYFCB semaine' : 'TYFCB cumulé']}
+                        labelStyle={{ fontWeight:700 }}
+                        contentStyle={{ borderRadius:8, border:'1px solid #E8E6E1', fontSize:12 }} />
+                      <Legend wrapperStyle={{ fontSize:11 }} />
+                      <ReferenceLine y={OBJECTIF_TYFCB_MOIS} stroke="#059669" strokeDasharray="4 4" strokeWidth={2} label={{ value:`🎯 Objectif ${(OBJECTIF_TYFCB_MOIS/1000).toFixed(0)}k`, position:'insideTopRight', fill:'#059669', fontSize:10, fontWeight:700 }} />
+                      <Bar dataKey="mpb" name="TYFCB semaine" fill="#C41E3A" radius={[4,4,0,0]} />
+                      <Line type="monotone" dataKey="mpbCumul" name="TYFCB cumulé" stroke="#3B82F6" strokeWidth={3} dot={{ r:5, fill:'#3B82F6' }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </TableWrap>
+            )
+          })()}
 
           {/* Activité : TàT + Recos */}
           <TableWrap>
