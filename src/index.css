@@ -202,6 +202,24 @@ html.dark-mode select {
   border-color: #2A2A44 !important;
 }
 
+/* Lignes de statut des invites : attenuer les fonds pastels pour qu'ils
+   s'integrent mieux en mode sombre tout en restant identifiables */
+html.dark-mode tr[style*="background: rgb(254, 249, 195)"],
+html.dark-mode tr[style*="background: rgb(253, 230, 138)"] {
+  background-color: rgba(254, 249, 195, 0.15) !important;
+}
+html.dark-mode tr[style*="background: rgb(254, 226, 226)"],
+html.dark-mode tr[style*="background: rgb(252, 165, 165)"] {
+  background-color: rgba(254, 226, 226, 0.15) !important;
+}
+html.dark-mode tr[style*="background: rgb(209, 250, 229)"],
+html.dark-mode tr[style*="background: rgb(167, 243, 208)"] {
+  background-color: rgba(209, 250, 229, 0.15) !important;
+}
+html.dark-mode tr[style*="background: rgb(219, 234, 254)"] {
+  background-color: rgba(219, 234, 254, 0.15) !important;
+}
+
 /* Scrollbar adaptee */
 html.dark-mode ::-webkit-scrollbar-thumb { background: #4B5563; }
 html.dark-mode ::-webkit-scrollbar-thumb:hover { background: #6B7280; }

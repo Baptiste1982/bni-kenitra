@@ -16,6 +16,8 @@ export function formatMoroccanPhone(raw) {
   if (raw == null) return ''
   const str = String(raw).trim()
   if (!str) return ''
+  // Rejeter les valeurs d'erreur heritees de Google Sheets ou autres imports (#ERROR!, #N/A, #REF!, etc.)
+  if (/^#[A-Z]+!?$/i.test(str) || /error/i.test(str)) return ''
 
   // Garder uniquement chiffres et "+"
   let cleaned = str.replace(/[^\d+]/g, '')
