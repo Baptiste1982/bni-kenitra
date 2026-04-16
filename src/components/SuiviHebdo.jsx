@@ -86,6 +86,9 @@ function spreadsheetXmlToTsv(xml) {
 
 export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [rawText, setRawText] = useState('')
+  // Modal de confirmation date avant l'import (apparait apres selection fichier)
+  const [showDateModal, setShowDateModal] = useState(false)
+  const [pendingFileName, setPendingFileName] = useState('')
   // Origine de l'import courant : 'xls' (consolidé) | 'text' (provisoire) | null
   // - Fichier .xls PALMS SpreadsheetML → consolidé (clôture la semaine)
   // - Copier-coller ou .csv/.tsv → provisoire (remplaçable)
@@ -1096,11 +1099,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
               const r = new FileReader()
               r.onload = ev => {
                 const txt = String(ev.target?.result || '')
-                // Si c'est un export PALMS .xls (SpreadsheetML XML) → import consolidé (clôture la semaine)
-                // Sinon CSV/TSV → import provisoire (remplaçable)
                 const isXml = txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')
                 setRawText(isXml ? spreadsheetXmlToTsv(txt) : txt)
                 setImportSource(isXml ? 'xls' : 'text')
+                setPendingFileName(f.name)
+                setShowDateModal(true)
               }
               r.readAsText(f, 'utf-8')
             }
@@ -1114,14 +1117,14 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             const r = new FileReader()
             r.onload = ev => {
               const txt = String(ev.target?.result || '')
-              // Si c'est un export PALMS .xls (SpreadsheetML XML) → import consolidé (clôture la semaine)
-              // Sinon CSV/TSV → import provisoire (remplaçable)
               const isXml = txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')
               setRawText(isXml ? spreadsheetXmlToTsv(txt) : txt)
               setImportSource(isXml ? 'xls' : 'text')
+              setPendingFileName(f.name)
+              setShowDateModal(true)
             }
             r.readAsText(f, 'utf-8')
-            e.target.value = '' // permet de re-sélectionner le même fichier
+            e.target.value = ''
           }} />
 
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1383,6 +1386,70 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
           onClose={() => setSelectedMembre(null)}
         />
       )}
+
+      {/* Modale de confirmation de date avant l'import */}
+      {showDateModal && (() => {
+        // Calcul de la periode couverte
+        const finDate = dateReunion
+        const debutDate = new Date(dateReunion + 'T12:00:00')
+        debutDate.setDate(debutDate.getDate() - 7 * nbReunions)
+        const debutStr = debutDate.toISOString().split('T')[0]
+        const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'long', year:'numeric' })
+        const isXls = importSource === 'xls'
+        const cancel = () => { setShowDateModal(false); setRawText(''); setImportSource(null); setPendingFileName('') }
+        const confirm = () => { setShowDateModal(false); handleImport() }
+        return (
+          <div onClick={cancel}
+            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', zIndex:9500, display:'flex', alignItems:'center', justifyContent:'center', padding:20, animation:'fadeIn 0.2s' }}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ background:'#fff', borderRadius:14, maxWidth:480, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.4)', overflow:'hidden' }}>
+              <div style={{ padding:'18px 22px', borderBottom:'1px solid #E8E6E1', background: isXls ? '#ECFDF5' : '#FFFBEB' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:20 }}>{isXls ? '📊' : '✏️'}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:700, color: isXls ? '#065F46' : '#854D0E' }}>
+                      Confirmer l'import {isXls ? 'Excel (Consolidé)' : 'Texte (Provisoire)'}
+                    </div>
+                    {pendingFileName && <div style={{ fontSize:11, color:'#6B7280', marginTop:2, fontFamily:'monospace' }}>{pendingFileName}</div>}
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding:22 }}>
+                <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>📅 Date de la réunion importée</label>
+                <input type="date" value={dateReunion} onChange={e => setDateReunion(e.target.value)} autoFocus
+                  style={{ width:'100%', padding:'14px 16px', border:'2px solid #C41E3A', borderRadius:10, fontSize:16, fontWeight:600, fontFamily:'DM Sans, sans-serif', outline:'none', boxSizing:'border-box', color:'#1C1C2E' }} />
+                <div style={{ marginTop:16 }}>
+                  <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>Nombre de réunions couvertes</label>
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    {[1, 2, 3, 4].map(n => (
+                      <button key={n} onClick={() => setNbReunions(n)}
+                        style={{ flex:1, padding:'10px 0', borderRadius:8, border:`2px solid ${nbReunions === n ? '#C41E3A' : '#E8E6E1'}`, background: nbReunions === n ? '#FEF2F2' : '#fff', color: nbReunions === n ? '#C41E3A' : '#6B7280', fontSize:14, fontWeight: nbReunions === n ? 700 : 500, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginTop:16, padding:12, background:'#F9F8F6', borderRadius:8, fontSize:12, color:'#4B5563', lineHeight:1.5 }}>
+                  <div style={{ fontWeight:600, color:'#1C1C2E', marginBottom:4 }}>📆 Période couverte</div>
+                  <div>Du <strong>{fmt(debutStr)}</strong></div>
+                  <div>au <strong>{fmt(finDate)}</strong></div>
+                  <div style={{ marginTop:4, color:'#9CA3AF', fontSize:11 }}>soit {7 * nbReunions} jours · {nbReunions} réunion{nbReunions > 1 ? 's' : ''} de jeudi</div>
+                </div>
+              </div>
+              <div style={{ padding:'14px 22px', borderTop:'1px solid #E8E6E1', display:'flex', gap:10, justifyContent:'flex-end', background:'#F9F8F6' }}>
+                <button onClick={cancel}
+                  style={{ padding:'10px 18px', border:'1px solid #E8E6E1', background:'#fff', color:'#6B7280', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                  Annuler
+                </button>
+                <button onClick={confirm} disabled={importing}
+                  style={{ padding:'10px 22px', border:'none', background: isXls ? '#10B981' : '#C41E3A', color:'#fff', borderRadius:8, fontSize:13, fontWeight:700, cursor: importing ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif', opacity: importing ? 0.6 : 1 }}>
+                  {importing ? '⏳ Import...' : `✓ Confirmer l'import ${isXls ? 'Excel' : 'Texte'}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
