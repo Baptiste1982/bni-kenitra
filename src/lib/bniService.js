@@ -900,6 +900,18 @@ export async function uploadPostulantPDF(file, groupeCode, prenom, nom) {
   return data?.publicUrl || null
 }
 
+// Extraction automatique des champs d'une fiche de postulation via Claude Vision
+// images : array de base64 data-URL ("data:image/png;base64,..." ou base64 brut)
+// returns : { extracted: { prenom, nom, email, ... }, usage }
+export async function extractPostulantFromImages(images) {
+  const { data, error } = await supabase.functions.invoke('extract-postulant', {
+    body: { images }
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
 export async function convertPostulantToMembre(postulant, groupeId) {
   // Crée un membre à partir d'un postulant et le marque statut='inscrit'
   const { data: mem, error } = await supabase.from('membres').insert({

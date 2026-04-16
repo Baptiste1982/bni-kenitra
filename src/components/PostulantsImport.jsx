@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import * as pdfjs from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import { upsertPostulant, uploadPostulantPDF } from '../lib/bniService'
+import { upsertPostulant, uploadPostulantPDF, extractPostulantFromImages } from '../lib/bniService'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
@@ -20,6 +20,9 @@ export default function PostulantsImport({ groupes = [], defaultGroupeCode = 'MK
   const [scale, setScale] = useState(1.3)
   const [form, setForm] = useState({ ...BLANK, groupe_code: defaultGroupeCode })
   const [saving, setSaving] = useState(false)
+  const [extracting, setExtracting] = useState(false)
+  const [extractedFields, setExtractedFields] = useState(new Set())
+  const [extractInfo, setExtractInfo] = useState('')
   const [error, setError] = useState('')
   const canvasRef = useRef(null)
   const dropRef = useRef(null)
@@ -65,7 +68,59 @@ export default function PostulantsImport({ groupes = [], defaultGroupeCode = 'MK
     else setError('Glisse un fichier PDF')
   }
 
-  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  const set = (k, v) => {
+    setForm(prev => ({ ...prev, [k]: v }))
+    // Si l'utilisateur modifie manuellement, on retire le flag "extrait"
+    if (extractedFields.has(k)) {
+      setExtractedFields(prev => { const n = new Set(prev); n.delete(k); return n })
+    }
+  }
+
+  // Rend une page PDF en data URL JPEG (compact pour la vision API)
+  const renderPageToDataURL = async (doc, pageNum, scale = 1.6) => {
+    const page = await doc.getPage(pageNum)
+    const viewport = page.getViewport({ scale })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    const ctx = canvas.getContext('2d')
+    await page.render({ canvasContext: ctx, viewport }).promise
+    return canvas.toDataURL('image/jpeg', 0.82)
+  }
+
+  const handleExtract = async () => {
+    if (!pdfDoc) return
+    setExtracting(true); setError(''); setExtractInfo('')
+    try {
+      const maxPages = Math.min(pdfDoc.numPages, 8)
+      setExtractInfo(`Rendu des ${maxPages} page(s)…`)
+      const images = []
+      for (let i = 1; i <= maxPages; i++) {
+        images.push(await renderPageToDataURL(pdfDoc, i, 1.6))
+      }
+      setExtractInfo('Analyse IA en cours…')
+      const res = await extractPostulantFromImages(images)
+      const extracted = res?.extracted || {}
+      const filled = new Set()
+      setForm(prev => {
+        const next = { ...prev }
+        Object.entries(extracted).forEach(([k, v]) => {
+          if (v !== null && v !== undefined && v !== '' && k in BLANK) {
+            next[k] = String(v)
+            filled.add(k)
+          }
+        })
+        return next
+      })
+      setExtractedFields(filled)
+      setExtractInfo(filled.size > 0 ? `✓ ${filled.size} champ(s) extrait(s) — vérifie et complète si besoin` : 'Aucune donnée extraite — remplis manuellement')
+    } catch (err) {
+      setError('Erreur extraction : ' + (err.message || err))
+      setExtractInfo('')
+    } finally {
+      setExtracting(false)
+    }
+  }
 
   const canSave = form.prenom.trim() && form.nom.trim() && form.groupe_code
 
@@ -96,7 +151,19 @@ export default function PostulantsImport({ groupes = [], defaultGroupeCode = 'MK
 
   const mob = window.innerWidth <= 768
   const lbl = { fontSize:11, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4, display:'block' }
-  const inp = { width:'100%', padding:'8px 10px', fontSize:13, border:'1px solid #E5E7EB', borderRadius:6, outline:'none', fontFamily:'inherit', background:'#fff' }
+  const inpBase = { width:'100%', padding:'8px 10px', fontSize:13, border:'1px solid #E5E7EB', borderRadius:6, outline:'none', fontFamily:'inherit', background:'#fff' }
+  const fieldStyle = (k) => extractedFields.has(k)
+    ? { ...inpBase, border:'2px solid #F59E0B', background:'#FFFBEB', padding:'7px 9px' }
+    : inpBase
+  const inp = inpBase
+  const LabelWithBadge = ({ k, children }) => (
+    <label style={{ ...lbl, display:'flex', alignItems:'center', gap:6 }}>
+      {children}
+      {extractedFields.has(k) && (
+        <span style={{ fontSize:8, padding:'1px 5px', borderRadius:3, background:'#F59E0B', color:'#fff', fontWeight:700, letterSpacing:'0.04em' }}>IA</span>
+      )}
+    </label>
+  )
 
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding: mob ? 8 : 24 }}>
@@ -134,12 +201,30 @@ export default function PostulantsImport({ groupes = [], defaultGroupeCode = 'MK
                   <button onClick={() => setPageNum(p => Math.max(1, p-1))} disabled={pageNum<=1} style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #E5E7EB', background:'#fff', cursor: pageNum<=1?'default':'pointer', fontSize:13 }}>◀</button>
                   <span style={{ fontSize:13, fontWeight:600, minWidth:60, textAlign:'center' }}>{pageNum} / {numPages}</span>
                   <button onClick={() => setPageNum(p => Math.min(numPages, p+1))} disabled={pageNum>=numPages} style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #E5E7EB', background:'#fff', cursor: pageNum>=numPages?'default':'pointer', fontSize:13 }}>▶</button>
+                  <button
+                    onClick={handleExtract}
+                    disabled={extracting}
+                    title="Extraire automatiquement les infos du PDF avec Claude Vision"
+                    style={{
+                      padding:'5px 12px', borderRadius:6, border:'none',
+                      background: extracting ? '#9CA3AF' : 'linear-gradient(135deg, #C41E3A 0%, #7C1428 100%)',
+                      color:'#fff', cursor: extracting ? 'default' : 'pointer', fontSize:12, fontWeight:700,
+                      display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap',
+                      boxShadow: extracting ? 'none' : '0 2px 6px rgba(196,30,58,0.3)',
+                    }}>
+                    {extracting ? '⏳ Extraction…' : '✨ Extraire avec IA'}
+                  </button>
                   <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
                     <button onClick={() => setScale(s => Math.max(0.6, s-0.2))} style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #E5E7EB', background:'#fff', cursor:'pointer', fontSize:13 }}>−</button>
                     <button onClick={() => setScale(s => Math.min(3, s+0.2))} style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #E5E7EB', background:'#fff', cursor:'pointer', fontSize:13 }}>+</button>
-                    <button onClick={() => setFile(null)} title="Changer de fichier" style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #FCA5A5', background:'#fff', color:'#B91C1C', cursor:'pointer', fontSize:13 }}>Retirer</button>
+                    <button onClick={() => { setFile(null); setExtractedFields(new Set()); setExtractInfo('') }} title="Changer de fichier" style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #FCA5A5', background:'#fff', color:'#B91C1C', cursor:'pointer', fontSize:13 }}>Retirer</button>
                   </div>
                 </div>
+                {extractInfo && (
+                  <div style={{ padding:'8px 14px', background:'#FEF9C3', borderBottom:'1px solid #FDE68A', color:'#854D0E', fontSize:12, fontWeight:500 }}>
+                    {extractInfo}
+                  </div>
+                )}
                 <div style={{ flex:1, overflow:'auto', padding:14, display:'flex', justifyContent:'center' }}>
                   <canvas ref={canvasRef} style={{ boxShadow:'0 2px 8px rgba(0,0,0,0.12)', background:'#fff' }} />
                 </div>
@@ -157,56 +242,56 @@ export default function PostulantsImport({ groupes = [], defaultGroupeCode = 'MK
                 </select>
               </div>
               <div>
-                <label style={lbl}>Prénom *</label>
-                <input value={form.prenom} onChange={e => set('prenom', e.target.value)} style={inp} />
+                <LabelWithBadge k="prenom">Prénom *</LabelWithBadge>
+                <input value={form.prenom} onChange={e => set('prenom', e.target.value)} style={fieldStyle('prenom')} />
               </div>
               <div>
-                <label style={lbl}>Nom *</label>
-                <input value={form.nom} onChange={e => set('nom', e.target.value)} style={inp} />
+                <LabelWithBadge k="nom">Nom *</LabelWithBadge>
+                <input value={form.nom} onChange={e => set('nom', e.target.value)} style={fieldStyle('nom')} />
               </div>
               <div>
-                <label style={lbl}>Email</label>
-                <input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inp} />
+                <LabelWithBadge k="email">Email</LabelWithBadge>
+                <input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={fieldStyle('email')} />
               </div>
               <div>
-                <label style={lbl}>Téléphone</label>
-                <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} />
+                <LabelWithBadge k="phone">Téléphone</LabelWithBadge>
+                <input value={form.phone} onChange={e => set('phone', e.target.value)} style={fieldStyle('phone')} />
               </div>
               <div>
-                <label style={lbl}>Date de naissance</label>
-                <input type="date" value={form.date_naissance} onChange={e => set('date_naissance', e.target.value)} style={inp} />
+                <LabelWithBadge k="date_naissance">Date de naissance</LabelWithBadge>
+                <input type="date" value={form.date_naissance} onChange={e => set('date_naissance', e.target.value)} style={fieldStyle('date_naissance')} />
               </div>
               <div>
-                <label style={lbl}>Ville</label>
-                <input value={form.ville} onChange={e => set('ville', e.target.value)} style={inp} />
+                <LabelWithBadge k="ville">Ville</LabelWithBadge>
+                <input value={form.ville} onChange={e => set('ville', e.target.value)} style={fieldStyle('ville')} />
               </div>
               <div>
-                <label style={lbl}>Profession</label>
-                <input value={form.profession} onChange={e => set('profession', e.target.value)} style={inp} />
+                <LabelWithBadge k="profession">Profession</LabelWithBadge>
+                <input value={form.profession} onChange={e => set('profession', e.target.value)} style={fieldStyle('profession')} />
               </div>
               <div>
-                <label style={lbl}>Catégorie BNI</label>
-                <input value={form.categorie} onChange={e => set('categorie', e.target.value)} style={inp} placeholder="ex: Assurance, Immobilier…" />
+                <LabelWithBadge k="categorie">Catégorie BNI</LabelWithBadge>
+                <input value={form.categorie} onChange={e => set('categorie', e.target.value)} style={fieldStyle('categorie')} placeholder="ex: Assurance, Immobilier…" />
               </div>
               <div style={{ gridColumn:'1 / -1' }}>
-                <label style={lbl}>Entreprise / Raison sociale</label>
-                <input value={form.entreprise} onChange={e => set('entreprise', e.target.value)} style={inp} />
+                <LabelWithBadge k="entreprise">Entreprise / Raison sociale</LabelWithBadge>
+                <input value={form.entreprise} onChange={e => set('entreprise', e.target.value)} style={fieldStyle('entreprise')} />
               </div>
               <div style={{ gridColumn:'1 / -1' }}>
-                <label style={lbl}>Adresse entreprise</label>
-                <input value={form.adresse_entreprise} onChange={e => set('adresse_entreprise', e.target.value)} style={inp} />
+                <LabelWithBadge k="adresse_entreprise">Adresse entreprise</LabelWithBadge>
+                <input value={form.adresse_entreprise} onChange={e => set('adresse_entreprise', e.target.value)} style={fieldStyle('adresse_entreprise')} />
               </div>
               <div>
-                <label style={lbl}>Site web</label>
-                <input value={form.site_web} onChange={e => set('site_web', e.target.value)} style={inp} />
+                <LabelWithBadge k="site_web">Site web</LabelWithBadge>
+                <input value={form.site_web} onChange={e => set('site_web', e.target.value)} style={fieldStyle('site_web')} />
               </div>
               <div>
-                <label style={lbl}>LinkedIn</label>
-                <input value={form.linkedin} onChange={e => set('linkedin', e.target.value)} style={inp} />
+                <LabelWithBadge k="linkedin">LinkedIn</LabelWithBadge>
+                <input value={form.linkedin} onChange={e => set('linkedin', e.target.value)} style={fieldStyle('linkedin')} />
               </div>
               <div style={{ gridColumn:'1 / -1' }}>
-                <label style={lbl}>Parrain / Source</label>
-                <input value={form.parrain_nom} onChange={e => set('parrain_nom', e.target.value)} style={inp} placeholder="Nom du parrain, site BNI, etc." />
+                <LabelWithBadge k="parrain_nom">Parrain / Source</LabelWithBadge>
+                <input value={form.parrain_nom} onChange={e => set('parrain_nom', e.target.value)} style={fieldStyle('parrain_nom')} placeholder="Nom du parrain, site BNI, etc." />
               </div>
               <div>
                 <label style={lbl}>Statut initial</label>
@@ -218,8 +303,8 @@ export default function PostulantsImport({ groupes = [], defaultGroupeCode = 'MK
                 </select>
               </div>
               <div style={{ gridColumn:'1 / -1' }}>
-                <label style={lbl}>Notes</label>
-                <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} style={{ ...inp, resize:'vertical', fontFamily:'inherit' }} />
+                <LabelWithBadge k="notes">Notes</LabelWithBadge>
+                <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} style={{ ...fieldStyle('notes'), resize:'vertical', fontFamily:'inherit' }} />
               </div>
             </div>
 
