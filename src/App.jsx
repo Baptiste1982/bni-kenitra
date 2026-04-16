@@ -32,6 +32,10 @@ const ConnectionToast = ({ name, onDone }) => {
   )
 }
 
+// Version applicative — à incrémenter à chaque release pour déclencher le bandeau de MàJ mobile
+export const APP_VERSION = '1.1.0'
+export const APP_VERSION_NAME = 'Robinson'
+
 const ADMIN_ROLES = ['super_admin', 'directeur_executif']
 // Agent IA réservé à SA (super_admin) et DC (directrice_consultante)
 const AGENT_IA_ROLES = ['super_admin', 'directrice_consultante']
@@ -67,13 +71,19 @@ export default function App() {
   const [unreadChat, setUnreadChat] = useState(0)
   const [groupeCode, setGroupeCode] = useState('MK-01')
   const [groupes, setGroupes] = useState([])
+  // Bandeau MàJ : affiché tant que la version vue localement ≠ APP_VERSION
   const [showUpdateBanner, setShowUpdateBanner] = useState(() => {
-    try { return sessionStorage.getItem('bni_update_dismissed') !== '1' } catch { return true }
+    try { return localStorage.getItem('bni_version_seen') !== APP_VERSION } catch { return true }
   })
   const chatTabRef = React.useRef(null)
 
+  const markVersionSeen = () => {
+    try { localStorage.setItem('bni_version_seen', APP_VERSION) } catch {}
+  }
+
   const handleReload = () => {
-    try { sessionStorage.removeItem('bni_update_dismissed') } catch {}
+    markVersionSeen()
+    setShowUpdateBanner(false)
     // Force reload (bypasse le cache navigateur)
     if ('caches' in window) {
       caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).finally(() => window.location.reload())
@@ -82,7 +92,7 @@ export default function App() {
     }
   }
   const dismissUpdateBanner = () => {
-    try { sessionStorage.setItem('bni_update_dismissed', '1') } catch {}
+    markVersionSeen()
     setShowUpdateBanner(false)
   }
 
@@ -392,7 +402,7 @@ export default function App() {
           }}>
             <div style={{ fontSize:16, flexShrink:0 }}>↻</div>
             <div style={{ flex:1, fontSize:11, lineHeight:1.3 }}>
-              Rechargez l'app pour appliquer les dernières mises à jour
+              Nouvelle version <strong>{APP_VERSION} · {APP_VERSION_NAME}</strong> disponible — rechargez pour l'appliquer
             </div>
             <button onClick={handleReload} style={{
               background:'rgba(255,255,255,0.2)', border:'1px solid rgba(255,255,255,0.35)',
