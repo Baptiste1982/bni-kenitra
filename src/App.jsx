@@ -254,7 +254,11 @@ export default function App() {
 
   const userRole = profil?.role || 'lecture'
   // Accès modules : si modules_access est défini, l'utiliser, sinon admin voit tout
-  const userModules = profil?.modules_access || (ADMIN_ROLES.includes(userRole) ? ALL_MODULES.map(m => m.id) : ['dashboard', 'membres'])
+  // Admins (SA/DE) voient TOUJOURS tous les modules, meme si modules_access est fige en base.
+  // Pour les autres roles, on respecte modules_access stocke (sinon fallback minimal).
+  const userModules = ADMIN_ROLES.includes(userRole)
+    ? ALL_MODULES.map(m => m.id)
+    : (profil?.modules_access || ['dashboard', 'membres'])
   const NAV = ALL_MODULES.filter(m => {
     if (!userModules.includes(m.id)) return false
     // Agent IA : visible uniquement pour SA et DC, indépendamment de modules_access
