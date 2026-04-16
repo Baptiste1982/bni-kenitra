@@ -28,6 +28,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
   const [editGreetingSub, setEditGreetingSub] = useState('')
   const [editGreetingLogo, setEditGreetingLogo] = useState('')
   const [trendData, setTrendData] = useState([])
+  const [tfOfficiel, setTfOfficiel] = useState(null) // Score TF region officiel (depuis region_traffic_light)
   const [objectifTyfcb, setObjectifTyfcb] = useState(DEFAULT_OBJECTIF_TYFCB)
   const [editObjectif, setEditObjectif] = useState(false)
   const [objectifInput, setObjectifInput] = useState('')
@@ -92,6 +93,18 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
     supabase.from('groupes').select('objectif_tyfcb_mois').eq('code', groupeCode).single()
       .then(({ data }) => {
         if (data?.objectif_tyfcb_mois) setObjectifTyfcb(Number(data.objectif_tyfcb_mois))
+      })
+
+    // Charger le dernier score TF officiel depuis region_traffic_light pour ce groupe
+    supabase.from('region_traffic_light')
+      .select('annee, mois, score, groupe_nom')
+      .is('deleted_at', null)
+      .ilike('groupe_nom', `${groupeCode}%`)
+      .order('annee', { ascending: false }).order('mois', { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setTfOfficiel(data[0])
+        else setTfOfficiel(null)
       })
   }, [groupeCode])
 
@@ -433,6 +446,29 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
                     </div>
                   ))}
                 </div>
+                {/* Score TF officiel (depuis le rapport regional PALMS) */}
+                {tfOfficiel && (() => {
+                  const MOIS_COURT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc']
+                  const tfBg = tfOfficiel.score >= 70 ? '#D1FAE5' : tfOfficiel.score >= 50 ? '#FEF9C3' : tfOfficiel.score >= 30 ? '#FEE2E2' : '#F3F4F6'
+                  const tfCol = tfOfficiel.score >= 70 ? '#065F46' : tfOfficiel.score >= 50 ? '#854D0E' : tfOfficiel.score >= 30 ? '#991B1B' : '#4B5563'
+                  return (
+                    <div onClick={(e) => { e.stopPropagation(); onNavigate('rtl') }}
+                      style={{ marginTop:10, padding:'10px 14px', background:'#F9F8F6', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid #E8E6E1', cursor:'pointer', transition:'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#F0EFEC'} onMouseLeave={e => e.currentTarget.style.background='#F9F8F6'}>
+                      <div>
+                        <div style={{ fontSize:9, fontWeight:600, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.06em' }}>TF officiel PALMS</div>
+                        <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{MOIS_COURT[tfOfficiel.mois - 1]} {tfOfficiel.annee}</div>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ fontSize:20, fontWeight:800, color:tfCol }}>{tfOfficiel.score}</span>
+                        <span style={{ fontSize:11, color:'#9CA3AF' }}>/100</span>
+                        <span style={{ fontSize:9, padding:'2px 7px', borderRadius:4, background:tfBg, color:tfCol, fontWeight:700, textTransform:'uppercase', marginLeft:4 }}>
+                          {tfOfficiel.score >= 70 ? 'Vert' : tfOfficiel.score >= 50 ? 'Orange' : tfOfficiel.score >= 30 ? 'Rouge' : 'Gris'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })()}

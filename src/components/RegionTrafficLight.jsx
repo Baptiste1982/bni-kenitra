@@ -104,15 +104,22 @@ const groupColorFor = (nom, i) => {
 
 export default function RegionTrafficLight({ profil }) {
   const [rtlData, setRtlData] = useState([])
+  const [trashData, setTrashData] = useState([])
+  const [showTrash, setShowTrash] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState('')
-  const [activeMetric, setActiveMetric] = useState('score') // score | recommandations | invites | conversion | absenteisme | taille_groupe
+  const [activeMetric, setActiveMetric] = useState('score')
   const fileRef = useRef(null)
 
   const loadData = () => {
-    supabase.from('region_traffic_light').select('*')
+    supabase.from('region_traffic_light').select('*').is('deleted_at', null)
       .order('annee', { ascending: true }).order('mois', { ascending: true })
       .then(({ data }) => setRtlData(data || []))
+  }
+  const loadTrash = () => {
+    supabase.from('region_traffic_light').select('*').not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .then(({ data }) => setTrashData(data || []))
   }
   useEffect(() => { loadData() }, [])
 
@@ -144,10 +151,28 @@ export default function RegionTrafficLight({ profil }) {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette entrée ?')) return
-    await supabase.from('region_traffic_light').delete().eq('id', id)
+  // Soft delete : deplace vers la corbeille (ne supprime pas reellement)
+  const handleSoftDelete = async (id) => {
+    await supabase.from('region_traffic_light').update({ deleted_at: new Date().toISOString() }).eq('id', id)
     await loadData()
+    if (showTrash) await loadTrash()
+  }
+  // Restauration depuis la corbeille
+  const handleRestore = async (id) => {
+    await supabase.from('region_traffic_light').update({ deleted_at: null }).eq('id', id)
+    await loadTrash()
+    await loadData()
+  }
+  // Suppression definitive (irreversible)
+  const handleHardDelete = async (id, label) => {
+    if (!window.confirm(`Supprimer DÉFINITIVEMENT "${label}" ?\n\nCette action est irréversible.`)) return
+    await supabase.from('region_traffic_light').delete().eq('id', id)
+    await loadTrash()
+  }
+  // Ouvrir la corbeille
+  const openTrash = () => {
+    loadTrash()
+    setShowTrash(true)
   }
 
   // Build unique groupes list + chart data
@@ -198,13 +223,20 @@ export default function RegionTrafficLight({ profil }) {
         title="🚦 Traffic Light Régional"
         sub={`Progression mensuelle · ${rtlData.length} lignes importées · ${groupesNoms.length} groupe${groupesNoms.length > 1 ? 's' : ''}`}
         right={canWrite(profil) ? (
-          <div>
+          <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
             <input ref={fileRef} type="file" accept=".xls,.xlsx,.xml" multiple hidden onChange={e => handleUpload(e.target.files)} />
-            <button onClick={() => fileRef.current?.click()} disabled={uploading}
-              style={{ background: uploading ? '#E8E6E1' : '#1C1C2E', color:'#fff', border:'none', padding:'10px 16px', borderRadius:10, fontSize:13, fontWeight:700, cursor: uploading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif' }}>
-              {uploading ? '⏳ Import...' : '📂 Importer .xls (multi)'}
+            <button onClick={openTrash}
+              style={{ background:'#fff', color:'#1C1C2E', border:'1px solid #E8E6E1', padding:'10px 14px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+              onMouseEnter={e => e.currentTarget.style.background='#F7F6F3'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+              🗑 Corbeille
             </button>
-            {msg && <div style={{ marginTop:4, fontSize:11, color: msg.includes('erreur') ? '#DC2626' : '#059669', fontWeight:600 }}>{msg}</div>}
+            <div>
+              <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                style={{ background: uploading ? '#E8E6E1' : '#1C1C2E', color:'#fff', border:'none', padding:'10px 16px', borderRadius:10, fontSize:13, fontWeight:700, cursor: uploading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                {uploading ? '⏳ Import...' : '📂 Importer .xls (multi)'}
+              </button>
+              {msg && <div style={{ marginTop:4, fontSize:11, color: msg.includes('erreur') ? '#DC2626' : '#059669', fontWeight:600 }}>{msg}</div>}
+            </div>
           </div>
         ) : null}
       />
@@ -354,7 +386,7 @@ export default function RegionTrafficLight({ profil }) {
                         <td style={{ padding:'8px 12px', fontWeight:700, textAlign:'center', background:sc.bg, color:sc.color }}>{r.score}</td>
                         {canWrite(profil) && (
                           <td style={{ padding:'8px 12px', textAlign:'center' }}>
-                            <button onClick={() => handleDelete(r.id)} title="Supprimer cette ligne" style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'#DC2626', opacity:0.5 }}
+                            <button onClick={() => handleSoftDelete(r.id)} title="Envoyer a la corbeille (annulable)" style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'#DC2626', opacity:0.5 }}
                               onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.5'}>🗑</button>
                           </td>
                         )}
@@ -366,6 +398,64 @@ export default function RegionTrafficLight({ profil }) {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modale Corbeille — affichee au clic sur le bouton "🗑 Corbeille" */}
+      {showTrash && (
+        <div onClick={() => setShowTrash(false)}
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(4px)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:20, animation:'fadeIn 0.2s' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:'#fff', borderRadius:14, maxWidth:900, width:'100%', maxHeight:'85vh', overflow:'auto', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }}>
+            <div style={{ padding:'18px 22px', borderBottom:'1px solid #E8E6E1', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, background:'#fff', zIndex:1 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color:'#1C1C2E' }}>🗑 Corbeille Traffic Light</div>
+                <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{trashData.length} élément{trashData.length > 1 ? 's' : ''} supprimé{trashData.length > 1 ? 's' : ''} · restaurables ou à vider définitivement</div>
+              </div>
+              <button onClick={() => setShowTrash(false)}
+                style={{ background:'#F3F2EF', border:'none', width:32, height:32, borderRadius:'50%', cursor:'pointer', fontSize:16, color:'#6B7280' }}
+                onMouseEnter={e => e.currentTarget.style.background='#E8E6E1'} onMouseLeave={e => e.currentTarget.style.background='#F3F2EF'}>✕</button>
+            </div>
+            <div style={{ padding:18 }}>
+              {trashData.length === 0 ? (
+                <div style={{ padding:40, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>
+                  La corbeille est vide.<br/>
+                  <span style={{ fontSize:11, marginTop:6, display:'inline-block' }}>Les éléments supprimés depuis le tableau apparaîtront ici et pourront être restaurés.</span>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {trashData.map(r => {
+                    const sc = scoreTl(r.score)
+                    const delDate = r.deleted_at ? new Date(r.deleted_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '?'
+                    return (
+                      <div key={r.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderRadius:10, background:'#FEF2F2', border:'1px solid #FCA5A5' }}>
+                        <div style={{ width:10, height:10, borderRadius:'50%', background:'#DC2626', flexShrink:0 }} />
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:'#1C1C2E' }}>
+                            {moisLabelFromNum(r.mois)} {r.annee} · {r.groupe_nom}
+                            <span style={{ marginLeft:8, fontSize:9, padding:'2px 7px', borderRadius:6, background:sc.bg, color:sc.color, fontWeight:700, textTransform:'uppercase' }}>{sc.label} · {r.score}</span>
+                          </div>
+                          <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>Supprimé le <strong>{delDate}</strong> · Taille {Number(r.taille_groupe).toFixed(0)} · Recos {Number(r.recommandations).toFixed(2)} · Invités {Number(r.invites).toFixed(2)}</div>
+                        </div>
+                        <button onClick={() => handleRestore(r.id)}
+                          style={{ background:'#10B981', color:'#fff', border:'none', padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                          onMouseEnter={e => e.currentTarget.style.background='#059669'} onMouseLeave={e => e.currentTarget.style.background='#10B981'}>
+                          ↩ Restaurer
+                        </button>
+                        <button onClick={() => handleHardDelete(r.id, `${moisLabelFromNum(r.mois)} ${r.annee} ${r.groupe_nom}`)}
+                          title="Supprimer définitivement"
+                          style={{ background:'transparent', color:'#991B1B', border:'1px solid #FCA5A5', padding:'8px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                          onMouseEnter={e => { e.currentTarget.style.background='#DC2626'; e.currentTarget.style.color='#fff' }}
+                          onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#991B1B' }}>
+                          Supprimer définitivement
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
