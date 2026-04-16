@@ -1142,15 +1142,28 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         </div>
       </Card></div>}
 
+      {/* ─── BARRE DE RECHERCHE PARTAGÉE (filtre les deux tableaux) ─── */}
+      {!loading && dates.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher un membre..."
+            style={{ width:'100%', padding:'10px 14px', border:'1px solid #E8E6E1', borderRadius:10, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none', boxSizing:'border-box', background:'#fff' }} />
+        </div>
+      )}
+
       {/* ─── TABLEAU ACTIONS POUR ALL GREEN ─────────────────────────────── */}
       {!loading && dates.length > 0 && (() => {
-        const actionsSorted = Object.values(membresMap).slice().sort((a, b) => {
-          const remA = manque(a.cumul.tat, objTat) + manque(a.cumul.refs, objRefs)
-          const remB = manque(b.cumul.tat, objTat) + manque(b.cumul.refs, objRefs)
-          return remB - remA
-        })
-        const nbTotal = actionsSorted.length
-        const nbVerts = actionsSorted.filter(m => manque(m.cumul.tat, objTat) === 0 && manque(m.cumul.refs, objRefs) === 0).length
+        const actionsSorted = Object.values(membresMap)
+          .filter(m => !search || `${m.prenom} ${m.nom}`.toLowerCase().includes(search.toLowerCase()))
+          .slice()
+          .sort((a, b) => {
+            const remA = manque(a.cumul.tat, objTat) + manque(a.cumul.refs, objRefs)
+            const remB = manque(b.cumul.tat, objTat) + manque(b.cumul.refs, objRefs)
+            return remB - remA
+          })
+        // Stats globales (non filtrées par recherche, pour garder la photo complete)
+        const allMembres = Object.values(membresMap)
+        const nbTotal = allMembres.length
+        const nbVerts = allMembres.filter(m => manque(m.cumul.tat, objTat) === 0 && manque(m.cumul.refs, objRefs) === 0).length
         const pct = nbTotal > 0 ? Math.round((nbVerts / nbTotal) * 100) : 0
         return (
           <div style={{ marginBottom: 20 }}>
@@ -1221,10 +1234,6 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
           </div>
         </div>
         <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{Math.max(0, nbJeudis - totalReunionsSaisies)} restante{Math.max(0, nbJeudis - totalReunionsSaisies) > 1 ? 's' : ''}</span>
-      </div>
-      <div style={{ padding:'8px 14px', background:'#fff', borderBottom:'1px solid #E8E6E1' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un membre..."
-          style={{ width:'100%', padding:'8px 12px', border:'1px solid #E8E6E1', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none', boxSizing:'border-box' }} />
       </div>
 
       {loading ? (
