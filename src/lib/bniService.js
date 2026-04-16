@@ -113,21 +113,24 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const insightMap = {}
   ;(insightData || []).forEach(d => { insightMap[d.membre_id] = { sponsors: d.sponsors || 0 } })
 
-  // 4bis. Charger TOUT le UEG depuis palms_hebdo (sans filtre de date) pour le CEU
-  // Car le cutoff gt(palmsImportDate) exclut les reunions dont la date = periode_fin,
-  // et palms_imports ne capture pas encore UEG. Source unique = palms_hebdo.
+  // 4bis. Charger TOUT le UEG depuis palms_hebdo (sans filtre de date) pour le CEU.
+  // Le cutoff gt(palmsImportDate) excluait les reunions dont la date = periode_fin
+  // et palms_imports.ueg etait souvent 0. Source reelle = palms_hebdo.
+  //
+  // BAREME BNI : CEU Rate = UEG cumul / nb jeudis 6 MOIS GLISSANTS
+  // Le denominateur doit etre la duree reelle de la periode PALMS
+  // (periodeDebut -> aujourdHui), PAS le nombre de dates importees.
   const { data: allUegData } = await supabase
     .from('palms_hebdo')
-    .select('membre_id, ueg, date_reunion')
+    .select('membre_id, ueg')
     .eq('groupe_id', groupeId)
   const uegByMembre = {}
-  const uegDates = new Set()
   ;(allUegData || []).forEach(h => {
     if (!h.membre_id) return
     uegByMembre[h.membre_id] = (uegByMembre[h.membre_id] || 0) + (h.ueg || 0)
-    if (h.date_reunion) uegDates.add(h.date_reunion)
   })
-  const nbJeudisPourCeu = uegDates.size || nbSemaines
+  // nbSemaines = countJeudis(periodeDebut, aujourdHui) calcule plus haut (ligne 105)
+  const nbJeudisPourCeu = nbSemaines
 
   // 5. Charger les membres pour matcher invite_par_nom → membre_id
   const { data: membres } = await supabase
