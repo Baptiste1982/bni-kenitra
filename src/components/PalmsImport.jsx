@@ -141,6 +141,7 @@ export default function PalmsImport({ onImportDone, groupeCode = 'MK-01' }) {
           invites: parseInt(row['Inv.'] || row['Invités'] || 0),
           tat: parseFloat(row['TàT'] || row['T\u00e0T'] || 0),
           mpb: parseFloat(row['MPB'] || 0),
+          ueg: parseInt(row['UEG'] || 0),
           periode_debut,
           periode_fin,
         }

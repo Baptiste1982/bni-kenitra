@@ -113,6 +113,22 @@ export async function recalculateScores(groupeCode = 'MK-01') {
   const insightMap = {}
   ;(insightData || []).forEach(d => { insightMap[d.membre_id] = { sponsors: d.sponsors || 0 } })
 
+  // 4bis. Charger TOUT le UEG depuis palms_hebdo (sans filtre de date) pour le CEU
+  // Car le cutoff gt(palmsImportDate) exclut les reunions dont la date = periode_fin,
+  // et palms_imports ne capture pas encore UEG. Source unique = palms_hebdo.
+  const { data: allUegData } = await supabase
+    .from('palms_hebdo')
+    .select('membre_id, ueg, date_reunion')
+    .eq('groupe_id', groupeId)
+  const uegByMembre = {}
+  const uegDates = new Set()
+  ;(allUegData || []).forEach(h => {
+    if (!h.membre_id) return
+    uegByMembre[h.membre_id] = (uegByMembre[h.membre_id] || 0) + (h.ueg || 0)
+    if (h.date_reunion) uegDates.add(h.date_reunion)
+  })
+  const nbJeudisPourCeu = uegDates.size || nbSemaines
+
   // 5. Charger les membres pour matcher invite_par_nom → membre_id
   const { data: membres } = await supabase
     .from('membres')
@@ -148,8 +164,11 @@ export async function recalculateScores(groupeCode = 'MK-01') {
 
     // ── BNI INSIGHT : Sponsors uniquement (parrainages) ──
     const insight = insightMap[p.membre_id] || { sponsors: 0 }
-    // CEU : calcule depuis PALMS UEG (cumul 6 mois) / nb jeudis
-    const finalCeuRate = rateUeg
+    // CEU : somme UEG de TOUS les palms_hebdo (Excel + provisoire) / nb jeudis distincts
+    // Cette source ignore le cutoff palmsImportDate pour ne pas exclure les reunions
+    // qui tombent sur periode_fin (ex: 16/04 alors que palms_imports couvre 09-16/04).
+    const uegCeu = uegByMembre[p.membre_id] || 0
+    const finalCeuRate = uegCeu / nbJeudisPourCeu
     // Sponsors : depuis BNI Insight
     const finalSponsors = insight.sponsors
 
