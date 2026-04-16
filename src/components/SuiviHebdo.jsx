@@ -40,6 +40,50 @@ function matchMembre(prenom, nom, membres) {
     || null
 }
 
+// Convertit un export PALMS au format SpreadsheetML 2003 (.xls en XML) en TSV.
+// Gère ss:Index (sauts de colonnes vides — ex: col 9 entre RDI et RDE)
+// et ss:MergeAcross (cellules fusionnées visuellement — on remplit de vide pour
+// garder l'alignement des colonnes).
+function spreadsheetXmlToTsv(xml) {
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml')
+    if (doc.getElementsByTagName('parsererror').length) return xml
+    const SS = 'urn:schemas-microsoft-com:office:spreadsheet'
+    const getElems = (parent, name) => {
+      const ns = parent.getElementsByTagNameNS ? parent.getElementsByTagNameNS(SS, name) : null
+      if (ns && ns.length) return ns
+      return parent.getElementsByTagName(name)
+    }
+    const getAttr = (el, name) => {
+      const v = el.getAttributeNS ? el.getAttributeNS(SS, name) : null
+      return v || el.getAttribute('ss:' + name) || el.getAttribute(name)
+    }
+    const rows = getElems(doc, 'Row')
+    if (!rows.length) return xml
+    const lines = []
+    for (let i = 0; i < rows.length; i++) {
+      const cells = getElems(rows[i], 'Cell')
+      const out = []
+      let colIdx = 1 // ss:Index est 1-based
+      for (let j = 0; j < cells.length; j++) {
+        const cell = cells[j]
+        const idx = parseInt(getAttr(cell, 'Index')) || colIdx
+        while (colIdx < idx) { out.push(''); colIdx++ }
+        const data = getElems(cell, 'Data')[0]
+        out.push(data ? (data.textContent || '') : '')
+        colIdx++
+        const merge = parseInt(getAttr(cell, 'MergeAcross')) || 0
+        for (let k = 0; k < merge; k++) { out.push(''); colIdx++ }
+      }
+      lines.push(out.join('\t'))
+    }
+    return lines.join('\n')
+  } catch (e) {
+    console.error('[SpreadsheetML]', e)
+    return xml
+  }
+}
+
 export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [rawText, setRawText] = useState('')
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
@@ -333,8 +377,15 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
     try {
       const membres = await fetchMembresForMatch(groupeCode)
 
+      // Si l'utilisateur a chargé un fichier PALMS .xls (en fait du SpreadsheetML XML)
+      // ou a collé du XML, on convertit en TSV avant de parser.
+      let sourceText = rawText
+      if (sourceText.trim().startsWith('<?xml') || sourceText.trim().startsWith('<Workbook')) {
+        sourceText = spreadsheetXmlToTsv(sourceText)
+      }
+
       // Détection automatique du séparateur : tab (copier/coller), puis point-virgule (CSV fr), puis virgule
-      const firstLine = rawText.trim().split(/\r?\n/)[0] || ''
+      const firstLine = sourceText.trim().split(/\r?\n/)[0] || ''
       const sep = firstLine.includes('\t') ? '\t'
         : firstLine.split(';').length > firstLine.split(',').length ? ';'
         : ','
@@ -351,7 +402,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         out.push(cur)
         return out.map(s => s.trim())
       }
-      const lines = rawText.trim().split(/\r?\n/).map(parseLine)
+      const lines = sourceText.trim().split(/\r?\n/).map(parseLine)
 
       // Chercher dynamiquement la ligne d'en-tête (celle qui contient Prénom ET Nom)
       // Les exports PALMS ont 5-10 lignes de métadonnées avant le vrai header
@@ -983,16 +1034,30 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
           onDrop={e => {
             e.preventDefault(); e.currentTarget.style.background='transparent'
             const f = e.dataTransfer.files?.[0]
-            if (f) { const r = new FileReader(); r.onload = ev => setRawText(String(ev.target?.result || '')); r.readAsText(f, 'utf-8') }
+            if (f) {
+              const r = new FileReader()
+              r.onload = ev => {
+                const txt = String(ev.target?.result || '')
+                // Si c'est un export PALMS .xls (SpreadsheetML XML), on convertit en TSV
+                const converted = (txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')) ? spreadsheetXmlToTsv(txt) : txt
+                setRawText(converted)
+              }
+              r.readAsText(f, 'utf-8')
+            }
           }}>
           <div style={{ fontSize:22, marginBottom:4 }}>📄</div>
-          <div style={{ fontSize:12, color:'#6B7280' }}>Cliquez ou glissez un fichier CSV/TSV (tab, virgule ou point-virgule)</div>
+          <div style={{ fontSize:12, color:'#6B7280' }}>Cliquez ou glissez un fichier PALMS .xls, CSV ou TSV</div>
         </div>
-        <input ref={hebdoFileRef} type="file" accept=".csv,.tsv,.txt" hidden
+        <input ref={hebdoFileRef} type="file" accept=".csv,.tsv,.txt,.xls,.xml" hidden
           onChange={e => {
             const f = e.target.files?.[0]; if (!f) return
             const r = new FileReader()
-            r.onload = ev => setRawText(String(ev.target?.result || ''))
+            r.onload = ev => {
+              const txt = String(ev.target?.result || '')
+              // Si c'est un export PALMS .xls (SpreadsheetML XML), on convertit en TSV
+              const converted = (txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')) ? spreadsheetXmlToTsv(txt) : txt
+              setRawText(converted)
+            }
             r.readAsText(f, 'utf-8')
             e.target.value = '' // permet de re-sélectionner le même fichier
           }} />
