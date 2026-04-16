@@ -689,8 +689,8 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                   <React.Fragment key={i}>
                   {showSeparator && (
                     <tr>
-                      <td colSpan={nbCols} style={{ padding:'6px 14px', background:'#F3F2EF', borderTop:'1px solid #D1D5DB', borderBottom:'1px solid #E8E6E1', fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>
-                        {weekLabel(inv.date_visite)}
+                      <td colSpan={nbCols} style={{ padding:'10px 16px', background:'#374151', borderTop:'2px solid #1F2937', borderBottom:'1px solid #1F2937', fontSize:11, fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:'0.08em', boxShadow:'inset 4px 0 0 #C41E3A' }}>
+                        📅 {weekLabel(inv.date_visite)}
                       </td>
                     </tr>
                   )}
