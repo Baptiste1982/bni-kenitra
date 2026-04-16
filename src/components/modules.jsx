@@ -422,6 +422,8 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
                 </div>
               </div>}
+            {/* Bouton "Sync Google Sheets" masque temporairement pour eviter les re-imports
+                accidentels de doublons. Reactivable en decommentant ce bloc.
             {profil?.role === 'super_admin' &&
               <div onClick={syncing ? undefined : handleSync}
                 style={{ background: syncing ? '#E8E6E1' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor: syncing ? 'not-allowed' : 'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:12, opacity: syncing ? 0.6 : 1 }}
@@ -437,6 +439,7 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
                 </div>
               </div>}
+            */}
           </div>
         }
       />
