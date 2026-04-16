@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase'
 import { TLBadge, SectionTitle, PageHeader, TableWrap, fullName } from './ui'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, ComposedChart, ReferenceLine, Legend } from 'recharts'
 
-// Objectif mensuel TYFCB par defaut (ajustable). Base sur le seuil "vert" (>= 100k)
-const OBJECTIF_TYFCB_MOIS = 100000
+// Objectif mensuel TYFCB par defaut (fallback si pas configure en base). Seuil "vert" >= 100k
+const DEFAULT_OBJECTIF_TYFCB = 100000
 
 const scoreBg = (score) => score >= 70 ? { bg:'#D1FAE5', color:'#065F46' } : score >= 50 ? { bg:'#FEF9C3', color:'#854D0E' } : score >= 30 ? { bg:'#FEE2E2', color:'#991B1B' } : { bg:'#F3F4F6', color:'#4B5563' }
 const tlBg = (tl) => ({ vert:{bg:'#D1FAE5',color:'#065F46'}, orange:{bg:'#FEF9C3',color:'#854D0E'}, rouge:{bg:'#FEE2E2',color:'#991B1B'}, gris:{bg:'#F3F4F6',color:'#4B5563'} }[tl] || {bg:'#F3F4F6',color:'#4B5563'})
@@ -28,7 +28,11 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
   const [editGreetingSub, setEditGreetingSub] = useState('')
   const [editGreetingLogo, setEditGreetingLogo] = useState('')
   const [trendData, setTrendData] = useState([])
+  const [objectifTyfcb, setObjectifTyfcb] = useState(DEFAULT_OBJECTIF_TYFCB)
+  const [editObjectif, setEditObjectif] = useState(false)
+  const [objectifInput, setObjectifInput] = useState('')
   const isAdmin = ['super_admin','directeur_executif'].includes(profil?.role)
+  const canEditObjectif = ['super_admin','directrice_consultante'].includes(profil?.role)
 
   const now = new Date()
   const mois = now.getMonth() + 1
@@ -83,7 +87,21 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
         }))
         setTrendData(trend)
       })
+
+    // Charger l'objectif TYFCB mensuel configure sur le groupe
+    supabase.from('groupes').select('objectif_tyfcb_mois').eq('code', groupeCode).single()
+      .then(({ data }) => {
+        if (data?.objectif_tyfcb_mois) setObjectifTyfcb(Number(data.objectif_tyfcb_mois))
+      })
   }, [groupeCode])
+
+  const saveObjectifTyfcb = async () => {
+    const val = parseInt(String(objectifInput).replace(/\s/g,'')) || 0
+    if (val < 0) { setEditObjectif(false); return }
+    const { error } = await supabase.from('groupes').update({ objectif_tyfcb_mois: val }).eq('code', groupeCode)
+    if (!error) setObjectifTyfcb(val)
+    setEditObjectif(false)
+  }
 
   const handleCloture = async () => {
     if (!window.confirm(`Clôturer le mois de ${moisLabel} ? Les données seront sauvegardées.`)) return
@@ -233,15 +251,36 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
               return { ...d, mpbCumul: Math.round(runningSum) }
             })
             const cumulActuel = dataWithCumul.length ? dataWithCumul[dataWithCumul.length - 1].mpbCumul : 0
-            const pctObjectif = Math.round((cumulActuel / OBJECTIF_TYFCB_MOIS) * 100)
-            const atteint = cumulActuel >= OBJECTIF_TYFCB_MOIS
+            const pctObjectif = Math.round((cumulActuel / objectifTyfcb) * 100)
+            const atteint = cumulActuel >= objectifTyfcb
             return (
               <TableWrap>
                 <div style={{ padding:'14px 16px', borderBottom:'1px solid #E8E6E1', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
                   <SectionTitle>💰 TYFCB cumulé vs objectif</SectionTitle>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11 }}>
-                    <span style={{ fontWeight:700, color: atteint ? '#065F46' : pctObjectif >= 50 ? '#854D0E' : '#991B1B' }}>
-                      {Number(cumulActuel).toLocaleString('fr-FR')} / {Number(OBJECTIF_TYFCB_MOIS).toLocaleString('fr-FR')} MAD
+                    <span style={{ fontWeight:700, color: atteint ? '#065F46' : pctObjectif >= 50 ? '#854D0E' : '#991B1B', display:'flex', alignItems:'center', gap:4 }}>
+                      {Number(cumulActuel).toLocaleString('fr-FR')} /
+                      {editObjectif ? (
+                        <input
+                          type="number"
+                          value={objectifInput}
+                          onChange={e => setObjectifInput(e.target.value)}
+                          onBlur={saveObjectifTyfcb}
+                          onKeyDown={e => { if (e.key === 'Enter') saveObjectifTyfcb(); if (e.key === 'Escape') setEditObjectif(false) }}
+                          autoFocus
+                          style={{ width:90, padding:'2px 6px', border:'1px solid #3B82F6', borderRadius:4, fontSize:11, fontFamily:'DM Sans, sans-serif', fontWeight:700 }}
+                        />
+                      ) : (
+                        <span
+                          onClick={() => { if (canEditObjectif) { setObjectifInput(objectifTyfcb); setEditObjectif(true) } }}
+                          style={canEditObjectif ? { cursor:'pointer', borderBottom:'1px dashed currentColor', padding:'0 2px' } : {}}
+                          title={canEditObjectif ? 'Cliquer pour modifier l\'objectif' : undefined}
+                        >
+                          {Number(objectifTyfcb).toLocaleString('fr-FR')}
+                        </span>
+                      )}
+                      MAD
+                      {canEditObjectif && !editObjectif && <span style={{ fontSize:10, color:'#3B82F6', marginLeft:2 }}>✎</span>}
                     </span>
                     <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background: atteint ? '#D1FAE5' : pctObjectif >= 50 ? '#FEF9C3' : '#FEE2E2', color: atteint ? '#065F46' : pctObjectif >= 50 ? '#854D0E' : '#991B1B', fontWeight:700 }}>{pctObjectif}%</span>
                   </div>
@@ -257,7 +296,7 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
                         labelStyle={{ fontWeight:700 }}
                         contentStyle={{ borderRadius:8, border:'1px solid #E8E6E1', fontSize:12 }} />
                       <Legend wrapperStyle={{ fontSize:11 }} />
-                      <ReferenceLine y={OBJECTIF_TYFCB_MOIS} stroke="#059669" strokeDasharray="4 4" strokeWidth={2} label={{ value:`🎯 Objectif ${(OBJECTIF_TYFCB_MOIS/1000).toFixed(0)}k`, position:'insideTopRight', fill:'#059669', fontSize:10, fontWeight:700 }} />
+                      <ReferenceLine y={objectifTyfcb} stroke="#059669" strokeDasharray="4 4" strokeWidth={2} label={{ value:`🎯 Objectif ${(objectifTyfcb/1000).toFixed(0)}k`, position:'insideTopRight', fill:'#059669', fontSize:10, fontWeight:700 }} />
                       <Bar dataKey="mpb" name="TYFCB semaine" fill="#C41E3A" radius={[4,4,0,0]} />
                       <Line type="monotone" dataKey="mpbCumul" name="TYFCB cumulé" stroke="#3B82F6" strokeWidth={3} dot={{ r:5, fill:'#3B82F6' }} />
                     </ComposedChart>
