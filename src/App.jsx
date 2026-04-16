@@ -241,7 +241,7 @@ export default function App() {
     membres:   <Membres profil={profil} groupeCode={groupeCode} />,
     hebdo:     <SuiviHebdo profil={profil} groupeCode={groupeCode} />,
     invites:   <Invites profil={profil} groupeCode={groupeCode} />,
-    region:    <Region />,
+    region:    <Region profil={profil} />,
     groupes:   <Groupes groupes={groupes} groupeCode={groupeCode} onSwitchGroupe={setGroupeCode} />,
     reporting: <Reporting groupeCode={groupeCode} />,
     objectifs: <Objectifs groupeCode={groupeCode} profil={profil} />,
