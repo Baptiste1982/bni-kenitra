@@ -4,7 +4,20 @@ import { supabase } from '../lib/supabase'
 import { PageHeader, SectionTitle, TableWrap, Card, Spinner, AccordionPanel, fullName } from './ui'
 import MembreDetail from './MembreDetail'
 
-const HEADERS_MAP = { 'Prénom': 'prenom', 'Nom': 'nom', 'PALMS': 'palms', 'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre', 'Inv.': 'invites', 'TàT': 'tat', 'MPB': 'mpb', 'UEG': 'ueg' }
+// Mapping des entêtes PALMS → noms internes
+// Supporte :
+//  - colonne unique "PALMS" (ancien format)
+//  - 5 colonnes séparées "P" "A" "L" "M" "S" (format PALMS moderne)
+const HEADERS_MAP = {
+  'Prénom': 'prenom', 'Nom': 'nom',
+  'PALMS': 'palms',
+  'P': 'p', 'A': 'a', 'L': 'l', 'M': 'm', 'S': 's',
+  'RDI': 'rdi', 'RDE': 'rde', 'RRI': 'rri', 'RRE': 'rre',
+  'Inv.': 'invites', 'Inv': 'invites',
+  'TàT': 'tat',
+  'MPB': 'mpb',
+  'UEG': 'ueg',
+}
 
 // Objectifs mensuels (4 réunions/mois)
 
@@ -340,52 +353,89 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       }
       const lines = rawText.trim().split(/\r?\n/).map(parseLine)
 
-      // Detect headers
-      const headerRow = lines[0]
+      // Chercher dynamiquement la ligne d'en-tête (celle qui contient Prénom ET Nom)
+      // Les exports PALMS ont 5-10 lignes de métadonnées avant le vrai header
+      let headerIdx = -1
+      for (let i = 0; i < Math.min(lines.length, 40); i++) {
+        const cells = lines[i].map(c => (c || '').trim())
+        if (cells.includes('Prénom') && cells.includes('Nom')) { headerIdx = i; break }
+      }
+      if (headerIdx === -1) {
+        setResult({ error: `Ligne d'en-tête introuvable (pas de colonnes "Prénom" et "Nom" détectées dans les 40 premières lignes). Vérifie le format du fichier.` })
+        setImporting(false)
+        return
+      }
+
+      const headerRow = lines[headerIdx]
       const colMap = {}
-      headerRow.forEach((h, i) => { if (HEADERS_MAP[h.trim()]) colMap[HEADERS_MAP[h.trim()]] = i })
+      headerRow.forEach((h, i) => { const k = HEADERS_MAP[(h || '').trim()]; if (k && colMap[k] === undefined) colMap[k] = i })
+
+      // Détection : format moderne avec 5 colonnes séparées P A L M S ?
+      const hasPalmsSeparate = colMap.palms === undefined
+        && colMap.p !== undefined && colMap.a !== undefined
+        && colMap.l !== undefined && colMap.m !== undefined && colMap.s !== undefined
+
+      // Déduit la lettre PALMS depuis les 5 colonnes (P > A > L > M > S)
+      const derivePalms = (cols) => {
+        if (parseInt(cols[colMap.p]) > 0) return 'P'
+        if (parseInt(cols[colMap.a]) > 0) return 'A'
+        if (parseInt(cols[colMap.l]) > 0) return 'L'
+        if (parseInt(cols[colMap.m]) > 0) return 'M'
+        if (parseInt(cols[colMap.s]) > 0) return 'S'
+        return 'P'
+      }
+      // Parse un nombre décimal qui peut avoir une virgule (format FR: "13803,00")
+      const toFloat = (s) => { const n = parseFloat(String(s || '0').replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
+      const getPalms = (cols) => hasPalmsSeparate ? derivePalms(cols) : ((cols[colMap.palms] || 'P').trim() || 'P')
 
       let imported = 0, skipped = 0, bniRow = null
       const rows = []
 
-      for (let i = 1; i < lines.length; i++) {
+      for (let i = headerIdx + 1; i < lines.length; i++) {
         const cols = lines[i]
         const prenom = (cols[colMap.prenom] || '').trim()
         const nom = (cols[colMap.nom] || '').trim()
 
-        // Skip empty, "Invité", "Total"
-        if (!prenom || normalize(prenom) === 'total' || normalize(prenom) === 'invité') continue
+        // Lignes spéciales (peuvent avoir le libellé dans Prénom OU dans Nom selon l'export)
+        const firstLabel = prenom || nom
+        const key = normalize(firstLabel)
+
+        // Skip empty, "Total", "Invité(s)"
+        if (!firstLabel || key === 'total' || key === 'invite' || key === 'invites') continue
 
         // BNI line (contribution externe)
-        if (normalize(prenom) === 'bni') {
+        if (key === 'bni') {
           bniRow = {
             membre_id: null,
-            palms: 'P',
+            palms: getPalms(cols),
             rdi: parseInt(cols[colMap.rdi]) || 0,
             rde: parseInt(cols[colMap.rde]) || 0,
             rri: parseInt(cols[colMap.rri]) || 0,
             rre: parseInt(cols[colMap.rre]) || 0,
             invites: parseInt(cols[colMap.invites]) || 0,
             tat: parseInt(cols[colMap.tat]) || 0,
-            mpb: parseFloat(cols[colMap.mpb]) || 0,
+            mpb: toFloat(cols[colMap.mpb]),
             ueg: parseInt(cols[colMap.ueg]) || 0,
           }
           continue
         }
+
+        // Pas de prenom → pas un membre (ex: lignes de séparation vides)
+        if (!prenom) { skipped++; continue }
 
         const membre = matchMembre(prenom, nom, membres)
         if (!membre) { skipped++; continue }
 
         rows.push({
           membre_id: membre.id,
-          palms: (cols[colMap.palms] || 'P').trim(),
+          palms: getPalms(cols),
           rdi: parseInt(cols[colMap.rdi]) || 0,
           rde: parseInt(cols[colMap.rde]) || 0,
           rri: parseInt(cols[colMap.rri]) || 0,
           rre: parseInt(cols[colMap.rre]) || 0,
           invites: parseInt(cols[colMap.invites]) || 0,
           tat: parseInt(cols[colMap.tat]) || 0,
-          mpb: parseFloat(cols[colMap.mpb]) || 0,
+          mpb: toFloat(cols[colMap.mpb]),
           ueg: parseInt(cols[colMap.ueg]) || 0,
         })
         imported++
