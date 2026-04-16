@@ -47,15 +47,21 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
     const dernierJour = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0]
     Promise.all([
       fetchDashboardKPIs(groupeCode),
-      supabase.from('palms_hebdo').select('date_reunion, is_provisoire').gte('date_reunion', premierJour).lte('date_reunion', dernierJour),
+      supabase.from('palms_hebdo').select('date_reunion, is_provisoire, nb_reunions').gte('date_reunion', premierJour).lte('date_reunion', dernierJour),
       supabase.from('app_settings').select('key, value'),
     ]).then(([data, hebdoRes, settingsRes]) => {
       setKpis(data)
-      // Compter les réunions consolidées vs provisoires du mois en cours
-      const dates = new Set((hebdoRes?.data || []).filter(r => !r.is_provisoire).map(r => r.date_reunion))
-      const datesProv = new Set((hebdoRes?.data || []).filter(r => r.is_provisoire).map(r => r.date_reunion))
-      setReunionsSaisies(dates.size)
-      setReunionsProvisoires(datesProv.size)
+      // Compter les reunions consolidees vs provisoires du mois en cours
+      // FIX : 1 bille = 1 reunion (nb_reunions), pas 1 date. Un import nb_reunions=3
+      // sur une date unique doit remplir 3 billes.
+      const nbByDate = {}
+      ;(hebdoRes?.data || []).forEach(r => {
+        if (!nbByDate[r.date_reunion]) nbByDate[r.date_reunion] = { nb: r.nb_reunions || 1, isProv: r.is_provisoire }
+      })
+      const consolidees = Object.values(nbByDate).filter(v => !v.isProv).reduce((s, v) => s + v.nb, 0)
+      const provisoires = Object.values(nbByDate).filter(v => v.isProv).reduce((s, v) => s + v.nb, 0)
+      setReunionsSaisies(consolidees)
+      setReunionsProvisoires(provisoires)
       // Settings
       const sMap = {}
       ;(settingsRes?.data || []).forEach(s => { sMap[s.key] = s.value })

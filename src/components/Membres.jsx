@@ -52,13 +52,19 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
     setLoading(true)
     const premierJour = `${annee}-${String(mois).padStart(2,'0')}-01`
     const dernierJour = finMois.toISOString().split('T')[0]
-    Promise.all([fetchScoresMK01(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchPalmsMK01(groupeCode), supabase.from('palms_hebdo').select('date_reunion, is_provisoire').gte('date_reunion', premierJour).lte('date_reunion', dernierJour)])
+    Promise.all([fetchScoresMK01(groupeCode), fetchPalmsHebdoMois(mois, annee, groupeCode), fetchPalmsMK01(groupeCode), supabase.from('palms_hebdo').select('date_reunion, is_provisoire, nb_reunions').gte('date_reunion', premierJour).lte('date_reunion', dernierJour)])
       .then(([scoresData, hebdoData, palmsRaw, hebdoRes]) => {
         // Réunions consolidées vs provisoires du mois en cours
-        const datesConsolidees = new Set((hebdoRes?.data || []).filter(r => !r.is_provisoire).map(r => r.date_reunion))
-        const datesProvisoires = new Set((hebdoRes?.data || []).filter(r => r.is_provisoire).map(r => r.date_reunion))
-        setReunionsSaisies(datesConsolidees.size)
-        setReunionsProvisoires(datesProvisoires.size)
+        // FIX : 1 bille = 1 reunion (nb_reunions), pas 1 date distincte.
+        // Un import nb_reunions=3 sur une seule date doit remplir 3 billes.
+        const nbByDate = {}
+        ;(hebdoRes?.data || []).forEach(r => {
+          if (!nbByDate[r.date_reunion]) nbByDate[r.date_reunion] = { nb: r.nb_reunions || 1, isProv: r.is_provisoire }
+        })
+        const consolidees = Object.values(nbByDate).filter(v => !v.isProv).reduce((s, v) => s + v.nb, 0)
+        const provisoires = Object.values(nbByDate).filter(v => v.isProv).reduce((s, v) => s + v.nb, 0)
+        setReunionsSaisies(consolidees)
+        setReunionsProvisoires(provisoires)
         // Indexer les PALMS consolidés par membre_id
         const pMap = {}
         palmsRaw.forEach(p => { if (p.membre_id) pMap[p.membre_id] = p })
@@ -80,8 +86,10 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
           m.cumul.invites += r.invites || 0
           m.cumul.mpb += Number(r.mpb) || 0
           m.cumul.ueg += r.ueg || 0
-          m.cumul.total += r.nb_reunions || 1
-          if (r.palms === 'P') m.cumul.presences += r.nb_reunions || 1
+          const nb = r.nb_reunions || 1
+          m.cumul.total += nb
+          // Regle BNI : P/L/M/S = presence (seul A = absence)
+          if (['P','L','M','S'].includes(r.palms)) m.cumul.presences += nb
           if (r.date_reunion === lastDate) {
             m.derniere = { tat: r.tat || 0, refs, invites: r.invites || 0, mpb: Number(r.mpb) || 0, ueg: r.ueg || 0 }
           }

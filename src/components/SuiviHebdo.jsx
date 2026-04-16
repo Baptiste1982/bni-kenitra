@@ -609,13 +609,16 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
     }
     const m = membresMap[key]
     const refs = (r.rdi || 0) + (r.rde || 0)
+    const nb = r.nb_reunions || 1
     m.cumul.tat += r.tat || 0
     m.cumul.refs += refs
     m.cumul.invites += r.invites || 0
     m.cumul.mpb += Number(r.mpb) || 0
     m.cumul.ueg += r.ueg || 0
-    if (r.palms === 'P') m.cumul.presences++
-    else m.cumul.absences++
+    // Regle BNI : P/L/M/S = presence, A = absence. Multiplie par nb_reunions
+    // pour qu'une saisie couvrant 3 semaines compte comme 3 reunions.
+    if (r.palms === 'A') m.cumul.absences += nb
+    else if (['P','L','M','S'].includes(r.palms)) m.cumul.presences += nb
 
     if (r.date_reunion === lastDate) {
       m.derniere = { tat: r.tat || 0, refs, invites: r.invites || 0, mpb: Number(r.mpb) || 0, ueg: r.ueg || 0 }
