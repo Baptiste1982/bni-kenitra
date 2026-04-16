@@ -394,10 +394,19 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       // Snap au jeudi de la semaine pour éviter les doublons
       const jeudiDate = snapToThursday(dateReunion)
 
+      // ⚠️ Garde-fou : si aucune ligne n'est prête à être insérée, on avorte
+      // AVANT le DELETE pour ne pas perdre la saisie précédente
+      if (rows.length === 0 && !bniRow) {
+        setResult({ error: `Aucun membre reconnu dans le fichier (${skipped} ligne${skipped > 1 ? 's' : ''} ignorée${skipped > 1 ? 's' : ''}). Vérifie les colonnes Prénom/Nom et le séparateur du CSV. Rien n'a été modifié en base.` })
+        setImporting(false)
+        return
+      }
+
       // Supprimer les anciennes données de ce jeudi avant d'insérer (écrasement)
       const { data: groupeData } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
       if (groupeData?.id) {
-        await supabase.from('palms_hebdo').delete().eq('groupe_id', groupeData.id).eq('date_reunion', jeudiDate)
+        const { error: delErr } = await supabase.from('palms_hebdo').delete().eq('groupe_id', groupeData.id).eq('date_reunion', jeudiDate)
+        if (delErr) throw new Error('Suppression ancienne saisie : ' + delErr.message)
       }
 
       if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode, { isProvisoire: true })
