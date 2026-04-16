@@ -86,6 +86,10 @@ function spreadsheetXmlToTsv(xml) {
 
 export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
   const [rawText, setRawText] = useState('')
+  // Origine de l'import courant : 'xls' (consolidé) | 'text' (provisoire) | null
+  // - Fichier .xls PALMS SpreadsheetML → consolidé (clôture la semaine)
+  // - Copier-coller ou .csv/.tsv → provisoire (remplaçable)
+  const [importSource, setImportSource] = useState(null)
   const [dateReunion, setDateReunion] = useState(new Date().toISOString().split('T')[0])
   const [nbReunions, setNbReunions] = useState(1)
   const [showImport, setShowImport] = useState(false)
@@ -495,6 +499,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       // Snap au jeudi de la semaine pour éviter les doublons
       const jeudiDate = snapToThursday(dateReunion)
 
+      // Règle métier :
+      //  - Fichier .xls (SpreadsheetML) → import CONSOLIDÉ (clôture la semaine, écrase tout)
+      //  - Texte / CSV / TSV           → import PROVISOIRE (remplace le précédent provisoire)
+      //  - Un provisoire ne doit PAS pouvoir écraser un consolidé déjà posé
+      const isProvisoire = importSource !== 'xls'
+
       // ⚠️ Garde-fou : si aucune ligne n'est prête à être insérée, on avorte
       // AVANT le DELETE pour ne pas perdre la saisie précédente
       if (rows.length === 0 && !bniRow) {
@@ -503,22 +513,40 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         return
       }
 
-      // Supprimer les anciennes données de ce jeudi avant d'insérer (écrasement)
+      // Récupérer le groupe + contrôler s'il existe déjà un consolidé pour ce jeudi
       const { data: groupeData } = await supabase.from('groupes').select('id').eq('code', groupeCode).single()
-      if (groupeData?.id) {
-        const { error: delErr } = await supabase.from('palms_hebdo').delete().eq('groupe_id', groupeData.id).eq('date_reunion', jeudiDate)
-        if (delErr) throw new Error('Suppression ancienne saisie : ' + delErr.message)
+      if (!groupeData?.id) throw new Error(`Groupe ${groupeCode} introuvable`)
+
+      if (isProvisoire) {
+        // Un import texte ne peut pas écraser un consolidé déjà enregistré
+        const { data: existing } = await supabase
+          .from('palms_hebdo')
+          .select('is_provisoire')
+          .eq('groupe_id', groupeData.id)
+          .eq('date_reunion', jeudiDate)
+          .eq('is_provisoire', false)
+          .limit(1)
+        if (existing && existing.length > 0) {
+          setResult({ error: `Ce jeudi (${jeudiDate}) est déjà clôturé par un import Excel consolidé. Pour le remplacer, supprime d'abord le consolidé dans les Archives ou ré-importe un nouveau .xls.` })
+          setImporting(false)
+          return
+        }
       }
 
-      if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode, { isProvisoire: true })
-      if (bniRow) await insertPalmsHebdo([bniRow], jeudiDate, nbReunions, groupeCode, { isProvisoire: true })
+      // Supprimer les anciennes données de ce jeudi avant d'insérer (écrasement)
+      const { error: delErr } = await supabase.from('palms_hebdo').delete().eq('groupe_id', groupeData.id).eq('date_reunion', jeudiDate)
+      if (delErr) throw new Error('Suppression ancienne saisie : ' + delErr.message)
+
+      if (rows.length > 0) await insertPalmsHebdo(rows, jeudiDate, nbReunions, groupeCode, { isProvisoire })
+      if (bniRow) await insertPalmsHebdo([bniRow], jeudiDate, nbReunions, groupeCode, { isProvisoire })
 
       // Recalculer les scores BNI (PALMS base + hebdo compilé)
       let scoreResult = null
       try { scoreResult = await recalculateScores(groupeCode) } catch (e) { console.error('[Hebdo] Erreur recalcul scores:', e) }
 
-      setResult({ imported, skipped, bni: !!bniRow, jeudiDate, snapped: jeudiDate !== dateReunion, scoreResult })
+      setResult({ imported, skipped, bni: !!bniRow, jeudiDate, snapped: jeudiDate !== dateReunion, scoreResult, isProvisoire })
       setRawText('')
+      setImportSource(null)
       await loadMonth()
       // Rafraîchir la liste des archives pour que la nouvelle saisie apparaisse
       // (sinon le panneau Archives garde son cache antérieur à l'import)
@@ -831,7 +859,8 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         <div ref={archivesPanelRef}><Card style={{ marginBottom: 24 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
             <SectionTitle>📂 Archives des saisies hebdo</SectionTitle>
-            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Texte · Provisoire</span>
+            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Provisoire</span>
+            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Consolidé</span>
           </div>
           {(() => {
             // Grouper par mois + garder info provisoire par date
@@ -873,9 +902,9 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                           const { data } = await supabase.from('palms_hebdo').select('*, membres(prenom, nom)').eq('date_reunion', d).order('tat', { ascending:false })
                           setArchiveData(data || [])
                         }}
-                          style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : isProvisoire ? '#FFFBEB' : '#F7F6F3', border:`1px solid ${isActive ? '#8B5CF6' : isProvisoire ? '#F59E0B' : '#E8E6E1'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
+                          style={{ padding:'8px 14px', borderRadius:8, background: isActive ? '#EDE9FE' : isProvisoire ? '#FFFBEB' : '#ECFDF5', border:`1px solid ${isActive ? '#8B5CF6' : isProvisoire ? '#F59E0B' : '#10B981'}`, display:'flex', alignItems:'center', gap:8, cursor:'pointer', transition:'all 0.1s' }}
                           onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                          <div style={{ width:8, height:8, borderRadius:'50%', background: isProvisoire ? '#F59E0B' : '#C41E3A' }} />
+                          <div style={{ width:8, height:8, borderRadius:'50%', background: isProvisoire ? '#F59E0B' : '#10B981' }} />
                           <div style={{ flex:1 }}>
                             <div style={{ fontSize:12, fontWeight:600, color: isActive ? '#5B21B6' : '#1C1C2E', display:'flex', alignItems:'center', gap:6 }}>
                               {isProvisoire ? (
@@ -883,7 +912,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                               ) : (
                                 date.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' })
                               )}
-                              {isProvisoire && <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#FEF3C7', color:'#92400E', fontWeight:700, textTransform:'uppercase' }}>Provisoire</span>}
+                              {isProvisoire ? (
+                                <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#FEF3C7', color:'#92400E', fontWeight:700, textTransform:'uppercase' }}>Provisoire</span>
+                              ) : (
+                                <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#D1FAE5', color:'#065F46', fontWeight:700, textTransform:'uppercase' }}>Consolidé</span>
+                              )}
                             </div>
                             <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#9CA3AF' }}>
                               {isProvisoire && !isActive ? `Réunion du ${date.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}` : isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}
@@ -1019,8 +1052,12 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       {/* ─── SAISIE ──────────────────────────────────────────────────────── */}
       {showImport && <div ref={importPanelRef}><Card style={{ marginBottom: 24 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:0 }}>
-          <SectionTitle>Coller les données PALMS ou importer un CSV</SectionTitle>
-          <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Import texte · Provisoire</span>
+          <SectionTitle>Coller les données PALMS ou importer un CSV / Excel</SectionTitle>
+          {importSource === 'xls' ? (
+            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Excel · Consolidé</span>
+          ) : (
+            <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#FEF3C7', color:'#92400E', fontWeight:600 }}>Texte · Provisoire</span>
+          )}
         </div>
 
         {/* Zone de dépôt CSV */}
@@ -1038,9 +1075,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
               const r = new FileReader()
               r.onload = ev => {
                 const txt = String(ev.target?.result || '')
-                // Si c'est un export PALMS .xls (SpreadsheetML XML), on convertit en TSV
-                const converted = (txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')) ? spreadsheetXmlToTsv(txt) : txt
-                setRawText(converted)
+                // Si c'est un export PALMS .xls (SpreadsheetML XML) → import consolidé (clôture la semaine)
+                // Sinon CSV/TSV → import provisoire (remplaçable)
+                const isXml = txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')
+                setRawText(isXml ? spreadsheetXmlToTsv(txt) : txt)
+                setImportSource(isXml ? 'xls' : 'text')
               }
               r.readAsText(f, 'utf-8')
             }
@@ -1054,9 +1093,11 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             const r = new FileReader()
             r.onload = ev => {
               const txt = String(ev.target?.result || '')
-              // Si c'est un export PALMS .xls (SpreadsheetML XML), on convertit en TSV
-              const converted = (txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')) ? spreadsheetXmlToTsv(txt) : txt
-              setRawText(converted)
+              // Si c'est un export PALMS .xls (SpreadsheetML XML) → import consolidé (clôture la semaine)
+              // Sinon CSV/TSV → import provisoire (remplaçable)
+              const isXml = txt.trim().startsWith('<?xml') || txt.trim().startsWith('<Workbook')
+              setRawText(isXml ? spreadsheetXmlToTsv(txt) : txt)
+              setImportSource(isXml ? 'xls' : 'text')
             }
             r.readAsText(f, 'utf-8')
             e.target.value = '' // permet de re-sélectionner le même fichier
@@ -1076,7 +1117,7 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
         </div>
         <textarea
           value={rawText}
-          onChange={e => setRawText(e.target.value)}
+          onChange={e => { setRawText(e.target.value); setImportSource('text') }}
           placeholder="Coller ici le tableau PALMS (copier depuis Excel/Google Sheets avec les en-têtes)..."
           style={{ width: '100%', minHeight: 120, padding: 12, border: '1px solid #E8E6E1', borderRadius: 8, fontSize: 12, fontFamily: 'DM Sans, monospace', resize: 'vertical', boxSizing: 'border-box' }}
         />
@@ -1088,6 +1129,9 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
           {result && !result.error && (
             <span style={{ fontSize: 12, color: '#059669', fontWeight: 500 }}>
               {result.imported} membres importés{result.skipped > 0 ? `, ${result.skipped} ignorés` : ''}{result.bni ? ' + contribution BNI' : ''}
+              <span style={{ marginLeft:6, fontSize:9, padding:'1px 5px', borderRadius:4, fontWeight:700, textTransform:'uppercase', ...(result.isProvisoire ? { background:'#FEF3C7', color:'#92400E' } : { background:'#D1FAE5', color:'#065F46' }) }}>
+                {result.isProvisoire ? 'Provisoire' : 'Consolidé'}
+              </span>
               {result.snapped && <span style={{ color:'#D97706' }}> · Recalé au jeudi {new Date(result.jeudiDate+'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}</span>}
             </span>
           )}
