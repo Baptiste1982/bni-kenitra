@@ -867,16 +867,16 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
             <span style={{ fontSize:9, padding:'2px 8px', borderRadius:6, background:'#D1FAE5', color:'#065F46', fontWeight:600 }}>Consolidé</span>
           </div>
           {(() => {
-            // Grouper par mois + garder info provisoire par date
+            // Grouper par mois + garder info provisoire/consolidé + nb_reunions par date
             const byMonth = {}
-            const dateInfo = {} // { date_reunion: { is_provisoire, date_import } }
+            const dateInfo = {} // { date_reunion: { is_provisoire, date_import, nb_reunions } }
             archives.forEach(a => {
               const d = new Date(a.date_reunion + 'T12:00:00')
               const key = d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
               const sortKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
               if (!byMonth[key]) byMonth[key] = { sortKey, dates: new Set() }
               byMonth[key].dates.add(a.date_reunion)
-              if (!dateInfo[a.date_reunion]) dateInfo[a.date_reunion] = { is_provisoire: a.is_provisoire, date_import: a.date_import }
+              if (!dateInfo[a.date_reunion]) dateInfo[a.date_reunion] = { is_provisoire: a.is_provisoire, date_import: a.date_import, nb_reunions: a.nb_reunions || 1 }
             })
             const months = Object.entries(byMonth).sort((a,b) => b[1].sortKey.localeCompare(a[1].sortKey))
 
@@ -922,9 +922,20 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                                 <span style={{ fontSize:8, padding:'1px 5px', borderRadius:4, background:'#D1FAE5', color:'#065F46', fontWeight:700, textTransform:'uppercase' }}>Consolidé</span>
                               )}
                             </div>
-                            <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#9CA3AF' }}>
-                              {isProvisoire && !isActive ? `Réunion du ${date.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })}` : isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}
-                            </div>
+                            {(() => {
+                              const nbReunions = info.nb_reunions || 1
+                              const nbJours = 7 * nbReunions
+                              const periodeFin = date
+                              const periodeDebut = new Date(date)
+                              periodeDebut.setDate(periodeDebut.getDate() - nbJours)
+                              const fmtShort = (dt) => dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
+                              return (
+                                <div style={{ fontSize:9, color: isActive ? '#7C3AED' : '#6B7280', marginTop:2, lineHeight:1.4 }}>
+                                  <div style={{ fontWeight:600 }}>Du {fmtShort(periodeDebut)} au {fmtShort(periodeFin)} · {nbJours} jours</div>
+                                  <div style={{ color: isActive ? '#7C3AED' : '#9CA3AF', fontSize:9, marginTop:1 }}>{isActive ? 'Cliquer pour fermer' : 'Cliquer pour voir'}</div>
+                                </div>
+                              )
+                            })()}
                           </div>
                           <div onClick={async (e) => {
                             e.stopPropagation()
