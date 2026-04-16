@@ -163,6 +163,7 @@ export default function App() {
   const currentGroupe = groupes.find(g => g.code === groupeCode)
 
   // Realtime Presence — activité live
+  const recentJoinsRef = React.useRef({}) // { [user_id]: timestamp du dernier toast }
   useEffect(() => {
     if (!user || !profil) return
 
@@ -185,11 +186,18 @@ export default function App() {
     })
 
     channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-      if (key === user.id) return // pas se notifier soi-même
+      if (key === user.id) return // pas se notifier soi-meme
+      // Cooldown 60s par utilisateur : eviter les toasts multiples quand
+      // la meme personne change d'onglet / se reconnecte / re-track
+      const now = Date.now()
+      const lastSeen = recentJoinsRef.current[key] || 0
+      if (now - lastSeen < 60000) return
+      recentJoinsRef.current[key] = now
       const p = newPresences[0]
       if (p?.prenom) {
         const name = `${p.prenom} ${p.nom || ''}`
-        setConnectionToasts(prev => [...prev, { id: Date.now(), name }])
+        // Dedupe cote state : ne pas ajouter si un toast avec le meme nom est deja affiche
+        setConnectionToasts(prev => prev.some(t => t.name === name) ? prev : [...prev, { id: `${now}-${Math.random().toString(36).slice(2,8)}`, name }])
       }
     })
 
