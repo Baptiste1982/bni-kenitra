@@ -44,31 +44,51 @@ function parseRegionTrafficLightXml(xml) {
       }
       parsedRows.push(vals)
     }
-    let region = 'Kenitra', annee = new Date().getFullYear(), moisNom = ''
-    for (const r of parsedRows) {
-      if (r[0] === 'Région :' && r[1]) region = r[1]
-      if (r[0] === 'Année :' && r[1]) annee = parseInt(r[1]) || annee
-      if (r[0] === 'Mois :' && r[1]) moisNom = r[1].toLowerCase()
+    // Les cellules de "Paramètres" utilisent ss:MergeAcross qui insere des
+    // cellules vides de padding. La valeur n'est pas a r[1] mais plus loin.
+    // On cherche donc la 1re cellule non-vide APRES le libelle.
+    const findParam = (label) => {
+      for (const r of parsedRows) {
+        const labelIdx = r.findIndex(v => v && v.trim() === label)
+        if (labelIdx >= 0) {
+          for (let i = labelIdx + 1; i < r.length; i++) {
+            if (r[i] && r[i].trim() !== '') return r[i].trim()
+          }
+        }
+      }
+      return ''
     }
+    const region = findParam('Région :') || 'Kenitra'
+    const annee = parseInt(findParam('Année :')) || new Date().getFullYear()
+    const moisNom = (findParam('Mois :') || '').toLowerCase()
     const moisNum = MOIS_NOMS.indexOf(moisNom) + 1
-    if (!moisNum) return null
+    if (!moisNum) { console.warn('[RTL parse] Mois non trouvé dans le fichier:', moisNom); return null }
+
+    // Lignes de donnees : collapse les cellules vides puis prend les valeurs consecutives
+    const compact = (r) => r.filter(v => v !== undefined && v !== null && v !== '').map(v => v.trim())
     const groupes = []
     let headerFound = false
     for (const r of parsedRows) {
-      if (!headerFound) { if (r[0] === 'Nom du Groupe') headerFound = true; continue }
-      if (!r[0] || r[0].trim() === '') continue
+      const c = compact(r)
+      if (!headerFound) {
+        if (c[0] === 'Nom du Groupe') headerFound = true
+        continue
+      }
+      if (c.length === 0) continue
+      if (!c[0] || !c[0].startsWith('MK-') && !c[0].includes('-')) continue // ignore les totaux / footer
       groupes.push({
-        nom: r[0].trim(),
-        taille: parseFloat(r[1]) || 0,
-        croissance: parseFloat(r[2]) || 0,
-        stabilite: parseFloat(r[3]) || 0,
-        recommandations: parseFloat(r[4]) || 0,
-        invites: parseFloat(r[5]) || 0,
-        conversion: parseFloat(r[6]) || 0,
-        absenteisme: parseFloat(r[7]) || 0,
-        score: parseInt(r[8]) || 0,
+        nom: c[0],
+        taille: parseFloat(c[1]) || 0,
+        croissance: parseFloat(c[2]) || 0,
+        stabilite: parseFloat(c[3]) || 0,
+        recommandations: parseFloat(c[4]) || 0,
+        invites: parseFloat(c[5]) || 0,
+        conversion: parseFloat(c[6]) || 0,
+        absenteisme: parseFloat(c[7]) || 0,
+        score: parseInt(c[8]) || 0,
       })
     }
+    if (groupes.length === 0) { console.warn('[RTL parse] Aucun groupe trouvé'); return null }
     return { region, annee, mois: moisNum, groupes }
   } catch (e) {
     console.error('[RTL parse]', e)
