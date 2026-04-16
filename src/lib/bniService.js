@@ -87,8 +87,11 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     const a = hebdoAgg[h.membre_id]
     const nb = h.nb_reunions || 1
     // 6 mois : tous les hebdo
-    if (h.palms === 'P') a.total6m.presences += nb
-    else if (h.palms === 'A') a.total6m.absences += nb
+    // Regle BNI : P (Present), L (Late), M (Maladie/excuse), S (Substitut) comptent TOUS
+    // comme presences effectives pour le calcul de l'attendance rate.
+    // Seul A (Absent) compte comme absence.
+    if (h.palms === 'A') a.total6m.absences += nb
+    else if (['P','L','M','S'].includes(h.palms)) a.total6m.presences += nb
     a.total6m.invites += h.invites || 0
     a.total6m.mpb += Number(h.mpb) || 0
     a.total6m.ueg += h.ueg || 0
@@ -156,7 +159,9 @@ export async function recalculateScores(groupeCode = 'MK-01') {
     }
 
     // ── INDICATEURS 6 MOIS GLISSANTS : PALMS base + tous hebdo ──
-    const presences = (p.presences || 0) + h.total6m.presences
+    // Presence BNI = P + L (late) + M (maladie) + S (substitut) — seul A compte comme absence.
+    const presencesBase = (p.presences || 0) + (p.late || 0) + (p.makeup || 0) + (p.substitut || 0)
+    const presences = presencesBase + h.total6m.presences
     const absences = (p.absences || 0) + h.total6m.absences
     const totalReunions = presences + absences
     const visitors = (p.invites || 0) + h.total6m.invites
