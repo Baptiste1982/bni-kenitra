@@ -932,7 +932,10 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
                               const fmtShort = (dt) => dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
                               return (
                                 <div style={{ fontSize:12, color: isActive ? '#7C3AED' : '#6B7280', marginTop:6, lineHeight:1.5 }}>
-                                  <div style={{ fontWeight:600 }}>📅 Du {fmtShort(periodeDebut)} au {fmtShort(periodeFin)} · {nbJours} jours</div>
+                                  <div style={{ fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
+                                    <span style={{ display:'inline-flex', filter:'grayscale(1) brightness(0.45)' }}>📅</span>
+                                    Du {fmtShort(periodeDebut)} au {fmtShort(periodeFin)} · {nbJours} jours
+                                  </div>
                                   <div style={{ color: isActive ? '#7C3AED' : '#9CA3AF', fontSize:11, marginTop:2, fontWeight:500 }}>{isActive ? '▲ Cliquer pour fermer' : '▼ Cliquer pour voir le détail'}</div>
                                 </div>
                               )
