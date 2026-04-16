@@ -10,6 +10,9 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [tlFilter, setTlFilter] = useState('tous')
+  // Tri des colonnes : null = ordre par defaut (rank), sinon { key, dir:'asc'|'desc' }
+  const [sortBy, setSortBy] = useState(null)
+  const [sortDir, setSortDir] = useState('desc')
   const [selected, setSelected] = useState(null)
   const [showImport, setShowImport] = useState(false)
   const [showPalms, setShowPalms] = useState(false)
@@ -164,13 +167,74 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
     </td>
   )
 
-  const filtered = scores.filter(s => {
+  const filteredUnsorted = scores.filter(s => {
     const m = s.membres || {}
     const q = `${m.prenom||''} ${m.nom||''} ${m.societe||''} ${m.secteur_activite||''}`.toLowerCase()
     const matchQ = !search || q.includes(search.toLowerCase())
     const matchTL = tlFilter === 'tous' || s.traffic_light === tlFilter || (tlFilter === 'aucun' && !s.traffic_light)
     return matchQ && matchTL
   })
+
+  // Extracteur de la valeur de tri pour une colonne donnee
+  const getSortValue = (s, key) => {
+    const m = s.membres || {}
+    const h = previsions[s.membre_id] || {}
+    switch (key) {
+      case 'rank': return Number(s.rank) || 9999
+      case 'nom': return `${m.nom || ''} ${m.prenom || ''}`.toLowerCase()
+      case 'societe': return (m.societe || '').toLowerCase()
+      case 'total_score': return Number(s.total_score) || 0
+      case 'traffic_light': return { vert:3, orange:2, rouge:1, gris:0 }[s.traffic_light] || 0
+      case 'attendance_rate': return Number(s.attendance_rate) || 0
+      case 'cumulTat': return Number(h.cumulTat) || 0
+      case 'cumulRefs': return Number(h.cumulRefs) || 0
+      case 'visitors': return Number(s.visitors) || 0
+      case 'sponsors': return Number(s.sponsors) || 0
+      case 'tyfcb': return Number(s.tyfcb) || 0
+      case 'ceu_rate': return Number(s.ceu_rate) || 0
+      case 'date_renouvellement': return m.date_renouvellement || ''
+      default: return 0
+    }
+  }
+
+  const filtered = sortBy
+    ? [...filteredUnsorted].sort((a, b) => {
+        const va = getSortValue(a, sortBy)
+        const vb = getSortValue(b, sortBy)
+        if (typeof va === 'string' && typeof vb === 'string') {
+          return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
+        }
+        return sortDir === 'asc' ? va - vb : vb - va
+      })
+    : filteredUnsorted
+
+  // Mapping des en-tetes de colonnes vers leur cle de tri
+  const colSort = {
+    '#': 'rank',
+    'Membre': 'nom',
+    'Société': 'societe',
+    'Score': 'total_score',
+    'Traffic Light': 'traffic_light',
+    'Présence': 'attendance_rate',
+    '1-2-1': 'cumulTat',
+    'Reco.': 'cumulRefs',
+    'Visiteurs': 'visitors',
+    'Parr.': 'sponsors',
+    'TYFCB': 'tyfcb',
+    'CEU': 'ceu_rate',
+    'Renouvellement': 'date_renouvellement',
+  }
+  const handleSort = (col) => {
+    const key = colSort[col]
+    if (!key) return
+    if (sortBy === key) {
+      // Toggle : desc -> asc -> reset
+      if (sortDir === 'desc') setSortDir('asc')
+      else { setSortBy(null); setSortDir('desc') }
+    } else {
+      setSortBy(key); setSortDir('desc')
+    }
+  }
 
   const mob = typeof window !== 'undefined' && window.innerWidth <= 768
 
@@ -401,9 +465,20 @@ export default function Membres({ profil, groupeCode = 'MK-01' }) {
         )}
         <TableWrap>
           <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0 }}>
-            <thead><tr>{['#','Membre', ...(showExtra ? ['Société'] : []),'Score', ...(showExtra ? ['Traffic Light'] : []),'Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB','CEU', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []), ...(showExtra ? ['Renouvellement'] : [])].map(h => (
-              <th key={h} style={{ background:'#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:600, color: h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1' }}>{h}</th>
-            ))}</tr></thead>
+            <thead><tr>{['#','Membre', ...(showExtra ? ['Société'] : []),'Score', ...(showExtra ? ['Traffic Light'] : []),'Présence','1-2-1','Reco.','Visiteurs','Parr.','TYFCB','CEU', ...(hasPrevisions ? ['Prévi. Score','Prévi. TL','Manque TàT','Manque Réf.'] : []), ...(showExtra ? ['Renouvellement'] : [])].map(h => {
+              const sortKey = colSort[h]
+              const isSortable = !!sortKey
+              const isActive = isSortable && sortBy === sortKey
+              const arrow = isActive ? (sortDir === 'desc' ? ' ▼' : ' ▲') : (isSortable ? '' : '')
+              return (
+                <th key={h}
+                  onClick={isSortable ? () => handleSort(h) : undefined}
+                  title={isSortable ? 'Cliquer pour trier' : undefined}
+                  style={{ background: isActive ? '#EDE9FE' : '#F9F8F6', padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight: isActive ? 700 : 600, color: isActive ? '#5B21B6' : h.startsWith('Prévi') ? '#C41E3A' : '#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid #E8E6E1', cursor: isSortable ? 'pointer' : 'default', userSelect:'none', whiteSpace:'nowrap' }}>
+                  {h}{arrow}
+                </th>
+              )
+            })}</tr></thead>
             <tbody>
               {filtered.map((s, i) => {
                 const m = s.membres || {}
