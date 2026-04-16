@@ -450,19 +450,21 @@ export default function Dashboard({ onNavigate, profil, groupeCode = 'MK-01' }) 
                 {tfOfficiel && (() => {
                   const MOIS_COURT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc']
                   const tfBg = tfOfficiel.score >= 70 ? '#D1FAE5' : tfOfficiel.score >= 50 ? '#FEF9C3' : tfOfficiel.score >= 30 ? '#FEE2E2' : '#F3F4F6'
+                  const tfBgHover = tfOfficiel.score >= 70 ? '#A7F3D0' : tfOfficiel.score >= 50 ? '#FDE68A' : tfOfficiel.score >= 30 ? '#FECACA' : '#E5E7EB'
                   const tfCol = tfOfficiel.score >= 70 ? '#065F46' : tfOfficiel.score >= 50 ? '#854D0E' : tfOfficiel.score >= 30 ? '#991B1B' : '#4B5563'
+                  const tfBorder = tfOfficiel.score >= 70 ? '#86EFAC' : tfOfficiel.score >= 50 ? '#FDE68A' : tfOfficiel.score >= 30 ? '#FCA5A5' : '#D1D5DB'
                   return (
                     <div onClick={(e) => { e.stopPropagation(); onNavigate('rtl') }}
-                      style={{ marginTop:10, padding:'10px 14px', background:'#F9F8F6', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid #E8E6E1', cursor:'pointer', transition:'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background='#F0EFEC'} onMouseLeave={e => e.currentTarget.style.background='#F9F8F6'}>
+                      style={{ marginTop:10, padding:'10px 14px', background:tfBg, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'space-between', border:`1px solid ${tfBorder}`, cursor:'pointer', transition:'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background=tfBgHover} onMouseLeave={e => e.currentTarget.style.background=tfBg}>
                       <div>
-                        <div style={{ fontSize:9, fontWeight:600, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.06em' }}>TF officiel PALMS</div>
-                        <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{MOIS_COURT[tfOfficiel.mois - 1]} {tfOfficiel.annee}</div>
+                        <div style={{ fontSize:9, fontWeight:700, color:tfCol, opacity:0.7, textTransform:'uppercase', letterSpacing:'0.06em' }}>TF officiel PALMS</div>
+                        <div style={{ fontSize:11, color:tfCol, opacity:0.85, marginTop:2, fontWeight:500 }}>{MOIS_COURT[tfOfficiel.mois - 1]} {tfOfficiel.annee}</div>
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <span style={{ fontSize:20, fontWeight:800, color:tfCol }}>{tfOfficiel.score}</span>
-                        <span style={{ fontSize:11, color:'#9CA3AF' }}>/100</span>
-                        <span style={{ fontSize:9, padding:'2px 7px', borderRadius:4, background:tfBg, color:tfCol, fontWeight:700, textTransform:'uppercase', marginLeft:4 }}>
+                        <span style={{ fontSize:22, fontWeight:800, color:tfCol }}>{tfOfficiel.score}</span>
+                        <span style={{ fontSize:11, color:tfCol, opacity:0.6 }}>/100</span>
+                        <span style={{ fontSize:9, padding:'2px 7px', borderRadius:4, background:'rgba(255,255,255,0.7)', color:tfCol, fontWeight:700, textTransform:'uppercase', marginLeft:4 }}>
                           {tfOfficiel.score >= 70 ? 'Vert' : tfOfficiel.score >= 50 ? 'Orange' : tfOfficiel.score >= 30 ? 'Rouge' : 'Gris'}
                         </span>
                       </div>
