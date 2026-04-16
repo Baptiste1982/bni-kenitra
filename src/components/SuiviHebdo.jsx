@@ -410,6 +410,15 @@ export default function SuiviHebdo({ groupeCode = 'MK-01', profil }) {
       setResult({ imported, skipped, bni: !!bniRow, jeudiDate, snapped: jeudiDate !== dateReunion, scoreResult })
       setRawText('')
       await loadMonth()
+      // Rafraîchir la liste des archives pour que la nouvelle saisie apparaisse
+      // (sinon le panneau Archives garde son cache antérieur à l'import)
+      try {
+        const { data: archivesData } = await supabase
+          .from('palms_hebdo')
+          .select('date_reunion, nb_reunions, groupe_id, is_provisoire, date_import')
+          .order('date_reunion', { ascending: false })
+        setArchives(archivesData || [])
+      } catch (e) { console.error('[Hebdo] Erreur refresh archives:', e) }
     } catch (err) {
       setResult({ error: err.message })
     }
