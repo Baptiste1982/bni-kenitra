@@ -22,6 +22,8 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
   const [archiveData, setArchiveData] = useState([])
   // Pour l'annulation d'une suppression d'archive : { archive, countdown (sec), timerId }
   const [recentlyDeleted, setRecentlyDeleted] = useState(null)
+  const [showTrash, setShowTrash] = useState(false)
+  const [trashArchives, setTrashArchives] = useState([])
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
   const [newStatut, setNewStatut] = useState(false)
@@ -361,13 +363,28 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
           <div style={{ display:'flex', gap: isMobile ? 6 : 10, alignItems:'center', flexWrap:'wrap' }}>
             {syncMsg && <span style={{ fontSize:11, color: syncMsg.startsWith('Erreur') ? '#DC2626' : '#059669' }}>{syncMsg}</span>}
             {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
-              <div onClick={() => { setShowVisitorArchives(!showVisitorArchives); if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false); supabase.from('visitor_imports').select('*').order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[])) } }}
+              <div onClick={() => { setShowVisitorArchives(!showVisitorArchives); if (!showVisitorArchives) { setShowVisitorImport(false); setShowAccessConfig(false); setShowTrash(false); supabase.from('visitor_imports').select('*').is('deleted_at', null).order('imported_at',{ascending:false}).then(({data}) => setVisitorArchives(data||[])) } }}
                 style={{ background: showVisitorArchives ? '#F3F2EF' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:12 }}
                 onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
                 onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Archives</div>
                   <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>Historique</div>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                  <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
+                </div>
+              </div>}
+            {['super_admin','directrice_consultante','secretaire_tresorier'].includes(profil?.role) &&
+              <div onClick={() => { setShowTrash(!showTrash); if (!showTrash) { setShowVisitorArchives(false); setShowVisitorImport(false); setShowAccessConfig(false); supabase.from('visitor_imports').select('*').not('deleted_at','is',null).order('deleted_at',{ascending:false}).then(({data}) => setTrashArchives(data||[])) } }}
+                style={{ background: showTrash ? '#F3F2EF' : '#fff', border:'1px solid #E8E6E1', borderRadius:12, padding: isMobile ? '8px 14px' : '12px 16px', cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:12 }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';e.currentTarget.style.transform='translateY(-1px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none';e.currentTarget.style.transform='none'}}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:10, fontWeight:600, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>🗑 Corbeille</div>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:700, color:'#1C1C2E', fontFamily:'DM Sans, sans-serif' }}>Supprimés</div>
                 </div>
                 <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                   <span style={{ width:4, height:4, borderRadius:'50%', background:'#C41E3A' }} />
@@ -448,9 +465,8 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
         <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', background:'#1C1C2E', color:'#fff', padding:'12px 18px', borderRadius:10, display:'flex', alignItems:'center', gap:14, boxShadow:'0 4px 20px rgba(0,0,0,0.25)', zIndex:9999, fontSize:13, fontFamily:'DM Sans, sans-serif', animation:'fadeIn 0.2s ease' }}>
           <span>🗑 Archive <strong>{recentlyDeleted.periode}</strong> supprimée</span>
           <button onClick={async () => {
-            // Restaurer l'archive en base
-            const { id, ...rest } = recentlyDeleted.archive
-            const { data: restored, error } = await supabase.from('visitor_imports').insert({ id, ...rest }).select().single()
+            // Restaurer : remettre deleted_at a NULL
+            const { data: restored, error } = await supabase.from('visitor_imports').update({ deleted_at: null }).eq('id', recentlyDeleted.archive.id).select().single()
             if (error) {
               console.error('[Annuler] Erreur restauration:', error)
               setSyncMsg(`Erreur : impossible d'annuler la suppression (${error.message})`)
@@ -505,10 +521,10 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                       </div>
                       <button onClick={async (e) => {
                         e.stopPropagation()
-                        // Suppression sans confirm — l'utilisateur peut annuler via le toast
-                        // Snapshot de l'archive avant delete (pour restauration)
+                        // Soft delete : l'archive reste en base avec deleted_at = NOW()
+                        // Elle peut etre restauree via la Corbeille ou via le toast 10s
                         const snapshot = { ...a }
-                        await supabase.from('visitor_imports').delete().eq('id', a.id)
+                        await supabase.from('visitor_imports').update({ deleted_at: new Date().toISOString() }).eq('id', a.id)
                         setVisitorArchives(prev => prev.filter(x => x.id !== a.id))
                         if (isActive) { setArchiveDetail(null); setArchiveData([]) }
                         // Afficher le toast d'annulation (10s)
@@ -558,6 +574,55 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                         </table>
                       </div>
                     )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      </AccordionPanel>
+
+      {/* Corbeille — archives soft-deleted avec restauration */}
+      <AccordionPanel open={showTrash}>
+        <Card style={{ marginBottom:20 }}>
+          <SectionTitle>🗑 Corbeille des archives supprimées</SectionTitle>
+          <div style={{ fontSize:11, color:'#6B7280', marginBottom:12 }}>Les archives supprimées restent ici pour pouvoir être restaurées. Supprimer définitivement vide la Corbeille pour de bon.</div>
+          {trashArchives.length === 0 ? (
+            <div style={{ padding:16, textAlign:'center', color:'#9CA3AF', fontSize:13 }}>Aucune archive supprimée</div>
+          ) : (
+            <div>
+              {trashArchives.map((a) => {
+                const debut = a.date_debut ? new Date(a.date_debut+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '?'
+                const fin = a.date_fin ? new Date(a.date_fin+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '?'
+                const delDate = a.deleted_at ? new Date(a.deleted_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '?'
+                return (
+                  <div key={a.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderRadius:10, background:'#FEF2F2', border:'1px solid #FCA5A5', marginBottom:8 }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background:'#DC2626', flexShrink:0 }} />
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#1C1C2E' }}>{debut} → {fin}</div>
+                      <div style={{ fontSize:11, color:'#6B7280', marginTop:2 }}>{a.nb_invites} invité{a.nb_invites>1?'s':''} · Supprimé le <strong>{delDate}</strong></div>
+                    </div>
+                    <button onClick={async () => {
+                      const { data: restored } = await supabase.from('visitor_imports').update({ deleted_at: null }).eq('id', a.id).select().single()
+                      setTrashArchives(prev => prev.filter(x => x.id !== a.id))
+                      if (restored) setVisitorArchives(prev => [restored, ...prev].sort((a,b) => new Date(b.imported_at) - new Date(a.imported_at)))
+                    }}
+                      style={{ background:'#10B981', color:'#fff', border:'none', padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='#059669'}
+                      onMouseLeave={e=>e.currentTarget.style.background='#10B981'}>
+                      ↩ Restaurer
+                    </button>
+                    <button onClick={async () => {
+                      if (!window.confirm(`Supprimer DÉFINITIVEMENT l'archive du ${debut} → ${fin} ?\n\nCette action est irréversible.`)) return
+                      await supabase.from('visitor_imports').delete().eq('id', a.id)
+                      setTrashArchives(prev => prev.filter(x => x.id !== a.id))
+                    }}
+                      title="Supprimer définitivement"
+                      style={{ background:'transparent', color:'#991B1B', border:'1px solid #FCA5A5', padding:'8px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                      onMouseEnter={e=>{e.currentTarget.style.background='#DC2626';e.currentTarget.style.color='#fff'}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#991B1B'}}>
+                      Supprimer définitivement
+                    </button>
                   </div>
                 )
               })}
