@@ -257,6 +257,19 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
     } catch(e) { setSyncMsg('Erreur : ' + e.message) }
   }
 
+  const handleDeleteInvite = async () => {
+    if (!editId) return
+    const inv = invites.find(i => i.id === editId)
+    const label = inv ? `${cap(inv.prenom) || ''} ${cap(inv.nom) || ''}`.trim() || 'cet invité' : 'cet invité'
+    if (!window.confirm(`Supprimer définitivement ${label} ?\nCette action est irréversible.`)) return
+    try {
+      await supabase.from('invites').delete().eq('id', editId)
+      setInvites(prev => prev.filter(i => i.id !== editId))
+      setEditId(null)
+      setSyncMsg('Invité supprimé')
+    } catch(e) { setSyncMsg('Erreur suppression : ' + e.message) }
+  }
+
   const SENSITIVE_COLUMNS = [
     { key:'email', label:'Email' },
     { key:'telephone', label:'Téléphone' },
@@ -667,9 +680,15 @@ export function Invites({ profil, groupeCode = 'MK-01' }) {
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Commentaires</label><input value={editData.commentaires||''} onChange={e=>setEditData({...editData,commentaires:e.target.value})} style={inputSt}/></div>
                           <div><label style={{ fontSize:9, fontWeight:600, color:'#6B7280', textTransform:'uppercase' }}>Date visite</label><input type="date" value={editData.date_visite||''} onChange={e=>setEditData({...editData,date_visite:e.target.value})} style={inputSt}/></div>
                         </div>
-                        <div style={{ display:'flex', gap:8 }}>
+                        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                           <button onClick={e=>{e.stopPropagation();handleSaveEdit()}} style={{ padding:'6px 16px', background:'#C41E3A', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Sauvegarder</button>
                           <button onClick={e=>{e.stopPropagation();setEditId(null)}} style={{ padding:'6px 16px', background:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>Annuler</button>
+                          <div style={{ flex:1 }} />
+                          <button onClick={e=>{e.stopPropagation();handleDeleteInvite()}} title="Supprimer définitivement cet invité" style={{ padding:'6px 14px', background:'#fff', color:'#B91C1C', border:'1px solid #FCA5A5', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}
+                            onMouseEnter={e=>{ e.currentTarget.style.background='#FEE2E2'; e.currentTarget.style.borderColor='#B91C1C' }}
+                            onMouseLeave={e=>{ e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor='#FCA5A5' }}>
+                            🗑 Supprimer
+                          </button>
                         </div>
                       </td>
                     </tr>
